@@ -57,18 +57,23 @@ func Command(globalNoColor *bool, globalQuiet *bool) *cobra.Command {
 	f := &flags{}
 
 	cmd := &cobra.Command{
-		Use:   "json <file>",
+		Use:   "json [file]",
 		Short: "View, validate, and analyze JSON",
 		Long: `Parse, validate, and explore JSON files with multiple analysis lenses.
 
 Three output modes:
   (default)  Syntax-highlighted pretty-print with optional annotations
   --ui       Interactive TUI navigator (lazygit-style 3-panel layout)
-  --web      Local web server with browser-based explorer`,
-		Args: cobra.ExactArgs(1),
+  --web      Local web server with browser-based explorer
+
+Omit [file] with --ui or --web to open an interactive file picker.`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			f.noColor = *globalNoColor
 			f.quiet = *globalQuiet
+			if len(args) == 0 {
+				return runJSONNoFile(f)
+			}
 			return runJSON(f, args[0])
 		},
 		SilenceUsage: true,
@@ -216,6 +221,20 @@ func runJSON(f *flags, filename string) error {
 	renderOpts.ShowStats = f.showStats
 	renderOpts.ShowMerkle = f.showMerkle
 	return static.Render(os.Stdout, root, renderOpts)
+}
+
+func runJSONNoFile(f *flags) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		cwd = "."
+	}
+	if f.ui {
+		return tui.StartWithPicker(cwd)
+	}
+	if f.web {
+		return web.StartBrowser(web.Options{Port: f.port, Quiet: f.quiet})
+	}
+	return fmt.Errorf("missing argument: <file> (or use --ui / --web to pick interactively)")
 }
 
 func resolveTheme(name string) static.Theme {

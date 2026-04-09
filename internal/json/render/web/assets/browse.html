@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>unum — pick a file</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    #browse-wrap {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      padding: 0 16px 16px;
+    }
+
+    #breadcrumb {
+      padding: 10px 0 6px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    #breadcrumb .crumb {
+      color: var(--key);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    #breadcrumb .crumb:hover { text-decoration: underline; }
+    #breadcrumb .sep { color: var(--muted); }
+
+    #file-list {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+    }
+
+    .entry {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+      font-size: 13px;
+    }
+
+    .entry:last-child { border-bottom: none; }
+    .entry:hover { background: var(--bg-hover); }
+
+    .entry .icon { font-size: 14px; width: 20px; flex-shrink: 0; color: var(--muted); }
+    .entry.dir .icon { color: var(--key); }
+    .entry.json .icon { color: var(--string); }
+
+    .entry .name { flex: 1; }
+    .entry.dir .name { color: var(--key); }
+    .entry.json .name { color: var(--text); }
+
+    .entry .badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border: 1px solid var(--muted);
+      color: var(--muted);
+      border-radius: 2px;
+    }
+    .entry.json .badge { border-color: var(--string); color: var(--string); }
+
+    #empty {
+      padding: 40px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    #search-bar { border-top: none; border-bottom: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+  <div id="header">
+    <span class="brand">[ UNUM ]</span>
+    <span class="filename">file picker</span>
+    <div class="stats">
+      <span style="color:var(--muted)">select a .json file to explore</span>
+    </div>
+  </div>
+
+  <div id="search-bar">
+    <label>/ filter</label>
+    <input id="filter-input" type="text" placeholder="filter files..." autocomplete="off" spellcheck="false" />
+  </div>
+
+  <div id="browse-wrap">
+    <div id="breadcrumb"></div>
+    <div id="file-list"></div>
+  </div>
+
+  <div id="status-bar">
+    <span id="status-path">.</span>
+    <span id="status-type"></span>
+    <span id="status-hints">click dir to navigate · click .json to explore</span>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    let currentDir = '';
+    let entries = [];
+    let filterQuery = '';
+
+    async function loadDir(dir) {
+      const url = '/api/browse' + (dir ? '?dir=' + encodeURIComponent(dir) : '');
+      const resp = await fetch(url);
+      if (!resp.ok) { showError('failed to load directory'); return; }
+      entries = await resp.json();
+      currentDir = dir || entries[0]?.path?.replace(/[\\/][^\\/]+$/, '') || '.';
+      renderBreadcrumb();
+      renderList();
+      document.getElementById('status-path').textContent = currentDir;
+    }
+
+    function renderBreadcrumb() {
+      const el = document.getElementById('breadcrumb');
+      el.innerHTML = '';
+
+      // Split path into parts
+      const sep = currentDir.includes('\\') ? '\\' : '/';
+      const parts = currentDir.split(sep).filter(Boolean);
+
+      // Reconstruct paths for each crumb
+      let accumulated = currentDir.startsWith('/') ? '/' : '';
+      for (let i = 0; i < parts.length; i++) {
+        accumulated += (i === 0 && !accumulated ? '' : sep) + parts[i];
+        const path = accumulated;
+        const crumb = document.createElement('span');
+        crumb.className = 'crumb';
+        crumb.textContent = parts[i] || sep;
+        crumb.onclick = () => loadDir(path);
+        el.appendChild(crumb);
+        if (i < parts.length - 1) {
+          const sepEl = document.createElement('span');
+          sepEl.className = 'sep';
+          sepEl.textContent = ' / ';
+          el.appendChild(sepEl);
+        }
+      }
+    }
+
+    function renderList() {
+      const list = document.getElementById('file-list');
+      list.innerHTML = '';
+
+      const filtered = filterQuery
+        ? entries.filter(e => e.name.toLowerCase().includes(filterQuery))
+        : entries;
+
+      if (!filtered.length) {
+        const empty = document.createElement('div');
+        empty.id = 'empty';
+        empty.textContent = filterQuery ? 'no matches' : 'empty directory';
+        list.appendChild(empty);
+        return;
+      }
+
+      // Dirs first, then files
+      const sorted = [
+        ...filtered.filter(e => e.isDir),
+        ...filtered.filter(e => !e.isDir),
+      ];
+
+      for (const entry of sorted) {
+        const row = document.createElement('div');
+        row.className = 'entry ' + (entry.isDir ? 'dir' : 'json');
+
+        const icon = document.createElement('span');
+        icon.className = 'icon';
+        icon.textContent = entry.isDir ? '▶' : '{}';
+        row.appendChild(icon);
+
+        const name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = entry.name;
+        row.appendChild(name);
+
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = entry.isDir ? 'dir' : 'json';
+        row.appendChild(badge);
+
+        if (entry.isDir) {
+          row.onclick = () => loadDir(entry.path);
+        } else {
+          row.onclick = () => {
+            window.location.href = '/explore?file=' + encodeURIComponent(entry.path);
+          };
+        }
+
+        list.appendChild(row);
+      }
+    }
+
+    function showError(msg) {
+      const list = document.getElementById('file-list');
+      list.innerHTML = '<div id="empty">✗ ' + msg + '</div>';
+    }
+
+    document.getElementById('filter-input').addEventListener('input', (e) => {
+      filterQuery = e.target.value.trim().toLowerCase();
+      renderList();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === '/') { e.preventDefault(); document.getElementById('filter-input').focus(); }
+    });
+
+    loadDir('');
+  })();
+  </script>
+</body>
+</html>

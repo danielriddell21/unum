@@ -11,9 +11,11 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/danielriddell21/unum/internal/json/analyze"
@@ -22,6 +24,7 @@ import (
 	"github.com/danielriddell21/unum/internal/json/lens/transform"
 	"github.com/danielriddell21/unum/internal/json/lens/typegen"
 	"github.com/danielriddell21/unum/internal/json/node"
+	"github.com/danielriddell21/unum/internal/json/parse"
 )
 
 //go:embed assets/*
@@ -265,5 +268,155 @@ func maxDepth(n *node.Node) int {
 	return max + 1
 }
 
-// stubbing unused import
-var _ = strings.Contains
+// ─── Browser mode ─────────────────────────────────────────────────────────────
+
+// rootCache stores parsed roots keyed by absolute file path so the query
+// endpoint can re-use them without re-parsing.
+var rootCache sync.Map // map[string]*node.Node
+
+// StartBrowser launches the web server in file-browser mode (no pre-selected
+// file). The landing page lets the user navigate the filesystem and pick a
+// .json file to explore.
+func StartBrowser(opts Options) error {
+	baseDir, err := filepath.Abs(".")
+	if err != nil {
+		return err
+	}
+
+	port := opts.Port
+	if port == 0 {
+		port, err = freePort()
+		if err != nil {
+			return fmt.Errorf("web: cannot find free port: %w", err)
+		}
+	}
+
+	addr := "localhost:" + strconv.Itoa(port)
+	url := "http://" + addr
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/style.css", serveAsset("assets/style.css", "text/css"))
+	mux.HandleFunc("/app.js", serveAsset("assets/app.js", "application/javascript"))
+	mux.HandleFunc("/explore", serveAsset("assets/index.html", "text/html"))
+	mux.HandleFunc("/api/browse", handleBrowse(baseDir))
+	mux.HandleFunc("/api/tree", handleDynamicTree(baseDir))
+	mux.HandleFunc("/api/query", handleDynamicQuery(baseDir))
+	mux.HandleFunc("/", serveAsset("assets/browse.html", "text/html"))
+
+	srv := &http.Server{Addr: addr, Handler: mux}
+
+	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] NEURAL INTERFACE LIVE → %s\033[0m\n", url)
+	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
+
+	go openBrowser(url)
+	return srv.ListenAndServe()
+}
+
+// dirEntry is a serialisable filesystem entry for the browse API.
+type dirEntry struct {
+	Name  string `json:"name"`
+	IsDir bool   `json:"isDir"`
+	Path  string `json:"path"`
+}
+
+func handleBrowse(baseDir string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		dir := r.URL.Query().Get("dir")
+		if dir == "" {
+			dir = baseDir
+		}
+		abs, err := filepath.Abs(dir)
+		if err != nil || !strings.HasPrefix(abs, baseDir) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+
+		entries, err := os.ReadDir(abs)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var result []dirEntry
+		for _, e := range entries {
+			name := e.Name()
+			if strings.HasPrefix(name, ".") {
+				continue
+			}
+			if e.IsDir() || strings.HasSuffix(strings.ToLower(name), ".json") {
+				result = append(result, dirEntry{
+					Name:  name,
+					IsDir: e.IsDir(),
+					Path:  filepath.Join(abs, name),
+				})
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(result)
+	}
+}
+
+func handleDynamicTree(baseDir string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		file := r.URL.Query().Get("file")
+		if file == "" {
+			http.Error(w, "missing file param", http.StatusBadRequest)
+			return
+		}
+		abs, err := filepath.Abs(file)
+		if err != nil || !strings.HasPrefix(abs, baseDir) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+
+		data, err := os.ReadFile(abs)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		root, err := parse.Parse(data)
+		if err != nil {
+			http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		rootCache.Store(abs, root)
+
+		payload, err := buildPayload(root, abs)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		payload.SizeBytes = int64(len(data))
+
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(payloadBytes)
+	}
+}
+
+func handleDynamicQuery(baseDir string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		file := r.URL.Query().Get("file")
+		if file == "" {
+			writeJSON(w, queryResponse{Error: "no file context"})
+			return
+		}
+		abs, err := filepath.Abs(file)
+		if err != nil || !strings.HasPrefix(abs, baseDir) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		v, ok := rootCache.Load(abs)
+		if !ok {
+			writeJSON(w, queryResponse{Error: "file not yet loaded — open it first"})
+			return
+		}
+		handleQuery(v.(*node.Node))(w, r)
+	}
+}

@@ -11,9 +11,15 @@
 
   // ── Boot ────────────────────────────────────────────────────────────────────
 
+  // fileParam is set when navigating from the browser picker (/explore?file=...)
+  const fileParam = new URLSearchParams(window.location.search).get('file');
+
   async function boot() {
     try {
-      const resp = await fetch('/api/tree');
+      const treeURL = fileParam
+        ? '/api/tree?file=' + encodeURIComponent(fileParam)
+        : '/api/tree';
+      const resp = await fetch(treeURL);
       if (!resp.ok) throw new Error('Failed to load tree: ' + resp.status);
       treeData = await resp.json();
       renderHeader();
@@ -388,7 +394,10 @@
       const expr = input.value.trim();
       if (!expr) return;
       try {
-        const resp = await fetch('/api/query', {
+        const queryURL = fileParam
+          ? '/api/query?file=' + encodeURIComponent(fileParam)
+          : '/api/query';
+        const resp = await fetch(queryURL, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({expr}),
