@@ -25,6 +25,8 @@ type Palette struct {
 	Hash            string
 	Stats           string
 	Search          string
+	Added           string // diff line added
+	Removed         string // diff line removed
 }
 
 // PaletteCyber is the default cyber/neural-interface theme.
@@ -50,6 +52,8 @@ var PaletteCyber = Palette{
 	Hash:            "#C678DD",
 	Stats:           "#FFD700",
 	Search:          "#FFD700",
+	Added:           "#98C379",
+	Removed:         "#E06C75",
 }
 
 // PaletteMatrix is the matrix green theme.
@@ -75,6 +79,8 @@ var PaletteMatrix = Palette{
 	Hash:            "#39FF14",
 	Stats:           "#88FF44",
 	Search:          "#FFFFFF",
+	Added:           "#00FF41",
+	Removed:         "#FF3300",
 }
 
 // PaletteDracula is the Dracula theme.
@@ -100,6 +106,8 @@ var PaletteDracula = Palette{
 	Hash:            "#FF79C6",
 	Stats:           "#F1FA8C",
 	Search:          "#F1FA8C",
+	Added:           "#50FA7B",
+	Removed:         "#FF5555",
 }
 
 // PaletteNord is the Nord theme.
@@ -125,6 +133,8 @@ var PaletteNord = Palette{
 	Hash:            "#B48EAD",
 	Stats:           "#EBCB8B",
 	Search:          "#EBCB8B",
+	Added:           "#A3BE8C",
+	Removed:         "#BF616A",
 }
 
 // ResolvePalette returns the named palette, defaulting to Cyber.

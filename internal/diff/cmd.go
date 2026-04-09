@@ -11,6 +11,7 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/format"
 	"github.com/danielriddell21/unum/internal/diff/parse"
 	"github.com/danielriddell21/unum/internal/diff/render/static"
+	"github.com/danielriddell21/unum/internal/diff/render/tui"
 )
 
 type flags struct {
@@ -98,8 +99,7 @@ func runDiff(f *flags, fileA, fileB string) error {
 	diff.Format = fmt_
 
 	if f.ui {
-		fmt.Fprintln(os.Stderr, "TUI not yet implemented — coming soon")
-		return nil
+		return tui.Start(diff, f.theme)
 	}
 	if f.web {
 		fmt.Fprintln(os.Stderr, "web UI not yet implemented — coming soon")
