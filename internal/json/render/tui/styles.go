@@ -1,47 +1,51 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
-
-// palette — cyber/neural-interface color scheme
-const (
-	colorBG          = "#0D0D0D"
-	colorActiveBorder = "#00D4FF" // cyan — focused panel border
-	colorDimBorder   = "#1E1E1E" // very dim — unfocused panel border
-	colorObjectKey   = "#00D4FF" // cyan — object keys
-	colorArrayIndex  = "#FF6B6B" // coral — array indices
-	colorString      = "#98C379" // soft green — string values
-	colorNumber      = "#E5C07B" // amber — numbers
-	colorBoolTrue    = "#56B6C2" // teal — true
-	colorBoolFalse   = "#E06C75" // red — false
-	colorNull        = "#5C6370" // muted gray — null
-	colorSelected    = "#1A1A2E" // deep navy — selected row bg
-	colorSelectedFG  = "#FFFFFF"
-	colorPath        = "#C678DD" // purple — jq path in statusbar
-	colorSearch      = "#FFD700" // gold — search highlight
-	colorHash        = "#C678DD" // purple — merkle hashes
-	colorStats       = "#FFD700" // gold — stat annotations
-	colorTabActive   = "#00D4FF"
-	colorTabInactive = "#3A3A3A"
-	colorMuted       = "#3A3A3A"
-	colorError       = "#E06C75"
-	colorGreen       = "#00FF41" // matrix green — boot/status
+import (
+	"github.com/charmbracelet/lipgloss"
+	"github.com/danielriddell21/unum/internal/json/render/tui/panels"
 )
 
 var (
 	// Panel titles
 	styleTitle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(colorActiveBorder)).
+			Foreground(lipgloss.Color(panels.PaletteCyber.AccentPrimary)).
 			Bold(true)
 
 	styleTitleDim = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(colorMuted))
+			Foreground(lipgloss.Color(panels.PaletteCyber.Muted))
 
 	// Panel borders — active vs inactive
 	borderActive = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color(colorActiveBorder))
+			BorderForeground(lipgloss.Color(panels.PaletteCyber.BorderActive))
 
 	borderDim = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color(colorDimBorder))
+			BorderForeground(lipgloss.Color(panels.PaletteCyber.BorderDim))
+
+	// Muted hint text — used by picker and other non-panel chrome
+	styleHint = lipgloss.NewStyle().
+			Foreground(lipgloss.Color(panels.PaletteCyber.Muted))
+
+	// colorActiveBorder is kept for the help overlay border reference
+	colorActiveBorder = panels.PaletteCyber.BorderActive
 )
+
+// ApplyPalette rebuilds tui-level style vars to match the given palette.
+// Call this (after panels.ApplyPalette) before running any TUI program.
+func ApplyPalette(p panels.Palette) {
+	styleTitle = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.AccentPrimary)).
+		Bold(true)
+	styleTitleDim = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.Muted))
+	borderActive = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(p.BorderActive))
+	borderDim = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(p.BorderDim))
+	styleHint = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.Muted))
+	colorActiveBorder = p.BorderActive
+}

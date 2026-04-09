@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/danielriddell21/unum/internal/json/lens/merkle"
 	"github.com/danielriddell21/unum/internal/json/lens/query"
 	"github.com/danielriddell21/unum/internal/json/lens/stats"
@@ -373,11 +372,3 @@ func PrettyNode(n *node.Node) string {
 	return buf.String()
 }
 
-var (
-	styleTabActive   = lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF")).Bold(true)
-	styleTabInactive = lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A"))
-	styleHash        = lipgloss.NewStyle().Foreground(lipgloss.Color("#C678DD"))
-	styleStats       = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700"))
-	styleError       = lipgloss.NewStyle().Foreground(lipgloss.Color("#E06C75"))
-	styleSearchPrompt = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")).Bold(true)
-)

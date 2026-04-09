@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/danielriddell21/unum/internal/config"
 	"github.com/danielriddell21/unum/internal/json/analyze"
 	"github.com/danielriddell21/unum/internal/json/lens/merkle"
 	"github.com/danielriddell21/unum/internal/json/lens/query"
@@ -55,6 +56,7 @@ type flags struct {
 // Command returns the cobra command for `unum json`.
 func Command(globalNoColor *bool, globalQuiet *bool) *cobra.Command {
 	f := &flags{}
+	cfg := config.Load()
 
 	cmd := &cobra.Command{
 		Use:   "json [file]",
@@ -66,7 +68,10 @@ Three output modes:
   --ui       Interactive TUI navigator (lazygit-style 3-panel layout)
   --web      Local web server with browser-based explorer
 
-Omit [file] with --ui or --web to open an interactive file picker.`,
+Omit [file] with --ui or --web to open an interactive file picker.
+
+Config file (~/.config/unum/config.json):
+  { "theme": "cyber" }   — cyber | matrix | dracula | nord`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			f.noColor = *globalNoColor
@@ -87,7 +92,7 @@ Omit [file] with --ui or --web to open an interactive file picker.`,
 	// Static output
 	cmd.Flags().BoolVar(&f.validateOnly, "validate-only", false, "exit 0/1 based on validity only")
 	cmd.Flags().BoolVar(&f.compact, "compact", false, "output minified JSON")
-	cmd.Flags().StringVar(&f.theme, "theme", "cyber", "color theme: cyber, matrix, dracula, light")
+	cmd.Flags().StringVar(&f.theme, "theme", cfg.Theme, "color theme: cyber, matrix, dracula, nord")
 
 	// Annotation lenses
 	cmd.Flags().BoolVar(&f.showStats, "stats", false, "annotate numeric arrays with statistics")
@@ -113,7 +118,7 @@ func runJSON(f *flags, filename string) error {
 		return fmt.Errorf("cannot read %s: %w", filename, err)
 	}
 
-	theme := resolveTheme(f.theme)
+	theme := resolveStaticTheme(f.theme)
 	renderOpts := static.Options{
 		Theme:        theme,
 		ShowLineNums: true,
@@ -205,7 +210,7 @@ func runJSON(f *flags, filename string) error {
 	// ── TUI / Web modes ───────────────────────────────────────────────────────
 
 	if f.ui {
-		return tui.Start(root, filename)
+		return tui.Start(root, filename, f.theme)
 	}
 
 	if f.web {
@@ -229,7 +234,7 @@ func runJSONNoFile(f *flags) error {
 		cwd = "."
 	}
 	if f.ui {
-		return tui.StartWithPicker(cwd)
+		return tui.StartWithPicker(cwd, f.theme)
 	}
 	if f.web {
 		return web.StartBrowser(web.Options{Port: f.port, Quiet: f.quiet})
@@ -237,7 +242,7 @@ func runJSONNoFile(f *flags) error {
 	return fmt.Errorf("missing argument: <file> (or use --ui / --web to pick interactively)")
 }
 
-func resolveTheme(name string) static.Theme {
+func resolveStaticTheme(name string) static.Theme {
 	switch name {
 	case "matrix":
 		return static.Matrix

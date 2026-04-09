@@ -8,12 +8,6 @@ import (
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
-var (
-	styleSBPath = lipgloss.NewStyle().Foreground(lipgloss.Color("#C678DD")).Bold(true)
-	styleSBType = lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF"))
-	styleSBHint = lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A"))
-	styleSBSep  = lipgloss.NewStyle().Foreground(lipgloss.Color("#1E1E1E")).Render(" · ")
-)
 
 // StatusBar renders the bottom status bar.
 // It's a pure render function — no sub-model state.

@@ -302,19 +302,3 @@ func max(a, b int) int {
 	return b
 }
 
-// Re-export styles needed by render functions in this package
-var (
-	styleMuted     = lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A"))
-	styleObjectKey = lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF"))
-	styleArrayIdx  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B6B"))
-	styleString    = lipgloss.NewStyle().Foreground(lipgloss.Color("#98C379"))
-	styleNumber    = lipgloss.NewStyle().Foreground(lipgloss.Color("#E5C07B"))
-	styleBoolTrue  = lipgloss.NewStyle().Foreground(lipgloss.Color("#56B6C2"))
-	styleBoolFalse = lipgloss.NewStyle().Foreground(lipgloss.Color("#E06C75"))
-	styleNull      = lipgloss.NewStyle().Foreground(lipgloss.Color("#5C6370"))
-	styleCursor    = lipgloss.NewStyle().Background(lipgloss.Color("#1A1A2E")).Foreground(lipgloss.Color("#FFFFFF"))
-	connectorMid   = lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")).Render("├─▶ ")
-	connectorLast  = lipgloss.NewStyle().Foreground(lipgloss.Color("#1E1E1E")).Render("└─▷ ")
-	connectorOpen  = lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")).Render("▼  ")
-	connectorClosed = lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")).Render("▶  ")
-)

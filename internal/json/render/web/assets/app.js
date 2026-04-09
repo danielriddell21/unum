@@ -9,12 +9,148 @@
   let searchQuery = '';
   let typegenMode = 'go'; // go | ts | jsonschema
 
+  // ── Themes ───────────────────────────────────────────────────────────────────
+
+  const THEMES = {
+    cyber: {
+      '--bg':            '#0D0D0D',
+      '--bg-panel':      '#111111',
+      '--bg-hover':      '#1A1A2E',
+      '--border':        '#1E1E1E',
+      '--border-active': '#00D4FF',
+      '--key':           '#00D4FF',
+      '--array-idx':     '#FF6B6B',
+      '--string':        '#98C379',
+      '--number':        '#E5C07B',
+      '--bool-true':     '#56B6C2',
+      '--bool-false':    '#E06C75',
+      '--null':          '#5C6370',
+      '--path':          '#C678DD',
+      '--search':        '#FFD700',
+      '--muted':         '#3A3A3A',
+      '--text':          '#C0C0C0',
+      '--hash':          '#C678DD',
+      '--stats':         '#FFD700',
+    },
+    matrix: {
+      '--bg':            '#0D0D0D',
+      '--bg-panel':      '#0A1A0A',
+      '--bg-hover':      '#001A00',
+      '--border':        '#003300',
+      '--border-active': '#00FF41',
+      '--key':           '#00FF41',
+      '--array-idx':     '#33FF33',
+      '--string':        '#00CC22',
+      '--number':        '#88FF44',
+      '--bool-true':     '#00FF41',
+      '--bool-false':    '#FF3300',
+      '--null':          '#005500',
+      '--path':          '#39FF14',
+      '--search':        '#FFFFFF',
+      '--muted':         '#005500',
+      '--text':          '#00CC22',
+      '--hash':          '#39FF14',
+      '--stats':         '#88FF44',
+    },
+    dracula: {
+      '--bg':            '#282A36',
+      '--bg-panel':      '#21222C',
+      '--bg-hover':      '#44475A',
+      '--border':        '#3D4050',
+      '--border-active': '#BD93F9',
+      '--key':           '#BD93F9',
+      '--array-idx':     '#FF5555',
+      '--string':        '#50FA7B',
+      '--number':        '#F1FA8C',
+      '--bool-true':     '#8BE9FD',
+      '--bool-false':    '#FF5555',
+      '--null':          '#6272A4',
+      '--path':          '#FF79C6',
+      '--search':        '#F1FA8C',
+      '--muted':         '#6272A4',
+      '--text':          '#F8F8F2',
+      '--hash':          '#FF79C6',
+      '--stats':         '#F1FA8C',
+    },
+    nord: {
+      '--bg':            '#2E3440',
+      '--bg-panel':      '#272C36',
+      '--bg-hover':      '#3B4252',
+      '--border':        '#3B4252',
+      '--border-active': '#88C0D0',
+      '--key':           '#88C0D0',
+      '--array-idx':     '#BF616A',
+      '--string':        '#A3BE8C',
+      '--number':        '#EBCB8B',
+      '--bool-true':     '#81A1C1',
+      '--bool-false':    '#BF616A',
+      '--null':          '#4C566A',
+      '--path':          '#B48EAD',
+      '--search':        '#EBCB8B',
+      '--muted':         '#4C566A',
+      '--text':          '#ECEFF4',
+      '--hash':          '#B48EAD',
+      '--stats':         '#EBCB8B',
+    },
+  };
+
+  function applyTheme(name) {
+    const vars = THEMES[name] || THEMES.cyber;
+    const root = document.documentElement;
+    for (const [k, v] of Object.entries(vars)) {
+      root.style.setProperty(k, v);
+    }
+    localStorage.setItem('unum-theme', name);
+    // Update picker buttons if they exist
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.theme === name);
+    });
+  }
+
+  function renderThemePicker() {
+    const picker = document.createElement('div');
+    picker.id = 'theme-picker';
+    picker.style.cssText = 'display:flex;align-items:center;gap:6px;margin-left:auto;';
+
+    const label = document.createElement('span');
+    label.textContent = 'theme:';
+    label.style.cssText = 'color:var(--muted);font-size:11px;';
+    picker.appendChild(label);
+
+    const saved = localStorage.getItem('unum-theme') || 'cyber';
+    for (const name of Object.keys(THEMES)) {
+      const btn = document.createElement('button');
+      btn.className = 'theme-btn' + (name === saved ? ' active' : '');
+      btn.dataset.theme = name;
+      btn.textContent = name;
+      btn.style.cssText = [
+        'background:none', 'border:1px solid var(--border)',
+        'color:var(--muted)', 'font-size:10px', 'padding:2px 6px',
+        'border-radius:3px', 'cursor:pointer', 'font-family:inherit',
+        'transition:all 0.15s',
+      ].join(';');
+      btn.onmouseover = () => { btn.style.borderColor = 'var(--border-active)'; btn.style.color = 'var(--border-active)'; };
+      btn.onmouseout  = () => {
+        btn.style.borderColor = btn.classList.contains('active') ? 'var(--border-active)' : 'var(--border)';
+        btn.style.color = btn.classList.contains('active') ? 'var(--border-active)' : 'var(--muted)';
+      };
+      btn.onclick = () => applyTheme(name);
+      picker.appendChild(btn);
+    }
+
+    return picker;
+  }
+
   // ── Boot ────────────────────────────────────────────────────────────────────
 
   // fileParam is set when navigating from the browser picker (/explore?file=...)
   const fileParam = new URLSearchParams(window.location.search).get('file');
 
   async function boot() {
+    // Apply saved theme before rendering
+    const savedTheme = localStorage.getItem('unum-theme') || 'cyber';
+    applyTheme(savedTheme);
+
     try {
       const treeURL = fileParam
         ? '/api/tree?file=' + encodeURIComponent(fileParam)
@@ -41,6 +177,8 @@
     document.getElementById('stat-depth').textContent = treeData.maxDepth;
     document.getElementById('stat-size').textContent = humanBytes(treeData.sizeBytes);
 
+    const header = document.getElementById('header');
+
     if (fileParam) {
       const link = document.createElement('a');
       link.href = '/';
@@ -48,8 +186,10 @@
       link.style.cssText = 'color:var(--muted);font-size:11px;text-decoration:none;transition:color 0.15s;';
       link.onmouseover = () => { link.style.color = 'var(--key)'; };
       link.onmouseout  = () => { link.style.color = 'var(--muted)'; };
-      document.getElementById('header').appendChild(link);
+      header.appendChild(link);
     }
+
+    header.appendChild(renderThemePicker());
   }
 
   function humanBytes(b) {

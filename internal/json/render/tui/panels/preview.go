@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
@@ -77,13 +76,12 @@ func (p *PreviewPanel) renderNode(n *node.Node) string {
 func (p *PreviewPanel) renderContainer(n *node.Node) string {
 	b, err := n.MarshalJSON()
 	if err != nil {
-		return styleError2.Render("error: " + err.Error())
+		return styleError.Render("error: " + err.Error())
 	}
 	var pretty bytes.Buffer
 	if err := json.Indent(&pretty, b, "", "  "); err != nil {
 		return string(b)
 	}
-	// Apply basic coloring to the pretty-printed JSON
 	return colorizeJSON(pretty.String())
 }
 
@@ -93,27 +91,26 @@ func (p *PreviewPanel) renderLeaf(n *node.Node) string {
 
 	switch n.Kind {
 	case node.KindString:
-		typeLabel = lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")).Render("STRING")
+		typeLabel = styleMuted.Render("STRING")
 		var s string
 		_ = json.Unmarshal([]byte(n.Raw), &s)
-		valueStr = lipgloss.NewStyle().Foreground(lipgloss.Color("#98C379")).Render(`"` + s + `"`)
+		valueStr = styleString.Render(`"` + s + `"`)
 	case node.KindNumber:
-		typeLabel = lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")).Render("NUMBER")
-		valueStr = lipgloss.NewStyle().Foreground(lipgloss.Color("#E5C07B")).Render(n.Raw)
+		typeLabel = styleMuted.Render("NUMBER")
+		valueStr = styleNumber.Render(n.Raw)
 	case node.KindBool:
-		typeLabel = lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")).Render("BOOL")
+		typeLabel = styleMuted.Render("BOOL")
 		if n.Raw == "true" {
-			valueStr = lipgloss.NewStyle().Foreground(lipgloss.Color("#56B6C2")).Render("true")
+			valueStr = styleBoolTrue.Render("true")
 		} else {
-			valueStr = lipgloss.NewStyle().Foreground(lipgloss.Color("#E06C75")).Render("false")
+			valueStr = styleBoolFalse.Render("false")
 		}
 	case node.KindNull:
-		typeLabel = lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")).Render("NULL")
-		valueStr = lipgloss.NewStyle().Foreground(lipgloss.Color("#5C6370")).Render("null")
+		typeLabel = styleMuted.Render("NULL")
+		valueStr = styleNull.Render("null")
 	}
 
-	path := lipgloss.NewStyle().Foreground(lipgloss.Color("#C678DD")).Render(n.Path())
-
+	path := styleSBPath.Render(n.Path())
 	return fmt.Sprintf("%s\n\n%s\n\n%s", typeLabel, valueStr, path)
 }
 
@@ -138,9 +135,9 @@ func colorizeLine(line string) string {
 		if colonIdx > 0 {
 			key := trimmed[:colonIdx+1]  // includes closing quote
 			rest := trimmed[colonIdx+1:] // ": value..."
-			coloredKey := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF")).Render(key)
+			coloredKey := styleObjectKey.Render(key)
 			coloredRest := colorizeValue(strings.TrimSpace(rest[1:])) // strip ":"
-			return indent + coloredKey + lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")).Render(": ") + coloredRest
+			return indent + coloredKey + styleMuted.Render(": ") + coloredRest
 		}
 	}
 
@@ -152,29 +149,28 @@ func colorizeValue(s string) string {
 	suffix := ""
 	plain := s
 	if strings.HasSuffix(plain, ",") {
-		suffix = lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")).Render(",")
+		suffix = styleMuted.Render(",")
 		plain = plain[:len(plain)-1]
 	}
 
 	switch {
 	case strings.HasPrefix(plain, `"`):
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#98C379")).Render(plain) + suffix
+		return styleString.Render(plain) + suffix
 	case plain == "true":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#56B6C2")).Render(plain) + suffix
+		return styleBoolTrue.Render(plain) + suffix
 	case plain == "false":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#E06C75")).Render(plain) + suffix
+		return styleBoolFalse.Render(plain) + suffix
 	case plain == "null":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#5C6370")).Render(plain) + suffix
+		return styleNull.Render(plain) + suffix
 	case plain == "{" || plain == "}" || plain == "[" || plain == "]" ||
 		plain == "{}" || plain == "[]":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")).Render(plain) + suffix
+		return styleMuted.Render(plain) + suffix
 	default:
 		// Assume number
 		if len(plain) > 0 && (plain[0] == '-' || (plain[0] >= '0' && plain[0] <= '9')) {
-			return lipgloss.NewStyle().Foreground(lipgloss.Color("#E5C07B")).Render(plain) + suffix
+			return styleNumber.Render(plain) + suffix
 		}
 		return plain + suffix
 	}
 }
 
-var styleError2 = lipgloss.NewStyle().Foreground(lipgloss.Color("#E06C75"))

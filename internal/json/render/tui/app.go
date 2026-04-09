@@ -8,13 +8,23 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/danielriddell21/unum/internal/json/node"
 	"github.com/danielriddell21/unum/internal/json/parse"
+	"github.com/danielriddell21/unum/internal/json/render/tui/panels"
 )
+
+// applyTheme applies the named palette to both the panels and tui-level style vars.
+func applyTheme(theme string) {
+	p := panels.ResolvePalette(theme)
+	panels.ApplyPalette(p)
+	ApplyPalette(p)
+}
 
 // Start launches the TUI for the given node tree.
 // It takes over the terminal (AltScreen) and restores it cleanly on exit.
 // If the user presses 'o' to open a new file, the picker is shown and the
 // explorer restarts with the selected file.
-func Start(root *node.Node, filename string) error {
+func Start(root *node.Node, filename string, theme string) error {
+	applyTheme(theme)
+
 	for {
 		m := NewModel(root, filename)
 		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
@@ -61,7 +71,9 @@ func Start(root *node.Node, filename string) error {
 
 // StartWithPicker launches a file picker TUI. Once a .json file is selected
 // it parses it and transitions directly into the main JSON explorer.
-func StartWithPicker(initialDir string) error {
+func StartWithPicker(initialDir string, theme string) error {
+	applyTheme(theme)
+
 	pm := newPickerModel(initialDir)
 	p := tea.NewProgram(pm, tea.WithAltScreen())
 
@@ -88,5 +100,51 @@ func StartWithPicker(initialDir string) error {
 		return err
 	}
 
-	return Start(root, picked.Selected)
+	// Theme already applied — call Start with empty theme to skip re-applying
+	return startLoop(root, picked.Selected)
+}
+
+// startLoop runs the main TUI loop without re-applying the theme.
+func startLoop(root *node.Node, filename string) error {
+	for {
+		m := NewModel(root, filename)
+		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
+
+		result, err := p.Run()
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
+			return err
+		}
+
+		final, ok := result.(Model)
+		if !ok || !final.ReloadRequest {
+			return nil
+		}
+
+		cwd, _ := os.Getwd()
+		pm := newPickerModel(cwd)
+		pp := tea.NewProgram(pm, tea.WithAltScreen())
+		pr, err := pp.Run()
+		if err != nil {
+			return err
+		}
+		picked, ok := pr.(pickerModel)
+		if !ok || picked.Selected == "" {
+			return nil
+		}
+
+		data, err := os.ReadFile(picked.Selected)
+		if err != nil {
+			return fmt.Errorf("cannot read %s: %w", picked.Selected, err)
+		}
+		if err := parse.Validate(data); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "invalid JSON: %v\n", err)
+			return nil
+		}
+		root, err = parse.Parse(data)
+		if err != nil {
+			return err
+		}
+		filename = picked.Selected
+	}
 }

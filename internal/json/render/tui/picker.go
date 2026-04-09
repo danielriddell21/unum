@@ -5,7 +5,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/filepicker"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // pickerModel is a Bubble Tea model that wraps a filepicker.
@@ -54,10 +53,6 @@ func (m pickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m pickerModel) View() string {
 	header := styleTitle.Render(" [ UNUM ] SELECT JSON FILE ") + "\n\n"
-
-	hint := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(colorMuted)).
-		Render(fmt.Sprintf("  dir: %s\n\n  ↑↓ navigate · enter select · q quit", m.fp.CurrentDirectory))
-
+	hint := styleHint.Render(fmt.Sprintf("  dir: %s\n\n  ↑↓ navigate · enter select · q quit", m.fp.CurrentDirectory))
 	return header + m.fp.View() + "\n" + hint
 }
