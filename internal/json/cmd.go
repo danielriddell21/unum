@@ -17,10 +17,14 @@ import (
 	"github.com/danielriddell21/unum/internal/json/lens/typegen"
 	"github.com/danielriddell21/unum/internal/json/parse"
 	"github.com/danielriddell21/unum/internal/json/render/static"
+	"github.com/danielriddell21/unum/internal/json/render/tui"
 )
 
 // flags holds all flag values for the json subcommand.
 type flags struct {
+	// Output modes
+	ui bool
+
 	// Static output options
 	validateOnly bool
 	compact      bool
@@ -52,7 +56,9 @@ func Command(globalNoColor *bool, globalQuiet *bool) *cobra.Command {
 		Short: "View, validate, and analyze JSON",
 		Long: `Parse, validate, and explore JSON files with multiple analysis lenses.
 
-Lenses: --stats, --merkle, --transform, --typegen, --query`,
+Two output modes:
+  (default)  Syntax-highlighted pretty-print with optional annotations
+  --ui       Interactive TUI navigator (lazygit-style 3-panel layout)`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			f.noColor = *globalNoColor
@@ -61,6 +67,9 @@ Lenses: --stats, --merkle, --transform, --typegen, --query`,
 		},
 		SilenceUsage: true,
 	}
+
+	// Output modes
+	cmd.Flags().BoolVar(&f.ui, "ui", false, "launch interactive TUI navigator")
 
 	// Static output
 	cmd.Flags().BoolVar(&f.validateOnly, "validate-only", false, "exit 0/1 based on validity only")
@@ -178,6 +187,12 @@ func runJSON(f *flags, filename string) error {
 	if f.hashOnly {
 		fmt.Println(merkle.RootHash(root))
 		return nil
+	}
+
+	// ── TUI mode ─────────────────────────────────────────────────────────────
+
+	if f.ui {
+		return tui.Start(root, filename)
 	}
 
 	// ── Default: static render ────────────────────────────────────────────────

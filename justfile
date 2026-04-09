@@ -20,6 +20,10 @@ clean:
 run file="testdata/sample.json":
     go run {{ main }} json {{ file }}
 
+# Launch the TUI navigator
+ui file="testdata/sample.json":
+    go run {{ main }} json {{ file }} --ui
+
 # Lint with golangci-lint
 lint:
     golangci-lint run ./...
