@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>unum — JSON Explorer</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <!-- Header -->
+  <div id="header">
+    <span class="brand">[ UNUM ]</span>
+    <span class="filename" id="filename">loading...</span>
+    <div class="stats">
+      <span><span id="stat-nodes">—</span> nodes</span>
+      <span>depth <span id="stat-depth">—</span></span>
+      <span><span id="stat-size">—</span></span>
+    </div>
+  </div>
+
+  <!-- Search bar -->
+  <div id="search-bar">
+    <label>/ filter</label>
+    <input id="search-input" type="text" placeholder="search keys and values..." autocomplete="off" spellcheck="false" />
+  </div>
+
+  <!-- Main area -->
+  <div id="main">
+
+    <!-- JSON tree -->
+    <div id="tree-panel"></div>
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+
+      <!-- jq query bar -->
+      <div id="query-bar">
+        <span id="query-label">jq ›</span>
+        <input id="query-input" type="text" placeholder='.users[] | .name' autocomplete="off" spellcheck="false" />
+        <button id="query-run">run</button>
+      </div>
+
+      <!-- Collapsible analysis sections -->
+      <div id="sidebar-content"></div>
+
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div id="status-bar">
+    <span id="status-path">.</span>
+    <span id="status-type"></span>
+    <span id="status-hints">click path to copy · / to search · enter to run jq</span>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

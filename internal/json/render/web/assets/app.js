@@ -1,0 +1,459 @@
+/* unum web UI — vanilla JS, no framework, no build step */
+
+(function () {
+  'use strict';
+
+  let treeData = null;
+  let selectedNode = null;
+  let collapsed = new Set(); // node paths that are collapsed
+  let searchQuery = '';
+  let typegenMode = 'go'; // go | ts | jsonschema
+
+  // ── Boot ────────────────────────────────────────────────────────────────────
+
+  async function boot() {
+    try {
+      const resp = await fetch('/api/tree');
+      if (!resp.ok) throw new Error('Failed to load tree: ' + resp.status);
+      treeData = await resp.json();
+      renderHeader();
+      renderTree();
+      renderSidebar();
+      setupSearch();
+      setupQuery();
+      setupKeyboard();
+    } catch (e) {
+      document.getElementById('tree-panel').textContent = '✗ ' + e.message;
+    }
+  }
+
+  // ── Header ───────────────────────────────────────────────────────────────────
+
+  function renderHeader() {
+    document.getElementById('filename').textContent = treeData.filename;
+    document.getElementById('stat-nodes').textContent = treeData.nodeCount;
+    document.getElementById('stat-depth').textContent = treeData.maxDepth;
+    document.getElementById('stat-size').textContent = humanBytes(treeData.sizeBytes);
+  }
+
+  function humanBytes(b) {
+    if (b < 1024) return b + 'B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + 'KB';
+    return (b / 1024 / 1024).toFixed(1) + 'MB';
+  }
+
+  // ── Tree rendering ───────────────────────────────────────────────────────────
+
+  function renderTree() {
+    const panel = document.getElementById('tree-panel');
+    panel.innerHTML = '';
+    renderNodeEl(treeData.tree, panel, 0, null);
+  }
+
+  function renderNodeEl(node, container, depth, parentKey) {
+    const el = document.createElement('div');
+    el.className = 'tree-node';
+    el.dataset.path = node.path || '.';
+
+    // Indent
+    for (let i = 0; i < depth; i++) {
+      const sp = document.createElement('span');
+      sp.className = 'indent';
+      el.appendChild(sp);
+    }
+
+    // Toggle button (for containers)
+    const isContainer = node.kind === 'object' || node.kind === 'array';
+    const toggleEl = document.createElement('span');
+    toggleEl.className = 'toggle';
+    if (isContainer && node.children && node.children.length > 0) {
+      const isCollapsed = collapsed.has(node.path);
+      toggleEl.textContent = isCollapsed ? '▶' : '▼';
+      toggleEl.onclick = (e) => { e.stopPropagation(); toggleCollapse(node); };
+    } else {
+      toggleEl.textContent = ' ';
+    }
+    el.appendChild(toggleEl);
+
+    // Key or index
+    if (node.key !== undefined && node.key !== null && node.key !== '') {
+      const keyEl = document.createElement('span');
+      keyEl.className = 'key';
+      keyEl.textContent = '"' + node.key + '"';
+      if (searchQuery) highlightMatch(keyEl, node.key);
+      el.appendChild(keyEl);
+      const colon = document.createElement('span');
+      colon.className = 'colon';
+      colon.textContent = ': ';
+      el.appendChild(colon);
+    } else if (node.index !== undefined && node.index >= 0) {
+      const idxEl = document.createElement('span');
+      idxEl.className = 'array-idx';
+      idxEl.textContent = '[' + node.index + ']';
+      el.appendChild(idxEl);
+      const sp = document.createElement('span');
+      sp.className = 'colon';
+      sp.textContent = ' ';
+      el.appendChild(sp);
+    }
+
+    // Value
+    const isCollapsed = collapsed.has(node.path);
+    if (isContainer) {
+      const bracketOpen = document.createElement('span');
+      bracketOpen.className = 'bracket';
+      bracketOpen.textContent = node.kind === 'object' ? '{' : '[';
+      el.appendChild(bracketOpen);
+
+      if (isCollapsed || !node.children || node.children.length === 0) {
+        const count = document.createElement('span');
+        count.className = 'child-count';
+        count.textContent = node.children ? node.children.length : 0;
+        el.appendChild(count);
+        const bracketClose = document.createElement('span');
+        bracketClose.className = 'bracket';
+        bracketClose.textContent = node.kind === 'object' ? '}' : ']';
+        el.appendChild(bracketClose);
+      }
+    } else {
+      const valEl = document.createElement('span');
+      valEl.className = valueClass(node.kind, node.raw);
+      valEl.textContent = displayValue(node);
+      if (searchQuery && node.kind === 'string') highlightMatch(valEl, node.displayValue || '');
+      el.appendChild(valEl);
+    }
+
+    // Annotation strip
+    const strip = buildAnnotationStrip(node);
+    if (strip) el.appendChild(strip);
+
+    el.onclick = () => selectNode(node, el);
+    container.appendChild(el);
+
+    // Render children
+    if (isContainer && !isCollapsed && node.children && node.children.length > 0) {
+      // Filter by search
+      const visible = searchQuery
+        ? node.children.filter(c => nodeMatchesSearch(c))
+        : node.children;
+      for (const child of visible) {
+        renderNodeEl(child, container, depth + 1, node.key);
+      }
+
+      // Closing bracket
+      const closeEl = document.createElement('div');
+      closeEl.className = 'tree-node';
+      for (let i = 0; i < depth; i++) {
+        const sp = document.createElement('span');
+        sp.className = 'indent';
+        closeEl.appendChild(sp);
+      }
+      const sp = document.createElement('span');
+      sp.className = 'toggle';
+      sp.textContent = ' ';
+      closeEl.appendChild(sp);
+      const bracketClose = document.createElement('span');
+      bracketClose.className = 'bracket';
+      bracketClose.textContent = node.kind === 'object' ? '}' : ']';
+      closeEl.appendChild(bracketClose);
+      container.appendChild(closeEl);
+    }
+  }
+
+  function toggleCollapse(node) {
+    if (collapsed.has(node.path)) {
+      collapsed.delete(node.path);
+    } else {
+      collapsed.add(node.path);
+    }
+    renderTree();
+    updateStatus(selectedNode);
+  }
+
+  function selectNode(node, el) {
+    document.querySelectorAll('.tree-node.selected').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedNode = node;
+    updateStatus(node);
+
+    // Auto-switch sidebar to Stats if numeric array
+    if (node.kind === 'array' && node.stats && node.stats.numericCount > 0) {
+      activateSidebarSection('stats');
+      renderStatsSection(node);
+    }
+  }
+
+  function updateStatus(node) {
+    const pathEl = document.getElementById('status-path');
+    const typeEl = document.getElementById('status-type');
+    if (!node) {
+      pathEl.textContent = '.';
+      typeEl.textContent = '';
+      return;
+    }
+    pathEl.textContent = '[ ' + (node.path || '.') + ' ]';
+    typeEl.textContent = node.kind.toUpperCase();
+    pathEl.onclick = () => {
+      navigator.clipboard.writeText(node.path || '.').then(() => showToast('path copied!'));
+    };
+    pathEl.style.cursor = 'pointer';
+    pathEl.title = 'Click to copy path';
+  }
+
+  function valueClass(kind, raw) {
+    if (kind === 'string') return 'value-string';
+    if (kind === 'number') return 'value-number';
+    if (kind === 'bool' && raw === 'true') return 'value-bool-true';
+    if (kind === 'bool' && raw === 'false') return 'value-bool-false';
+    if (kind === 'null') return 'value-null';
+    return '';
+  }
+
+  function displayValue(node) {
+    if (node.kind === 'string') {
+      const v = node.displayValue || '';
+      return v.length > 60 ? '"' + v.slice(0, 57) + '…"' : '"' + v + '"';
+    }
+    return node.raw || 'null';
+  }
+
+  function buildAnnotationStrip(node) {
+    const parts = [];
+    if (node.merkleHash) {
+      parts.push('<span class="hash">#' + node.merkleHash.slice(0, 8) + '</span>');
+    }
+    if (node.stats && node.stats.numericCount > 0) {
+      const s = node.stats;
+      parts.push('<span class="stat">n=' + s.count + ' min=' + fmt(s.min) + ' max=' + fmt(s.max) + ' mean=' + fmt(s.mean) + '</span>');
+    }
+    if (!parts.length) return null;
+    const strip = document.createElement('div');
+    strip.className = 'annotation-strip';
+    strip.innerHTML = parts.join('  ');
+    return strip;
+  }
+
+  function fmt(v) {
+    if (v === undefined || v === null) return '';
+    return parseFloat(v.toPrecision(4)).toString();
+  }
+
+  // ── Search ───────────────────────────────────────────────────────────────────
+
+  function setupSearch() {
+    const input = document.getElementById('search-input');
+    input.addEventListener('input', () => {
+      searchQuery = input.value.trim().toLowerCase();
+      renderTree();
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { input.value = ''; searchQuery = ''; renderTree(); }
+    });
+  }
+
+  function nodeMatchesSearch(node) {
+    const q = searchQuery;
+    if (!q) return true;
+    if ((node.key || '').toLowerCase().includes(q)) return true;
+    if ((node.raw || '').toLowerCase().includes(q)) return true;
+    if ((node.displayValue || '').toLowerCase().includes(q)) return true;
+    if (node.children) return node.children.some(c => nodeMatchesSearch(c));
+    return false;
+  }
+
+  function highlightMatch(el, text) {
+    const q = searchQuery;
+    if (!q || !text) return;
+    const idx = text.toLowerCase().indexOf(q);
+    if (idx < 0) return;
+    const before = text.slice(0, idx);
+    const match = text.slice(idx, idx + q.length);
+    const after = text.slice(idx + q.length);
+    el.innerHTML = escapeHTML(before) + '<span class="search-match">' + escapeHTML(match) + '</span>' + escapeHTML(after);
+  }
+
+  function escapeHTML(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Sidebar ──────────────────────────────────────────────────────────────────
+
+  function renderSidebar() {
+    const content = document.getElementById('sidebar-content');
+    content.innerHTML = '';
+
+    const sections = [
+      { id: 'typegen', label: 'TYPE GENERATION', render: renderTypeGenSection },
+      { id: 'yaml',    label: 'YAML',             render: renderYAMLSection },
+      { id: 'schema',  label: 'JSON SCHEMA',       render: renderSchemaSection },
+      { id: 'merkle',  label: 'MERKLE ROOT',       render: renderMerkleSection },
+      { id: 'stats',   label: 'STATISTICS',        render: renderStatsSection },
+    ];
+
+    for (const s of sections) {
+      const section = document.createElement('div');
+      section.className = 'sidebar-section';
+      section.id = 'section-' + s.id;
+
+      const header = document.createElement('div');
+      header.className = 'sidebar-section-header';
+      header.innerHTML = '<span class="arrow">▼</span><span class="label">' + s.label + '</span>';
+      header.onclick = () => {
+        const body = section.querySelector('.sidebar-section-body');
+        const isCollapsed = body.classList.contains('collapsed');
+        body.classList.toggle('collapsed', !isCollapsed);
+        header.querySelector('.arrow').textContent = isCollapsed ? '▼' : '▶';
+      };
+
+      const body = document.createElement('div');
+      body.className = 'sidebar-section-body';
+      s.render(body, selectedNode);
+
+      section.appendChild(header);
+      section.appendChild(body);
+      content.appendChild(section);
+    }
+  }
+
+  function activateSidebarSection(id) {
+    const section = document.getElementById('section-' + id);
+    if (!section) return;
+    const body = section.querySelector('.sidebar-section-body');
+    if (body) body.classList.remove('collapsed');
+  }
+
+  function renderTypeGenSection(body, node) {
+    // Sub-mode tabs
+    body.innerHTML = '';
+    const tabs = document.createElement('div');
+    tabs.className = 'sub-tabs';
+    for (const [mode, label] of [['go','Go'], ['ts','TypeScript'], ['jsonschema','JSON Schema']]) {
+      const btn = document.createElement('button');
+      btn.className = 'sub-tab' + (mode === typegenMode ? ' active' : '');
+      btn.textContent = label;
+      btn.onclick = () => { typegenMode = mode; renderTypeGenSection(body, node); };
+      tabs.appendChild(btn);
+    }
+    body.appendChild(tabs);
+
+    const code = document.createElement('div');
+    code.textContent = treeData.typegen ? (treeData.typegen[typegenMode] || '') : '';
+    body.appendChild(code);
+  }
+
+  function renderYAMLSection(body) {
+    body.textContent = treeData.yaml || '';
+  }
+
+  function renderSchemaSection(body) {
+    body.textContent = treeData.typegen ? (treeData.typegen['jsonschema'] || '') : '';
+  }
+
+  function renderMerkleSection(body) {
+    const root = treeData.merkleRoot || '';
+    body.innerHTML = root
+      ? '<span class="syn-hash">root: ' + root + '</span>'
+      : '<span style="color:var(--muted)">Merkle hashing not enabled.\nRun with: unum json &lt;file&gt; --web --merkle</span>';
+  }
+
+  function renderStatsSection(body, node) {
+    const target = node && node.kind === 'array' && node.stats ? node : null;
+    if (!target || !target.stats || target.stats.numericCount === 0) {
+      body.textContent = 'Navigate to a numeric array to see statistics.';
+      return;
+    }
+    const s = target.stats;
+    body.innerHTML = [
+      'Array: <span class="syn-hash">' + (target.path || '.') + '</span>',
+      '',
+      'Items:   ' + s.count + '  (numeric: ' + s.numericCount + ')',
+      'Min:     <span class="syn-num">' + fmt(s.min) + '</span>',
+      'Max:     <span class="syn-num">' + fmt(s.max) + '</span>',
+      'Mean:    <span class="syn-num">' + fmt(s.mean) + '</span>',
+      'Std Dev: <span class="syn-num">' + fmt(s.stddev) + '</span>',
+      '',
+      'p50:     ' + fmt(s.p50),
+      'p95:     ' + fmt(s.p95),
+      'p99:     ' + fmt(s.p99),
+    ].join('\n');
+  }
+
+  // ── jq query ─────────────────────────────────────────────────────────────────
+
+  function setupQuery() {
+    const input = document.getElementById('query-input');
+    const runBtn = document.getElementById('query-run');
+
+    const run = async () => {
+      const expr = input.value.trim();
+      if (!expr) return;
+      try {
+        const resp = await fetch('/api/query', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({expr}),
+        });
+        const data = await resp.json();
+        if (data.error) {
+          showQueryResult('✗ ' + data.error);
+        } else {
+          showQueryResult(data.result);
+        }
+      } catch (e) {
+        showQueryResult('✗ ' + e.message);
+      }
+    };
+
+    runBtn.addEventListener('click', run);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') run();
+    });
+  }
+
+  function showQueryResult(text) {
+    // Show in a small overlay or inject into the tree panel area
+    let overlay = document.getElementById('query-result');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'query-result';
+      overlay.style.cssText = [
+        'position:fixed', 'bottom:32px', 'left:50%', 'transform:translateX(-50%)',
+        'background:var(--bg-panel)', 'border:1px solid var(--path)',
+        'padding:12px 16px', 'font-size:12px', 'max-width:600px', 'max-height:300px',
+        'overflow:auto', 'white-space:pre', 'z-index:200', 'border-radius:4px',
+        'box-shadow:0 0 20px rgba(198,120,221,0.2)',
+      ].join(';');
+      document.body.appendChild(overlay);
+    }
+    overlay.textContent = text;
+    overlay.style.display = 'block';
+    setTimeout(() => { overlay.style.display = 'none'; }, 10000);
+  }
+
+  // ── Keyboard shortcuts ────────────────────────────────────────────────────────
+
+  function setupKeyboard() {
+    document.addEventListener('keydown', (e) => {
+      // Ignore when typing in inputs
+      if (e.target.tagName === 'INPUT') return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        document.getElementById('search-input').focus();
+      }
+    });
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────────
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 2000);
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', boot);
+})();

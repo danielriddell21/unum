@@ -24,6 +24,10 @@ run file="testdata/sample.json":
 ui file="testdata/sample.json":
     go run {{ main }} json {{ file }} --ui
 
+# Launch the web UI
+web file="testdata/sample.json":
+    go run {{ main }} json {{ file }} --web
+
 # Lint with golangci-lint
 lint:
     golangci-lint run ./...
@@ -36,6 +40,25 @@ install:
 release tag:
     git tag {{ tag }}
     git push origin {{ tag }}
+
+# Lens shortcuts
+stats file="testdata/sample.json":
+    go run {{ main }} json {{ file }} --stats --no-color
+
+hash file="testdata/sample.json":
+    go run {{ main }} json {{ file }} --merkle --hash-only
+
+typegen-go file="testdata/sample.json":
+    go run {{ main }} json {{ file }} --typegen go
+
+typegen-ts file="testdata/sample.json":
+    go run {{ main }} json {{ file }} --typegen ts
+
+schema file="testdata/sample.json":
+    go run {{ main }} json {{ file }} --typegen jsonschema
+
+yaml file="testdata/sample.json":
+    go run {{ main }} json {{ file }} --transform
 
 # Full CI pipeline
 ci: lint test build

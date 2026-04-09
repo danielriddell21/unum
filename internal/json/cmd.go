@@ -18,12 +18,14 @@ import (
 	"github.com/danielriddell21/unum/internal/json/parse"
 	"github.com/danielriddell21/unum/internal/json/render/static"
 	"github.com/danielriddell21/unum/internal/json/render/tui"
+	"github.com/danielriddell21/unum/internal/json/render/web"
 )
 
 // flags holds all flag values for the json subcommand.
 type flags struct {
 	// Output modes
-	ui bool
+	ui  bool
+	web bool
 
 	// Static output options
 	validateOnly bool
@@ -42,6 +44,9 @@ type flags struct {
 	typegenType   string
 	jqExpr        string
 
+	// Web options
+	port int
+
 	// Global
 	quiet   bool
 	noColor bool
@@ -56,9 +61,10 @@ func Command(globalNoColor *bool, globalQuiet *bool) *cobra.Command {
 		Short: "View, validate, and analyze JSON",
 		Long: `Parse, validate, and explore JSON files with multiple analysis lenses.
 
-Two output modes:
+Three output modes:
   (default)  Syntax-highlighted pretty-print with optional annotations
-  --ui       Interactive TUI navigator (lazygit-style 3-panel layout)`,
+  --ui       Interactive TUI navigator (lazygit-style 3-panel layout)
+  --web      Local web server with browser-based explorer`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			f.noColor = *globalNoColor
@@ -70,6 +76,8 @@ Two output modes:
 
 	// Output modes
 	cmd.Flags().BoolVar(&f.ui, "ui", false, "launch interactive TUI navigator")
+	cmd.Flags().BoolVar(&f.web, "web", false, "launch web UI in browser")
+	cmd.Flags().IntVar(&f.port, "port", 0, "port for --web (default: random free port)")
 
 	// Static output
 	cmd.Flags().BoolVar(&f.validateOnly, "validate-only", false, "exit 0/1 based on validity only")
@@ -82,7 +90,7 @@ Two output modes:
 	cmd.Flags().BoolVar(&f.hashOnly, "hash-only", false, "print root merkle hash only (requires --merkle)")
 
 	// Output-mode lenses
-	cmd.Flags().BoolVar(&f.transformYAML, "transform", false, "convert to YAML")
+	cmd.Flags().BoolVar(&f.transformYAML, "transform", false, "convert to YAML (use: --transform yaml)")
 	cmd.Flags().StringVar(&f.typegenTarget, "typegen", "", "generate types: go, ts, jsonschema")
 	cmd.Flags().StringVar(&f.typegenPkg, "pkg", "", "Go package name for --typegen go")
 	cmd.Flags().StringVar(&f.typegenType, "type", "", "root type name for --typegen")
@@ -189,10 +197,18 @@ func runJSON(f *flags, filename string) error {
 		return nil
 	}
 
-	// ── TUI mode ─────────────────────────────────────────────────────────────
+	// ── TUI / Web modes ───────────────────────────────────────────────────────
 
 	if f.ui {
 		return tui.Start(root, filename)
+	}
+
+	if f.web {
+		return web.Start(root, web.Options{
+			Port:     f.port,
+			Filename: filename,
+			Quiet:    f.quiet,
+		})
 	}
 
 	// ── Default: static render ────────────────────────────────────────────────
