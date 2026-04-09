@@ -1,0 +1,269 @@
+/* unum diff web UI */
+
+:root {
+  --bg:           #0D0D0D;
+  --bg-panel:     #111111;
+  --bg-hover:     #1A1A2E;
+  --bg-added:     #0d1a0d;
+  --bg-removed:   #1a0d0d;
+  --border:       #1E1E1E;
+  --border-active:#00D4FF;
+  --text:         #C0C0C0;
+  --muted:        #3A3A3A;
+  --path:         #C678DD;
+  --search:       #FFD700;
+  --diff-added:   #98C379;
+  --diff-removed: #E06C75;
+  --diff-hunk:    #00D4FF;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────────── */
+
+#header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-panel);
+  flex-shrink: 0;
+}
+
+.brand {
+  color: var(--border-active);
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.files {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.file-name {
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+.files .arrow { color: var(--muted); }
+
+.stats {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.stat-added  { color: var(--diff-added); }
+.stat-removed { color: var(--diff-removed); }
+
+.theme-btn.active {
+  border-color: var(--border-active) !important;
+  color: var(--border-active) !important;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────────── */
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+
+#toggle-view {
+  background: none;
+  border: 1px solid var(--muted);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+#toggle-view:hover {
+  border-color: var(--border-active);
+  color: var(--border-active);
+}
+
+.search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.search-wrap label {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+#search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--muted);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  padding: 2px 4px;
+  transition: border-color 0.2s;
+  max-width: 400px;
+}
+
+#search-input:focus { border-color: var(--border-active); }
+
+/* ── Diff panel ──────────────────────────────────────────────────────────────── */
+
+#diff-panel {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.empty-state {
+  padding: 24px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ── Unified view ────────────────────────────────────────────────────────────── */
+
+.diff-line {
+  display: flex;
+  align-items: baseline;
+  padding: 0 8px;
+  white-space: pre;
+  min-height: 22px;
+  transition: background 0.1s;
+}
+
+.diff-line:hover {
+  filter: brightness(1.15);
+}
+
+.hunk-header {
+  color: var(--diff-hunk);
+  background: var(--bg-panel);
+  padding: 3px 8px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+.diff-added   { background: var(--bg-added); }
+.diff-removed { background: var(--bg-removed); }
+.diff-empty   { background: var(--bg-panel); min-height: 22px; }
+
+.gutter {
+  color: var(--muted);
+  user-select: none;
+  flex-shrink: 0;
+  padding-right: 8px;
+  font-size: 12px;
+}
+
+.line-content {
+  flex: 1;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diff-added   .line-content { color: var(--diff-added); }
+.diff-removed .line-content { color: var(--diff-removed); }
+.diff-unchanged .line-content { color: var(--muted); }
+
+/* Search */
+.line-match { outline: 1px solid var(--search); outline-offset: -1px; }
+.search-hl  { background: var(--search); color: #000; border-radius: 2px; padding: 0 1px; }
+
+/* ── Split view ──────────────────────────────────────────────────────────────── */
+
+.split-wrapper {
+  display: flex;
+  height: 100%;
+  min-height: 100%;
+}
+
+.split-side {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.split-left {
+  border-right: 1px solid var(--border);
+}
+
+/* ── Status bar ──────────────────────────────────────────────────────────────── */
+
+#status-bar {
+  padding: 4px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+#status-format { color: var(--border-active); font-weight: bold; }
+#status-hints  { margin-left: auto; color: var(--muted); }
+
+/* ── Scrollbars ──────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-active); }

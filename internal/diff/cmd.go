@@ -12,6 +12,7 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/parse"
 	"github.com/danielriddell21/unum/internal/diff/render/static"
 	"github.com/danielriddell21/unum/internal/diff/render/tui"
+	diffweb "github.com/danielriddell21/unum/internal/diff/render/web"
 )
 
 type flags struct {
@@ -102,8 +103,7 @@ func runDiff(f *flags, fileA, fileB string) error {
 		return tui.Start(diff, f.theme)
 	}
 	if f.web {
-		fmt.Fprintln(os.Stderr, "web UI not yet implemented — coming soon")
-		return nil
+		return diffweb.Start(diff, diffweb.Options{Port: f.port, Quiet: f.quiet})
 	}
 
 	return static.Render(os.Stdout, diff, opts)

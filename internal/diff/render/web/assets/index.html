@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>unum — Diff Viewer</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <!-- Header -->
+  <div id="header">
+    <span class="brand">[ UNUM ]</span>
+    <span class="files">
+      <span id="file-a" class="file-name">loading...</span>
+      <span class="arrow"> → </span>
+      <span id="file-b" class="file-name">loading...</span>
+    </span>
+    <span class="stats">
+      <span id="stat-added" class="stat-added">+0</span>
+      <span id="stat-removed" class="stat-removed">-0</span>
+    </span>
+  </div>
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <button id="toggle-view">split view</button>
+    <div class="search-wrap">
+      <label>/ search</label>
+      <input id="search-input" type="text" placeholder="filter lines..." autocomplete="off" spellcheck="false" />
+    </div>
+  </div>
+
+  <!-- Diff content -->
+  <div id="diff-panel"></div>
+
+  <!-- Status bar -->
+  <div id="status-bar">
+    <span id="status-format"></span>
+    <span id="status-hints">v:toggle split · /:search · j/k or scroll · q:close</span>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
