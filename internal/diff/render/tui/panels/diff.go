@@ -113,7 +113,17 @@ func (p *UnifiedPanel) build() {
 	p.lines = nil
 	p.matches = nil
 
-	if p.diff == nil || len(p.diff.Hunks) == 0 {
+	if p.diff == nil {
+		p.viewport.SetContent(diffUnchanged.Render("  (no differences)"))
+		return
+	}
+
+	if p.diff.Root != nil {
+		p.buildJSON()
+		return
+	}
+
+	if len(p.diff.Hunks) == 0 {
 		p.viewport.SetContent(diffUnchanged.Render("  (no differences)"))
 		return
 	}
@@ -423,4 +433,58 @@ func (p *SplitPanel) renderSide(l node.Line, kind node.ChangeKind, searchQ strin
 	}
 
 	return gutter + style.Render(prefix+content)
+}
+
+// buildJSON renders the DiffNode tree as a flat list of changed paths.
+func (p *UnifiedPanel) buildJSON() {
+	if p.diff.Root == nil {
+		p.viewport.SetContent(diffUnchanged.Render("  (no differences)"))
+		return
+	}
+
+	if p.diff.Added == 0 && p.diff.Removed == 0 && p.diff.Modified == 0 {
+		p.viewport.SetContent(diffUnchanged.Render("  (no differences)"))
+		return
+	}
+
+	q := strings.ToLower(p.search)
+
+	var walkFn func(dn *node.DiffNode)
+	walkFn = func(dn *node.DiffNode) {
+		if dn == nil {
+			return
+		}
+		var raw, display string
+		switch dn.Kind {
+		case node.Added:
+			raw = fmt.Sprintf("+ %-40s  %s", dn.Path, dn.NewValue)
+			display = diffAdded.Render(raw)
+		case node.Removed:
+			raw = fmt.Sprintf("- %-40s  %s", dn.Path, dn.OldValue)
+			display = diffRemoved.Render(raw)
+		case node.Modified:
+			raw = fmt.Sprintf("~ %-40s  %s → %s", dn.Path, dn.OldValue, dn.NewValue)
+			display = diffHunkHdr.Render(raw)
+		default:
+			// Unchanged container — recurse only
+			for _, child := range dn.Children {
+				walkFn(child)
+			}
+			return
+		}
+
+		lineIdx := len(p.lines)
+		if q != "" && strings.Contains(strings.ToLower(raw), q) {
+			p.matches = append(p.matches, lineIdx)
+		}
+		p.lines = append(p.lines, renderedLine{raw: raw, display: display})
+	}
+	walkFn(p.diff.Root)
+
+	var sb strings.Builder
+	for _, l := range p.lines {
+		sb.WriteString(l.display)
+		sb.WriteByte('\n')
+	}
+	p.viewport.SetContent(sb.String())
 }

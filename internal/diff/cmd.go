@@ -9,6 +9,7 @@ import (
 
 	"github.com/danielriddell21/unum/internal/config"
 	"github.com/danielriddell21/unum/internal/diff/format"
+	"github.com/danielriddell21/unum/internal/diff/node"
 	"github.com/danielriddell21/unum/internal/diff/parse"
 	"github.com/danielriddell21/unum/internal/diff/render/static"
 	"github.com/danielriddell21/unum/internal/diff/render/tui"
@@ -91,7 +92,13 @@ func runDiff(f *flags, fileA, fileB string) error {
 
 	static.Boot(os.Stderr, fileA, fileB, opts)
 
-	diff, err := parse.Text(dataA, dataB, f.context)
+	var diff *node.Diff
+	switch fmt_ {
+	case node.FormatJSON:
+		diff, err = parse.JSON(dataA, dataB)
+	default:
+		diff, err = parse.Text(dataA, dataB, f.context)
+	}
 	if err != nil {
 		return fmt.Errorf("diff: %w", err)
 	}

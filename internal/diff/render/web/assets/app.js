@@ -149,6 +149,13 @@
     document.getElementById('file-b').textContent = diffData.fileB;
     document.getElementById('stat-added').textContent = '+' + diffData.added;
     document.getElementById('stat-removed').textContent = '-' + diffData.removed;
+    if (diffData.modified > 0) {
+      const modEl = document.createElement('span');
+      modEl.id = 'stat-modified';
+      modEl.className = 'stat-modified';
+      modEl.textContent = '~' + diffData.modified;
+      document.querySelector('.stats').appendChild(modEl);
+    }
     document.getElementById('status-format').textContent =
       diffData.format !== 'text' ? '[' + diffData.format + ']' : '';
 
@@ -160,6 +167,12 @@
   function renderDiff() {
     const panel = document.getElementById('diff-panel');
     panel.innerHTML = '';
+
+    if (diffData.tree) {
+      renderTreeView(panel, diffData.tree);
+      if (searchQuery) applyHighlight();
+      return;
+    }
 
     if (!diffData.hunks || diffData.hunks.length === 0) {
       const empty = document.createElement('div');
@@ -178,6 +191,97 @@
     if (searchQuery) {
       applyHighlight();
     }
+  }
+
+  // ── Semantic tree view ────────────────────────────────────────────────────────
+
+  let collapsedPaths = new Set();
+
+  function renderTreeView(container, tree) {
+    renderTreeNode(container, tree, 0);
+  }
+
+  function renderTreeNode(container, node, depth) {
+    if (!node) return;
+    const kind = node.kind;
+
+    if (kind === 'unchanged' && node.children && node.children.length > 0) {
+      // Container with mixed children — render as collapsible
+      const label = node.key ? '"' + node.key + '"' : (node.index >= 0 ? '[' + node.index + ']' : '.');
+      const isCollapsed = collapsedPaths.has(node.path);
+      const toggle = document.createElement('div');
+      toggle.className = 'tree-row tree-unchanged';
+      toggle.dataset.path = node.path;
+      toggle.style.paddingLeft = (depth * 16 + 8) + 'px';
+      toggle.innerHTML =
+        '<span class="tree-toggle">' + (isCollapsed ? '▶' : '▼') + '</span>' +
+        '<span class="tree-key">' + escapeHTML(label) + '</span>';
+      toggle.onclick = () => {
+        if (collapsedPaths.has(node.path)) {
+          collapsedPaths.delete(node.path);
+        } else {
+          collapsedPaths.add(node.path);
+        }
+        renderDiff();
+      };
+      container.appendChild(toggle);
+      if (!isCollapsed) {
+        for (const child of node.children) {
+          renderTreeNode(container, child, depth + 1);
+        }
+      }
+      return;
+    }
+
+    if (kind === 'unchanged') {
+      // Unchanged leaf — skip (keep output focused on changes)
+      return;
+    }
+
+    const el = document.createElement('div');
+    el.className = 'tree-row tree-' + kind;
+    el.dataset.content = (node.oldValue || '') + (node.newValue || '') + node.path;
+    el.style.paddingLeft = (depth * 16 + 8) + 'px';
+
+    const prefix = kind === 'added' ? '+' : (kind === 'removed' ? '-' : '~');
+    const pathEl = '<span class="tree-path">' + escapeHTML(node.path) + '</span>';
+    let valueEl = '';
+
+    if (kind === 'modified') {
+      valueEl = '<span class="tree-old">' + escapeHTML(node.oldValue) + '</span>' +
+                '<span class="tree-arrow"> → </span>' +
+                '<span class="tree-new">' + escapeHTML(node.newValue) + '</span>';
+    } else if (kind === 'added') {
+      valueEl = '<span class="tree-new">' + escapeHTML(node.newValue) + '</span>';
+    } else {
+      valueEl = '<span class="tree-old">' + escapeHTML(node.oldValue) + '</span>';
+    }
+
+    el.innerHTML = '<span class="tree-prefix">' + prefix + ' </span>' + pathEl + '  ' + valueEl;
+
+    // If it has children (added/removed container), render them collapsed
+    if (node.children && node.children.length > 0) {
+      const isCollapsed = collapsedPaths.has(node.path);
+      el.querySelector('.tree-prefix').textContent = prefix + (isCollapsed ? ' ▶ ' : ' ▼ ');
+      el.onclick = (e) => {
+        e.stopPropagation();
+        if (collapsedPaths.has(node.path)) {
+          collapsedPaths.delete(node.path);
+        } else {
+          collapsedPaths.add(node.path);
+        }
+        renderDiff();
+      };
+      container.appendChild(el);
+      if (!isCollapsed) {
+        for (const child of node.children) {
+          renderTreeNode(container, child, depth + 1);
+        }
+      }
+      return;
+    }
+
+    container.appendChild(el);
   }
 
   function renderUnified(container) {

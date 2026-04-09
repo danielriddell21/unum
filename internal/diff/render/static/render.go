@@ -12,21 +12,23 @@ import (
 
 // Theme holds lipgloss styles for static diff rendering.
 type Theme struct {
-	Added      lipgloss.Style
-	Removed    lipgloss.Style
-	Unchanged  lipgloss.Style
-	HunkHeader lipgloss.Style
-	FileHeader lipgloss.Style
-	LineNumber lipgloss.Style
-	StatAdded  lipgloss.Style
+	Added       lipgloss.Style
+	Removed     lipgloss.Style
+	Modified    lipgloss.Style // structured diffs: changed value
+	Unchanged   lipgloss.Style
+	HunkHeader  lipgloss.Style
+	FileHeader  lipgloss.Style
+	LineNumber  lipgloss.Style
+	StatAdded   lipgloss.Style
 	StatRemoved lipgloss.Style
-	Banner     lipgloss.Style
+	Banner      lipgloss.Style
 }
 
 // Cyber is the default dark/cyan theme.
 var Cyber = Theme{
 	Added:       lipgloss.NewStyle().Foreground(lipgloss.Color("#98C379")),
 	Removed:     lipgloss.NewStyle().Foreground(lipgloss.Color("#E06C75")),
+	Modified:    lipgloss.NewStyle().Foreground(lipgloss.Color("#E5C07B")),
 	Unchanged:   lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")),
 	HunkHeader:  lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF")),
 	FileHeader:  lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF")).Bold(true),
@@ -40,6 +42,7 @@ var Cyber = Theme{
 var Matrix = Theme{
 	Added:       lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF41")),
 	Removed:     lipgloss.NewStyle().Foreground(lipgloss.Color("#FF3300")),
+	Modified:    lipgloss.NewStyle().Foreground(lipgloss.Color("#88FF44")),
 	Unchanged:   lipgloss.NewStyle().Foreground(lipgloss.Color("#005500")),
 	HunkHeader:  lipgloss.NewStyle().Foreground(lipgloss.Color("#39FF14")),
 	FileHeader:  lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF41")).Bold(true),
@@ -53,6 +56,7 @@ var Matrix = Theme{
 var Dracula = Theme{
 	Added:       lipgloss.NewStyle().Foreground(lipgloss.Color("#50FA7B")),
 	Removed:     lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5555")),
+	Modified:    lipgloss.NewStyle().Foreground(lipgloss.Color("#F1FA8C")),
 	Unchanged:   lipgloss.NewStyle().Foreground(lipgloss.Color("#6272A4")),
 	HunkHeader:  lipgloss.NewStyle().Foreground(lipgloss.Color("#BD93F9")),
 	FileHeader:  lipgloss.NewStyle().Foreground(lipgloss.Color("#BD93F9")).Bold(true),
@@ -66,6 +70,7 @@ var Dracula = Theme{
 var Nord = Theme{
 	Added:       lipgloss.NewStyle().Foreground(lipgloss.Color("#A3BE8C")),
 	Removed:     lipgloss.NewStyle().Foreground(lipgloss.Color("#BF616A")),
+	Modified:    lipgloss.NewStyle().Foreground(lipgloss.Color("#EBCB8B")),
 	Unchanged:   lipgloss.NewStyle().Foreground(lipgloss.Color("#4C566A")),
 	HunkHeader:  lipgloss.NewStyle().Foreground(lipgloss.Color("#88C0D0")),
 	FileHeader:  lipgloss.NewStyle().Foreground(lipgloss.Color("#88C0D0")).Bold(true),
@@ -113,6 +118,13 @@ func Boot(w io.Writer, fileA, fileB string, opts Options) {
 
 // Render writes the coloured diff to w.
 func Render(w io.Writer, d *node.Diff, opts Options) error {
+	if d.Root != nil {
+		return renderTree(w, d, opts)
+	}
+	return renderHunks(w, d, opts)
+}
+
+func renderHunks(w io.Writer, d *node.Diff, opts Options) error {
 	t := opts.Theme
 
 	// Summary line
@@ -138,7 +150,6 @@ func Render(w io.Writer, d *node.Diff, opts Options) error {
 	}
 
 	for _, h := range d.Hunks {
-		// Hunk header
 		header := fmt.Sprintf("@@ -%d,%d +%d,%d @@", h.OldStart, h.OldCount, h.NewStart, h.NewCount)
 		if !opts.NoColor {
 			_, _ = fmt.Fprintln(w, t.HunkHeader.Render(header))
@@ -151,6 +162,69 @@ func Render(w io.Writer, d *node.Diff, opts Options) error {
 		}
 	}
 	return nil
+}
+
+func renderTree(w io.Writer, d *node.Diff, opts Options) error {
+	t := opts.Theme
+
+	// Summary line
+	addedStr := fmt.Sprintf("+%d", d.Added)
+	removedStr := fmt.Sprintf("-%d", d.Removed)
+	modifiedStr := fmt.Sprintf("~%d", d.Modified)
+	if !opts.NoColor {
+		addedStr = t.StatAdded.Render(addedStr)
+		removedStr = t.StatRemoved.Render(removedStr)
+		modifiedStr = t.Modified.Render(modifiedStr)
+	}
+	_, _ = fmt.Fprintf(w, "%s  %s  %s\n", addedStr, removedStr, modifiedStr)
+
+	if opts.Stat {
+		return nil
+	}
+
+	if d.Added == 0 && d.Removed == 0 && d.Modified == 0 {
+		_, _ = fmt.Fprintln(w, t.Unchanged.Render("  (no differences)"))
+		return nil
+	}
+
+	walkTreeStatic(w, d.Root, t, opts.NoColor)
+	return nil
+}
+
+// walkTreeStatic prints only changed nodes (Added/Removed/Modified).
+func walkTreeStatic(w io.Writer, dn *node.DiffNode, t Theme, noColor bool) {
+	if dn == nil {
+		return
+	}
+
+	switch dn.Kind {
+	case node.Added:
+		line := fmt.Sprintf("+ %-40s  %s", dn.Path, dn.NewValue)
+		if noColor {
+			_, _ = fmt.Fprintln(w, line)
+		} else {
+			_, _ = fmt.Fprintln(w, t.Added.Render(line))
+		}
+	case node.Removed:
+		line := fmt.Sprintf("- %-40s  %s", dn.Path, dn.OldValue)
+		if noColor {
+			_, _ = fmt.Fprintln(w, line)
+		} else {
+			_, _ = fmt.Fprintln(w, t.Removed.Render(line))
+		}
+	case node.Modified:
+		line := fmt.Sprintf("~ %-40s  %s → %s", dn.Path, dn.OldValue, dn.NewValue)
+		if noColor {
+			_, _ = fmt.Fprintln(w, line)
+		} else {
+			_, _ = fmt.Fprintln(w, t.Modified.Render(line))
+		}
+	default:
+		// Unchanged container — recurse into children
+		for _, child := range dn.Children {
+			walkTreeStatic(w, child, t, noColor)
+		}
+	}
 }
 
 func renderLine(w io.Writer, l node.Line, t Theme, noColor bool) {

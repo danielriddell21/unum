@@ -93,8 +93,9 @@ body::after {
   white-space: nowrap;
 }
 
-.stat-added  { color: var(--diff-added); }
-.stat-removed { color: var(--diff-removed); }
+.stat-added    { color: var(--diff-added); }
+.stat-removed  { color: var(--diff-removed); }
+.stat-modified { color: var(--search); font-weight: bold; }
 
 .theme-btn.active {
   border-color: var(--border-active) !important;
@@ -244,6 +245,38 @@ body::after {
 .split-left {
   border-right: 1px solid var(--border);
 }
+
+/* ── Semantic tree view ──────────────────────────────────────────────────────── */
+
+.tree-row {
+  display: flex;
+  align-items: baseline;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: pre;
+  transition: background 0.1s;
+  min-height: 22px;
+}
+
+.tree-row:hover { background: var(--bg-hover); }
+
+.tree-unchanged { color: var(--muted); }
+.tree-added     { background: var(--bg-added); }
+.tree-removed   { background: var(--bg-removed); }
+.tree-modified  { background: var(--bg-hover); }
+
+.tree-toggle { color: var(--muted); margin-right: 6px; font-size: 10px; flex-shrink: 0; }
+.tree-key    { color: var(--border-active); }
+.tree-prefix { font-weight: bold; flex-shrink: 0; }
+
+.tree-added    .tree-prefix { color: var(--diff-added); }
+.tree-removed  .tree-prefix { color: var(--diff-removed); }
+.tree-modified .tree-prefix { color: var(--search); }
+
+.tree-path { color: var(--path); margin-right: 8px; }
+.tree-old  { color: var(--diff-removed); }
+.tree-new  { color: var(--diff-added); }
+.tree-arrow { color: var(--muted); }
 
 /* ── Status bar ──────────────────────────────────────────────────────────────── */
 

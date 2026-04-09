@@ -107,12 +107,24 @@ func freePort() (int, error) {
 // ─── Payload ──────────────────────────────────────────────────────────────────
 
 type diffPayload struct {
-	FileA   string    `json:"fileA"`
-	FileB   string    `json:"fileB"`
-	Format  string    `json:"format"`
-	Added   int       `json:"added"`
-	Removed int       `json:"removed"`
-	Hunks   []webHunk `json:"hunks"`
+	FileA    string       `json:"fileA"`
+	FileB    string       `json:"fileB"`
+	Format   string       `json:"format"`
+	Added    int          `json:"added"`
+	Removed  int          `json:"removed"`
+	Modified int          `json:"modified"`
+	Hunks    []webHunk    `json:"hunks"`
+	Tree     *webDiffNode `json:"tree,omitempty"`
+}
+
+type webDiffNode struct {
+	Kind     string         `json:"kind"`
+	Path     string         `json:"path"`
+	Key      string         `json:"key,omitempty"`
+	Index    int            `json:"index"`
+	OldValue string         `json:"oldValue,omitempty"`
+	NewValue string         `json:"newValue,omitempty"`
+	Children []*webDiffNode `json:"children,omitempty"`
 }
 
 type webHunk struct {
@@ -132,11 +144,15 @@ type webLine struct {
 
 func buildPayload(d *node.Diff) (*diffPayload, error) {
 	p := &diffPayload{
-		FileA:   d.FileA,
-		FileB:   d.FileB,
-		Format:  formatString(d.Format),
-		Added:   d.Added,
-		Removed: d.Removed,
+		FileA:    d.FileA,
+		FileB:    d.FileB,
+		Format:   formatString(d.Format),
+		Added:    d.Added,
+		Removed:  d.Removed,
+		Modified: d.Modified,
+	}
+	if d.Root != nil {
+		p.Tree = toWebDiffNode(d.Root)
 	}
 	for _, h := range d.Hunks {
 		wh := webHunk{
@@ -156,6 +172,37 @@ func buildPayload(d *node.Diff) (*diffPayload, error) {
 		p.Hunks = append(p.Hunks, wh)
 	}
 	return p, nil
+}
+
+func toWebDiffNode(dn *node.DiffNode) *webDiffNode {
+	if dn == nil {
+		return nil
+	}
+	wn := &webDiffNode{
+		Kind:     changeKindString(dn.Kind),
+		Path:     dn.Path,
+		Key:      dn.Key,
+		Index:    dn.Index,
+		OldValue: dn.OldValue,
+		NewValue: dn.NewValue,
+	}
+	for _, c := range dn.Children {
+		wn.Children = append(wn.Children, toWebDiffNode(c))
+	}
+	return wn
+}
+
+func changeKindString(k node.ChangeKind) string {
+	switch k {
+	case node.Added:
+		return "added"
+	case node.Removed:
+		return "removed"
+	case node.Modified:
+		return "modified"
+	default:
+		return "unchanged"
+	}
 }
 
 func kindString(k node.ChangeKind) string {
