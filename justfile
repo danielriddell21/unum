@@ -15,3 +15,23 @@ test *args:
 # Clean build artifacts
 clean:
     rm -rf bin/
+
+# Run the tool against a JSON file
+run file="testdata/sample.json":
+    go run {{ main }} json {{ file }}
+
+# Lint with golangci-lint
+lint:
+    golangci-lint run ./...
+
+# Install binary to GOPATH/bin
+install:
+    go install {{ main }}
+
+# Tag and push a release
+release tag:
+    git tag {{ tag }}
+    git push origin {{ tag }}
+
+# Full CI pipeline
+ci: lint test build

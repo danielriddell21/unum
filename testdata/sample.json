@@ -1,0 +1,43 @@
+{
+  "corpus": "Lexica Technica",
+  "volumen": 3,
+  "editio": "MDCCCXLVII",
+  "curator": {
+    "nomen": "Iohannes Fabricius",
+    "civitas": "Londinium",
+    "verified": true
+  },
+  "entries": [
+    {
+      "id": "ENT-0001",
+      "titulus": "De Machina Computatrice",
+      "paginae": 14,
+      "annus": 1837,
+      "topics": ["arithmetica", "automata", "logica"],
+      "nota": null
+    },
+    {
+      "id": "ENT-0002",
+      "titulus": "Elementa Algorithmi",
+      "paginae": 22,
+      "annus": 1843,
+      "topics": ["algorithmus", "series", "recursio"],
+      "nota": "Prima descriptio algorithmorum"
+    },
+    {
+      "id": "ENT-0003",
+      "titulus": "Tractatus de Rete Globali",
+      "paginae": 9,
+      "annus": 1989,
+      "topics": ["rete", "protocollum", "nodus"],
+      "nota": null
+    }
+  ],
+  "metrics": {
+    "totalEntries": 1247,
+    "avgPageCount": 11.4,
+    "indexComplete": false,
+    "lastRevised": null
+  },
+  "pageScores": [71, 88, 94, 62, 79, 85, 91, 73, 87, 96]
+}
