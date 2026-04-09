@@ -11,6 +11,7 @@ A unified developer tool suite, built in Go.
 | Command | Description |
 |---|---|
 | `unum json` | JSON viewer, validator, and analyzer — three output modes, six analysis lenses |
+| `unum diff` | Diff visualizer — text, JSON, YAML, and Terraform plans; static, TUI, and web output |
 
 Full documentation → [Wiki](https://github.com/danielriddell21/unum/wiki)
 
