@@ -12,6 +12,10 @@ build:
 test *args:
     go test {{ args }} ./...
 
+# Run CLI functional tests
+yeet:
+    go test -v ./tests/...
+
 # Clean build artifacts
 clean:
     rm -rf bin/
@@ -61,4 +65,4 @@ yaml file="testdata/sample.json":
     go run {{ main }} json {{ file }} --transform
 
 # Full CI pipeline
-ci: lint test build
+ci: lint test yeet build
