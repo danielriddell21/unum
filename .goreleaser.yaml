@@ -1,0 +1,88 @@
+version: 2
+
+project_name: unum
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: unum
+    main: ./cmd/unum
+    binary: unum
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - id: unum
+    builds: [unum]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: danielriddell21
+    name: unum
+  name_template: "v{{ .Version }}"
+
+brews:
+  - name: unum
+    repository:
+      owner: danielriddell21
+      name: homebrew-unum
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: https://github.com/danielriddell21/unum
+    description: "A unified developer tool suite — JSON analysis, type generation, and more"
+    license: MIT
+    commit_msg_template: "Brew formula update for unum {{ .Tag }}"
+    install: |
+      bin.install "unum"
+    test: |
+      system "#{bin}/unum", "--version"
+
+winget:
+  - name: unum
+    publisher: danielriddell21
+    publisher_url: https://github.com/danielriddell21
+    short_description: "Unified developer tool suite"
+    license: MIT
+    package_identifier: danielriddell21.unum
+    repository:
+      owner: microsoft
+      name: winget-pkgs
+      branch: master
+      pull_request:
+        enabled: true
+        draft: false
+        base:
+          owner: microsoft
+          name: winget-pkgs
+          branch: master
