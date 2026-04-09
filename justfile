@@ -74,5 +74,15 @@ diff-ui file-a="testdata/diff-a.json" file-b="testdata/diff-b.json":
 diff-web file-a="testdata/diff-a.json" file-b="testdata/diff-b.json":
     go run {{ main }} diff {{ file-a }} {{ file-b }} --web
 
+diff-json file-a="testdata/diff-a.json" file-b="testdata/diff-b.json":
+    go run {{ main }} diff {{ file-a }} {{ file-b }}
+
+diff-yaml file-a="testdata/diff-a.yaml" file-b="testdata/diff-b.yaml":
+    go run {{ main }} diff {{ file-a }} {{ file-b }}
+
+diff-tf file="testdata/diff-a.tfplan.json":
+    go run {{ main }} diff {{ file }} {{ file }} --format terraform
+
+
 # Full CI pipeline
 ci: lint test yeet build

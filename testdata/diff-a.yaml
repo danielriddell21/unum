@@ -1,0 +1,14 @@
+service:
+  name: api-gateway
+  version: "1.0"
+  host: localhost
+  port: 8080
+  timeout: 30
+  features:
+    auth: true
+    cache: false
+    metrics: true
+  database:
+    host: db.internal
+    port: 5432
+    name: appdb

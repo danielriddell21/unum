@@ -1,0 +1,16 @@
+service:
+  name: api-gateway
+  version: "2.0"
+  host: prod.example.com
+  port: 8080
+  timeout: 60
+  features:
+    auth: true
+    cache: true
+    metrics: true
+    tracing: true
+  database:
+    host: db.prod.example.com
+    port: 5432
+    name: appdb
+    pool_size: 10

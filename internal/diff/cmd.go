@@ -96,6 +96,10 @@ func runDiff(f *flags, fileA, fileB string) error {
 	switch fmt_ {
 	case node.FormatJSON:
 		diff, err = parse.JSON(dataA, dataB)
+	case node.FormatYAML:
+		diff, err = parse.YAML(dataA, dataB)
+	case node.FormatTerraform:
+		diff, err = parse.Terraform(dataA)
 	default:
 		diff, err = parse.Text(dataA, dataB, f.context)
 	}
