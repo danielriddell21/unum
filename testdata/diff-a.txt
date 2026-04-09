@@ -1,0 +1,15 @@
+[server]
+host = localhost
+port = 8080
+timeout = 60
+debug = true
+
+[database]
+host = localhost
+port = 5432
+name = myapp
+pool_size = 5
+
+[cache]
+enabled = false
+ttl = 300

@@ -64,5 +64,15 @@ schema file="testdata/sample.json":
 yaml file="testdata/sample.json":
     go run {{ main }} json {{ file }} --transform
 
+# Diff shortcuts
+diff file-a="testdata/diff-a.txt" file-b="testdata/diff-b.txt":
+    go run {{ main }} diff {{ file-a }} {{ file-b }}
+
+diff-ui file-a="testdata/diff-a.json" file-b="testdata/diff-b.json":
+    go run {{ main }} diff {{ file-a }} {{ file-b }} --ui
+
+diff-web file-a="testdata/diff-a.json" file-b="testdata/diff-b.json":
+    go run {{ main }} diff {{ file-a }} {{ file-b }} --web
+
 # Full CI pipeline
 ci: lint test yeet build

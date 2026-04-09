@@ -1,0 +1,15 @@
+{
+  "service": "api",
+  "version": "1.0.0",
+  "host": "localhost",
+  "port": 8080,
+  "debug": true,
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "myapp",
+    "pool_size": 5
+  },
+  "features": ["auth", "metrics"],
+  "timeout": 60
+}

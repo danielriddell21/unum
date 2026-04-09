@@ -1,0 +1,16 @@
+[server]
+host = prod.example.com
+port = 8080
+timeout = 30
+log_level = info
+
+[database]
+host = db.prod.example.com
+port = 5432
+name = myapp_prod
+pool_size = 20
+
+[cache]
+enabled = true
+ttl = 600
+max_size = 512

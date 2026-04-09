@@ -1,0 +1,17 @@
+{
+  "service": "api",
+  "version": "2.0.0",
+  "host": "prod.example.com",
+  "port": 8080,
+  "debug": false,
+  "database": {
+    "host": "db.prod.example.com",
+    "port": 5432,
+    "name": "myapp_prod",
+    "pool_size": 20,
+    "ssl": true
+  },
+  "features": ["auth", "metrics", "tracing"],
+  "timeout": 30,
+  "region": "us-east-1"
+}
