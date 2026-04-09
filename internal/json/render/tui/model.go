@@ -47,10 +47,13 @@ type Model struct {
 	lens    panels.LensPanel
 
 	// State
-	focused     focusedPanel
-	currentMode mode
-	searchInput textinput.Model
+	focused      focusedPanel
+	currentMode  mode
+	searchInput  textinput.Model
 	yankFeedback string
+
+	// Set to true when the user wants to pick a new file (causes clean quit).
+	ReloadRequest bool
 
 	// Layout
 	width  int
@@ -188,6 +191,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Normal mode global keys
 	switch k {
 	case "q", "esc":
+		return m, tea.Quit
+
+	case "o":
+		m.ReloadRequest = true
 		return m, tea.Quit
 
 	case "?":
@@ -382,6 +389,7 @@ func helpText() string {
 %s
   /           Enter search mode
   y           Yank jq path to clipboard
+  o           Open a different file
   ?           Toggle this help
   q / esc     Quit`,
 		styleTitle.Render("UNUM — keyboard reference"),

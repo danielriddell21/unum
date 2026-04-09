@@ -12,21 +12,51 @@ import (
 
 // Start launches the TUI for the given node tree.
 // It takes over the terminal (AltScreen) and restores it cleanly on exit.
+// If the user presses 'o' to open a new file, the picker is shown and the
+// explorer restarts with the selected file.
 func Start(root *node.Node, filename string) error {
-	m := NewModel(root, filename)
+	for {
+		m := NewModel(root, filename)
+		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
-	p := tea.NewProgram(
-		m,
-		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
-	)
+		result, err := p.Run()
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
+			return err
+		}
 
-	_, err := p.Run()
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
-		return err
+		final, ok := result.(Model)
+		if !ok || !final.ReloadRequest {
+			return nil
+		}
+
+		// User wants to pick a different file.
+		cwd, _ := os.Getwd()
+		pm := newPickerModel(cwd)
+		pp := tea.NewProgram(pm, tea.WithAltScreen())
+		pr, err := pp.Run()
+		if err != nil {
+			return err
+		}
+		picked, ok := pr.(pickerModel)
+		if !ok || picked.Selected == "" {
+			return nil // picker dismissed — exit cleanly
+		}
+
+		data, err := os.ReadFile(picked.Selected)
+		if err != nil {
+			return fmt.Errorf("cannot read %s: %w", picked.Selected, err)
+		}
+		if err := parse.Validate(data); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "invalid JSON: %v\n", err)
+			return nil
+		}
+		root, err = parse.Parse(data)
+		if err != nil {
+			return err
+		}
+		filename = picked.Selected
 	}
-	return nil
 }
 
 // StartWithPicker launches a file picker TUI. Once a .json file is selected

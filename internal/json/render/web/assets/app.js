@@ -40,6 +40,16 @@
     document.getElementById('stat-nodes').textContent = treeData.nodeCount;
     document.getElementById('stat-depth').textContent = treeData.maxDepth;
     document.getElementById('stat-size').textContent = humanBytes(treeData.sizeBytes);
+
+    if (fileParam) {
+      const link = document.createElement('a');
+      link.href = '/';
+      link.textContent = '[ change file ]';
+      link.style.cssText = 'color:var(--muted);font-size:11px;text-decoration:none;transition:color 0.15s;';
+      link.onmouseover = () => { link.style.color = 'var(--key)'; };
+      link.onmouseout  = () => { link.style.color = 'var(--muted)'; };
+      document.getElementById('header').appendChild(link);
+    }
   }
 
   function humanBytes(b) {
