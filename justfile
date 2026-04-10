@@ -70,7 +70,7 @@ stats file="testdata/sample.json":
 
 # --merkle --hash-only
 [group('json')]
-hash file="testdata/sample.json":
+json-merkle file="testdata/sample.json":
     go run {{ main }} json {{ file }} --merkle --hash-only
 
 # Go struct generation
@@ -119,3 +119,25 @@ diff-yaml file-a="testdata/diff-a.yaml" file-b="testdata/diff-b.yaml":
 [group('diff')]
 diff-tf file="testdata/diff-a.tfplan.json":
     go run {{ main }} diff {{ file }} {{ file }} --format terraform
+
+# ── Hash ──────────────────────────────────────────────────────────────────────
+
+# full derivation table
+[group('hash')]
+hash text="my-api-service":
+    go run {{ main }} hash "{{ text }}"
+
+# print derived port only
+[group('hash')]
+hash-port text="my-api-service":
+    go run {{ main }} hash "{{ text }}" --port
+
+# TUI with history
+[group('hash')]
+hash-ui:
+    go run {{ main }} hash --ui
+
+# browser UI with history
+[group('hash')]
+hash-web:
+    go run {{ main }} hash --web

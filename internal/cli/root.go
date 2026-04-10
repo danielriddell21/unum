@@ -5,6 +5,7 @@ import (
 	"os"
 
 	difftool "github.com/danielriddell21/unum/internal/diff"
+	hashtool "github.com/danielriddell21/unum/internal/hash"
 	jsontool "github.com/danielriddell21/unum/internal/json"
 	"github.com/spf13/cobra"
 )
@@ -38,6 +39,7 @@ baked in to make your daily workflow more interesting.`,
 	// Register subcommands
 	root.AddCommand(jsontool.Command(&noColor, &quiet))
 	root.AddCommand(difftool.Command(&noColor, &quiet))
+	root.AddCommand(hashtool.Command(&noColor, &quiet))
 
 	return root.Execute()
 }
