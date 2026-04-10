@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"os"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
 	"github.com/danielriddell21/unum/internal/config"
 	"github.com/danielriddell21/unum/internal/hash/render/static"
+	hashTUI "github.com/danielriddell21/unum/internal/hash/render/tui"
 )
 
 type flags struct {
+	ui      bool
 	theme   string
 	quiet   bool
 	noColor bool
@@ -40,17 +43,22 @@ The same input always produces the same output — useful for generating
 consistent ports, UUIDs, colors, and identifiers for named services,
 environments, or any repeatable string.
 
+Output modes:
+  (default)  Full derivation table
+  --ui       Interactive TUI with history
+
 Single-field flags (pipe-friendly, skips the table):
   --port, --uuid, --color, --short, --emoji, --phrase`,
-		Args:         cobra.ExactArgs(1),
+		Args:         cobra.MaximumNArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			f.noColor = f.noColor || *globalNoColor
 			f.quiet = f.quiet || *globalQuiet
-			return runHash(f, args[0])
+			return runHash(f, args)
 		},
 	}
 
+	cmd.Flags().BoolVar(&f.ui, "ui", false, "launch interactive TUI with history")
 	cmd.Flags().StringVar(&f.theme, "theme", cfg.Theme, "color theme: cyber, matrix, dracula, nord")
 	cmd.Flags().BoolVar(&f.quiet, "quiet", false, "suppress the boot line")
 	cmd.Flags().BoolVar(&f.portOnly, "port", false, "print derived port only")
@@ -63,7 +71,20 @@ Single-field flags (pipe-friendly, skips the table):
 	return cmd
 }
 
-func runHash(f *flags, input string) error {
+func runHash(f *flags, args []string) error {
+	if f.ui {
+		applyTUITheme(f.theme)
+		hashTUI.SetFuncs(Derive, AppendHistory, LoadHistory)
+		p := tea.NewProgram(hashTUI.NewModel(), tea.WithAltScreen())
+		_, err := p.Run()
+		return err
+	}
+
+	if len(args) == 0 {
+		return fmt.Errorf("text argument required (or use --ui)")
+	}
+	input := args[0]
+
 	r := Derive(input)
 	_ = AppendHistory(input)
 
@@ -91,4 +112,19 @@ func runHash(f *flags, input string) error {
 	}
 
 	return nil
+}
+
+// applyTUITheme maps a theme name to TUI styles.
+func applyTUITheme(name string) {
+	type palette struct{ accent, dim, value, border string }
+	themes := map[string]palette{
+		"matrix":  {"#00FF41", "#1A3A1A", "#CCFFCC", "#0A1A0A"},
+		"dracula": {"#BD93F9", "#44475A", "#F8F8F2", "#282A36"},
+		"nord":    {"#88C0D0", "#4C566A", "#ECEFF4", "#2E3440"},
+	}
+	p, ok := themes[name]
+	if !ok {
+		p = palette{"#00D4FF", "#3A3A3A", "#E5E5E5", "#1A1A2E"}
+	}
+	hashTUI.ApplyTheme(p.accent, p.dim, p.value, p.border)
 }
