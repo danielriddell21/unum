@@ -21,9 +21,9 @@ Manual smoke-testing shortcuts:
 
 ```bash
 # json tool
-just run                            # static render  (testdata/sample.json)
-just ui                             # TUI navigator
-just web                            # browser UI
+just json                           # static render  (testdata/sample.json)
+just json-ui                        # TUI navigator
+just json-web                       # browser UI
 just stats                          # --stats annotation lens
 just hash                           # --merkle --hash-only
 just typegen-go                     # Go struct generation
