@@ -12,11 +12,14 @@ import (
 	"github.com/danielriddell21/unum/internal/config"
 	"github.com/danielriddell21/unum/internal/hash/render/static"
 	hashTUI "github.com/danielriddell21/unum/internal/hash/render/tui"
+	hashWeb "github.com/danielriddell21/unum/internal/hash/render/web"
 )
 
 type flags struct {
 	ui      bool
+	web     bool
 	theme   string
+	webPort int
 	quiet   bool
 	noColor bool
 
@@ -46,6 +49,7 @@ environments, or any repeatable string.
 Output modes:
   (default)  Full derivation table
   --ui       Interactive TUI with history
+  --web      Browser-based UI with history
 
 Single-field flags (pipe-friendly, skips the table):
   --port, --uuid, --color, --short, --emoji, --phrase`,
@@ -59,6 +63,8 @@ Single-field flags (pipe-friendly, skips the table):
 	}
 
 	cmd.Flags().BoolVar(&f.ui, "ui", false, "launch interactive TUI with history")
+	cmd.Flags().BoolVar(&f.web, "web", false, "launch web UI in browser")
+	cmd.Flags().IntVar(&f.webPort, "web-port", 0, "port for --web (default: random free port)")
 	cmd.Flags().StringVar(&f.theme, "theme", cfg.Theme, "color theme: cyber, matrix, dracula, nord")
 	cmd.Flags().BoolVar(&f.quiet, "quiet", false, "suppress the boot line")
 	cmd.Flags().BoolVar(&f.portOnly, "port", false, "print derived port only")
@@ -80,8 +86,13 @@ func runHash(f *flags, args []string) error {
 		return err
 	}
 
+	if f.web {
+		hashWeb.SetFuncs(Derive, AppendHistory, LoadHistory)
+		return hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet})
+	}
+
 	if len(args) == 0 {
-		return fmt.Errorf("text argument required (or use --ui)")
+		return fmt.Errorf("text argument required (or use --ui / --web)")
 	}
 	input := args[0]
 

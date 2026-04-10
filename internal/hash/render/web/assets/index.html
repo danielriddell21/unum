@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>[ UNUM ] hash</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <div class="main">
+      <header class="banner">[ UNUM ] hash</header>
+
+      <div class="input-row">
+        <input id="hashInput" type="text" placeholder="enter text to hash..." autofocus />
+        <button id="deriveBtn">derive</button>
+      </div>
+
+      <div id="results" class="results hidden">
+        <table>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+
+      <div id="empty" class="empty-hint">type something and press enter or click derive</div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="sidebar-title">history</div>
+      <ul id="historyList" class="history-list"></ul>
+    </aside>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
