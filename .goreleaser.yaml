@@ -68,21 +68,3 @@ brews:
     test: |
       system "#{bin}/unum", "--version"
 
-winget:
-  - name: unum
-    publisher: danielriddell21
-    publisher_url: https://github.com/danielriddell21
-    short_description: "Unified developer tool suite"
-    license: MIT
-    package_identifier: danielriddell21.unum
-    repository:
-      owner: microsoft
-      name: winget-pkgs
-      branch: master
-      pull_request:
-        enabled: true
-        draft: false
-        base:
-          owner: microsoft
-          name: winget-pkgs
-          branch: master

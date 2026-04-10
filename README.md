@@ -24,11 +24,6 @@ Full documentation → [Wiki](https://github.com/danielriddell21/unum/wiki)
 brew install danielriddell21/unum/unum
 ```
 
-### winget
-```
-winget install danielriddell21.unum
-```
-
 ### Go install
 ```bash
 go install github.com/danielriddell21/unum/cmd/unum@latest
