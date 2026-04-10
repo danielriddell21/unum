@@ -264,11 +264,4 @@ func (m Model) searchBar() string {
 // ensure searchBar is used (it's referenced in View indirectly via status bar)
 var _ = (&Model{}).searchBar
 
-func (m Model) viewModeString() string {
-	if m.view == viewSplit {
-		return "split"
-	}
-	return "unified"
-}
-
 var _ = strings.Join // ensure strings import is used

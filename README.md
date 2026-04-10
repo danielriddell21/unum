@@ -45,5 +45,5 @@ just install
 
 ## Acknowledgements
 
-- The initial architecture and design of this project was conceived with the assistance of [Claude](https://claude.ai) (Anthropic).
+- The initial architecture and design of this project was conceived with the assistance of [Claude](https://claude.ai) (Anthropic), which was also used throughout development for identifying and fixing bugs.
 - The TUI layout and interaction model was inspired by [lazygit](https://github.com/jesseduffield/lazygit) and [lazydocker](https://github.com/jesseduffield/lazydocker) by Jesse Duffield.

@@ -17,6 +17,8 @@ just lint       # golangci-lint
 just ci         # full gate: lint + test + yeet + build
 ```
 
+Run `just ci` before every commit — all four stages must pass.
+
 Manual smoke-testing shortcuts:
 
 ```bash
@@ -33,9 +35,8 @@ just yaml                           # transform to YAML
 
 # diff tool
 just diff                           # text diff  (diff-a.txt / diff-b.txt)
-just diff-ui                        # TUI diff
-just diff-web                       # browser diff
-just diff-json                      # semantic JSON diff
+just diff-ui                        # TUI diff  (diff-a.json / diff-b.json)
+just diff-web                       # browser diff  (diff-a.json / diff-b.json)
 just diff-yaml                      # semantic YAML diff
 just diff-tf                        # Terraform plan diff
 ```

@@ -16,7 +16,6 @@ var (
 	diffUnchanged  = lipgloss.NewStyle().Foreground(lipgloss.Color(jsonpanels.PaletteCyber.Muted))
 	diffHunkHdr    = lipgloss.NewStyle().Foreground(lipgloss.Color(jsonpanels.PaletteCyber.AccentPrimary))
 	diffLineNum    = lipgloss.NewStyle().Foreground(lipgloss.Color(jsonpanels.PaletteCyber.Muted))
-	diffSelected   = lipgloss.NewStyle().Background(lipgloss.Color(jsonpanels.PaletteCyber.BGSelected))
 	diffSearchHL   = lipgloss.NewStyle().Background(lipgloss.Color(jsonpanels.PaletteCyber.Search)).Foreground(lipgloss.Color("#000000"))
 )
 
@@ -27,7 +26,6 @@ func ApplyDiffPalette(p jsonpanels.Palette) {
 	diffUnchanged = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted))
 	diffHunkHdr = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary))
 	diffLineNum = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted))
-	diffSelected = lipgloss.NewStyle().Background(lipgloss.Color(p.BGSelected))
 	diffSearchHL = lipgloss.NewStyle().Background(lipgloss.Color(p.Search)).Foreground(lipgloss.Color("#000000"))
 }
 
