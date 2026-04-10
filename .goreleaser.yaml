@@ -56,7 +56,7 @@ brews:
     repository:
       owner: danielriddell21
       name: homebrew-unum
-      branch: main
+      branch: trunk
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
     homepage: https://github.com/danielriddell21/unum
