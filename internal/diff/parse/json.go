@@ -57,7 +57,7 @@ func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]i
 		// Process b's children in order (preserved + added)
 		for _, bc := range b.Children {
 			seen[bc.Key] = true
-			childPath := path + "." + bc.Key
+			childPath := objPath(path, bc.Key)
 			if ac, ok := aMap[bc.Key]; ok {
 				dn.Children = append(dn.Children, compareNodes(ac, bc, childPath, bc.Key, -1, counts))
 			} else {
@@ -75,7 +75,7 @@ func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]i
 		for _, ac := range a.Children {
 			if !seen[ac.Key] {
 				counts[1]++
-				childPath := path + "." + ac.Key
+				childPath := objPath(path, ac.Key)
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Removed,
 					Path:     childPath,

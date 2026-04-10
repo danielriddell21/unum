@@ -36,8 +36,9 @@ type Model struct {
 	mode        inputMode
 	searchInput textinput.Model
 
-	width  int
-	height int
+	width       int
+	height      int
+	initialized bool
 }
 
 // NewModel creates the diff TUI model.
@@ -96,10 +97,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		if m.diff == nil {
+		if !m.initialized {
 			m.initPanels()
-		} else if m.unified.MatchCount() == 0 && m.diff != nil {
-			m.initPanels()
+			m.initialized = true
 		} else {
 			m.resize()
 		}
@@ -145,10 +145,13 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "q", "esc":
 		return m, tea.Quit
 	case "v":
-		if m.view == viewUnified {
-			m.view = viewSplit
-		} else {
-			m.view = viewUnified
+		// Split view is only meaningful for text (hunk-based) diffs.
+		if m.diff != nil && m.diff.Root == nil {
+			if m.view == viewUnified {
+				m.view = viewSplit
+			} else {
+				m.view = viewUnified
+			}
 		}
 	case "/":
 		m.mode = modeSearch

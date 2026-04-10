@@ -51,8 +51,8 @@ Output modes:
 		Args:         cobra.ExactArgs(2),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			f.noColor = *globalNoColor
-			f.quiet = *globalQuiet
+			f.noColor = f.noColor || *globalNoColor
+			f.quiet = f.quiet || *globalQuiet
 			return runDiff(f, args[0], args[1])
 		},
 	}

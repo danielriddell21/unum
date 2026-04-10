@@ -68,12 +68,20 @@ func (p *InfoPanel) refresh() {
 	)
 
 	// Summary
-	fmt.Fprintf(&sb, "%s  %s\n\n",
-		sbAdded.Render(fmt.Sprintf("+%d added", p.diff.Added)),
-		sbRemoved.Render(fmt.Sprintf("-%d removed", p.diff.Removed)),
-	)
+	if p.diff.Modified > 0 {
+		fmt.Fprintf(&sb, "%s  %s  %s\n\n",
+			sbAdded.Render(fmt.Sprintf("+%d added", p.diff.Added)),
+			sbRemoved.Render(fmt.Sprintf("-%d removed", p.diff.Removed)),
+			sbAccent.Render(fmt.Sprintf("~%d modified", p.diff.Modified)),
+		)
+	} else {
+		fmt.Fprintf(&sb, "%s  %s\n\n",
+			sbAdded.Render(fmt.Sprintf("+%d added", p.diff.Added)),
+			sbRemoved.Render(fmt.Sprintf("-%d removed", p.diff.Removed)),
+		)
+	}
 
-	// Hunk info
+	// Hunk info (text diffs only)
 	if len(p.diff.Hunks) > 0 {
 		fmt.Fprintf(&sb, "%s\n", sbMuted.Render(fmt.Sprintf("Hunk %d of %d", p.hunkIdx+1, len(p.diff.Hunks))))
 		h := p.diff.Hunks[p.hunkIdx]
@@ -82,9 +90,16 @@ func (p *InfoPanel) refresh() {
 		)
 	}
 
+	// Format badge (semantic diffs)
+	if p.diff.Root != nil {
+		fmt.Fprintf(&sb, "%s\n\n", sbAccent.Render("["+p.diff.Format.String()+"]"))
+	}
+
 	// Keybindings hint
-	fmt.Fprintln(&sb, sbMuted.Render("v  toggle split/unified"))
-	fmt.Fprintln(&sb, sbMuted.Render("/  search lines"))
+	if p.diff.Root == nil {
+		fmt.Fprintln(&sb, sbMuted.Render("v  toggle split/unified"))
+	}
+	fmt.Fprintln(&sb, sbMuted.Render("/  search"))
 	fmt.Fprintln(&sb, sbMuted.Render("n/N  next/prev match"))
 	fmt.Fprintln(&sb, sbMuted.Render("q  quit"))
 

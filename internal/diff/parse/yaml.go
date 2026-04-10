@@ -71,7 +71,7 @@ func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]i
 			k := b.Content[i].Value
 			bVal := b.Content[i+1]
 			seen[k] = true
-			childPath := path + "." + k
+			childPath := objPath(path, k)
 			if aVal, ok := aMap[k]; ok {
 				dn.Children = append(dn.Children, compareYAMLNodes(aVal, bVal, childPath, k, -1, counts))
 			} else {
@@ -89,7 +89,7 @@ func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]i
 			k := a.Content[i].Value
 			if !seen[k] {
 				counts[1]++
-				childPath := path + "." + k
+				childPath := objPath(path, k)
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Removed,
 					Path:     childPath,
