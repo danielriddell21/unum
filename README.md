@@ -4,6 +4,10 @@
 
 A unified developer tool suite, built in Go.
 
+[![CI](https://github.com/danielriddell21/unum/actions/workflows/ci.yaml/badge.svg)](https://github.com/danielriddell21/unum/actions/workflows/ci.yaml)
+[![Go 1.26](https://img.shields.io/badge/go-1.26-blue)](https://go.dev)
+[![MIT License](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
+
 ---
 
 ## Tools
@@ -12,6 +16,7 @@ A unified developer tool suite, built in Go.
 |---|---|
 | `unum json` | JSON viewer, validator, and analyzer — three output modes, six analysis lenses |
 | `unum diff` | Diff visualizer — text, JSON, YAML, and Terraform plans; static, TUI, and web output |
+| `unum hash` | Deterministic deriver — maps any string to a stable port, UUID, color, short ID, emoji, and passphrase |
 
 Full documentation → [Wiki](https://github.com/danielriddell21/unum/wiki)
 
