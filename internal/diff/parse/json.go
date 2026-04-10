@@ -23,13 +23,17 @@ func JSON(a, b []byte) (*diffnode.Diff, error) {
 	var counts [3]int // [added, removed, modified]
 	root := compareNodes(rootA, rootB, ".", "", -1, &counts)
 
-	return &diffnode.Diff{
+	d := &diffnode.Diff{
 		Format:   diffnode.FormatJSON,
 		Root:     root,
 		Added:    counts[0],
 		Removed:  counts[1],
 		Modified: counts[2],
-	}, nil
+	}
+	if td, err := Text(a, b, 3); err == nil {
+		d.Hunks = td.Hunks
+	}
+	return d, nil
 }
 
 // compareNodes recursively compares two JSON nodes and returns a DiffNode.

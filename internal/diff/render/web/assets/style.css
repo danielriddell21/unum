@@ -114,7 +114,12 @@ body::after {
   flex-shrink: 0;
 }
 
-#toggle-view {
+.view-modes {
+  display: flex;
+  gap: 2px;
+}
+
+.view-mode-btn {
   background: none;
   border: 1px solid var(--muted);
   color: var(--muted);
@@ -127,7 +132,12 @@ body::after {
   white-space: nowrap;
 }
 
-#toggle-view:hover {
+.view-mode-btn:hover {
+  border-color: var(--border-active);
+  color: var(--border-active);
+}
+
+.view-mode-btn.active {
   border-color: var(--border-active);
   color: var(--border-active);
 }
@@ -232,7 +242,10 @@ body::after {
 .split-wrapper {
   display: flex;
   height: 100%;
-  min-height: 100%;
+}
+
+#diff-panel.is-split {
+  overflow: hidden;
 }
 
 .split-side {

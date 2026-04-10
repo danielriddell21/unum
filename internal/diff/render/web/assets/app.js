@@ -4,7 +4,7 @@
   'use strict';
 
   let diffData = null;
-  let viewMode = 'unified'; // 'unified' | 'split'
+  let viewMode = 'unified'; // set properly in renderHeader once data arrives
   let searchQuery = '';
 
   // ── Themes ───────────────────────────────────────────────────────────────────
@@ -160,6 +160,53 @@
       diffData.format !== 'text' ? '[' + diffData.format + ']' : '';
 
     document.getElementById('header').appendChild(renderThemePicker());
+
+    // Set default view mode and wire up the toolbar toggle
+    viewMode = diffData.tree ? 'semantic' : 'unified';
+    renderViewToggle();
+  }
+
+  // ── View mode toggle ──────────────────────────────────────────────────────────
+
+  function availableModes() {
+    const hasSemantic = !!diffData.tree;
+    const hasText = diffData.hunks && diffData.hunks.length > 0;
+    if (hasSemantic && hasText) return ['semantic', 'unified', 'split'];
+    if (hasText)                return ['unified', 'split'];
+    return []; // tree-only (e.g. Terraform) — no toggle
+  }
+
+  function renderViewToggle() {
+    const placeholder = document.getElementById('toggle-view');
+    const modes = availableModes();
+
+    if (modes.length === 0) {
+      placeholder.style.display = 'none';
+      return;
+    }
+
+    const group = document.createElement('div');
+    group.className = 'view-modes';
+    group.id = 'view-modes';
+
+    for (const mode of modes) {
+      const btn = document.createElement('button');
+      btn.className = 'view-mode-btn' + (mode === viewMode ? ' active' : '');
+      btn.dataset.mode = mode;
+      btn.textContent = mode;
+      btn.onclick = () => setViewMode(mode);
+      group.appendChild(btn);
+    }
+
+    placeholder.replaceWith(group);
+  }
+
+  function setViewMode(mode) {
+    viewMode = mode;
+    document.querySelectorAll('.view-mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    renderDiff();
   }
 
   // ── Diff rendering ────────────────────────────────────────────────────────────
@@ -167,14 +214,16 @@
   function renderDiff() {
     const panel = document.getElementById('diff-panel');
     panel.innerHTML = '';
+    panel.classList.toggle('is-split', viewMode === 'split');
 
-    if (diffData.tree) {
+    if (viewMode === 'semantic' && diffData.tree) {
       renderTreeView(panel, diffData.tree);
       if (searchQuery) applyHighlight();
       return;
     }
 
-    if (!diffData.hunks || diffData.hunks.length === 0) {
+    const hasHunks = diffData.hunks && diffData.hunks.length > 0;
+    if (!hasHunks) {
       const empty = document.createElement('div');
       empty.className = 'empty-state';
       empty.textContent = '(no differences)';
@@ -182,15 +231,13 @@
       return;
     }
 
-    if (viewMode === 'unified') {
-      renderUnified(panel);
-    } else {
+    if (viewMode === 'split') {
       renderSplit(panel);
+    } else {
+      renderUnified(panel);
     }
 
-    if (searchQuery) {
-      applyHighlight();
-    }
+    if (searchQuery) applyHighlight();
   }
 
   // ── Semantic tree view ────────────────────────────────────────────────────────
@@ -377,7 +424,6 @@
     wrapper.appendChild(rightPanel);
     container.appendChild(wrapper);
 
-    // Sync scroll between sides
     syncScroll(leftPanel, rightPanel);
   }
 
@@ -453,7 +499,7 @@
     if (!q) return;
     let firstMatch = null;
 
-    document.querySelectorAll('.diff-line[data-content]').forEach(el => {
+    document.querySelectorAll('[data-content]').forEach(el => {
       const raw = (el.dataset.content || '').toLowerCase();
       if (!raw.includes(q)) return;
 
@@ -490,7 +536,11 @@
         document.getElementById('search-input').focus();
       }
       if (e.key === 'v') {
-        toggleView();
+        const modes = availableModes();
+        if (modes.length > 1) {
+          const idx = modes.indexOf(viewMode);
+          setViewMode(modes[(idx + 1) % modes.length]);
+        }
       }
       if (e.key === 'j') {
         document.getElementById('diff-panel').scrollBy(0, 40);
@@ -500,15 +550,6 @@
       }
     });
   }
-
-  function toggleView() {
-    viewMode = viewMode === 'unified' ? 'split' : 'unified';
-    document.getElementById('toggle-view').textContent =
-      viewMode === 'unified' ? 'split view' : 'unified view';
-    renderDiff();
-  }
-
-  document.getElementById('toggle-view').addEventListener('click', toggleView);
 
   // ── Init ──────────────────────────────────────────────────────────────────────
 
