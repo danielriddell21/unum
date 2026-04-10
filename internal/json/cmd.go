@@ -2,6 +2,7 @@
 package jsontool
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -74,8 +75,8 @@ Config file (~/.config/unum/config.json):
   { "theme": "cyber" }   — cyber | matrix | dracula | nord`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			f.noColor = *globalNoColor
-			f.quiet = *globalQuiet
+			f.noColor = f.noColor || *globalNoColor
+			f.quiet = f.quiet || *globalQuiet
 			if len(args) == 0 {
 				return runJSONNoFile(f)
 			}
@@ -118,6 +119,9 @@ func runJSON(f *flags, filename string) error {
 		return fmt.Errorf("cannot read %s: %w", filename, err)
 	}
 
+	// Strip UTF-8 BOM — some editors (Notepad, VS) add \xEF\xBB\xBF.
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
+
 	theme := resolveStaticTheme(f.theme)
 	renderOpts := static.Options{
 		Theme:        theme,
@@ -128,6 +132,15 @@ func runJSON(f *flags, filename string) error {
 		Filename:     filename,
 	}
 
+	// --validate-only: no boot line, no render — just exit code.
+	if f.validateOnly {
+		if err := parse.Validate(data); err != nil {
+			static.RenderError(os.Stderr, err, renderOpts)
+			os.Exit(1)
+		}
+		return nil
+	}
+
 	start := time.Now()
 	done := static.Boot(os.Stderr, filename, renderOpts)
 
@@ -135,11 +148,6 @@ func runJSON(f *flags, filename string) error {
 		fmt.Fprintln(os.Stderr)
 		static.RenderError(os.Stderr, err, renderOpts)
 		os.Exit(1)
-	}
-
-	if f.validateOnly {
-		done(0, time.Since(start))
-		return nil
 	}
 
 	root, err := parse.Parse(data)
@@ -246,6 +254,10 @@ func resolveStaticTheme(name string) static.Theme {
 	switch name {
 	case "matrix":
 		return static.Matrix
+	case "dracula":
+		return static.Dracula
+	case "nord":
+		return static.Nord
 	default:
 		return static.Cyber
 	}

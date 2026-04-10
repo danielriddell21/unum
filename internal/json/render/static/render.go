@@ -49,6 +49,40 @@ var Cyber = Theme{
 	BannerOK:    lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF")),
 }
 
+// Dracula theme.
+var Dracula = Theme{
+	ObjectKey:   lipgloss.NewStyle().Foreground(lipgloss.Color("#BD93F9")),
+	ArrayIndex:  lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5555")),
+	StringVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#50FA7B")),
+	NumberVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#F1FA8C")),
+	BoolVal:     lipgloss.NewStyle().Foreground(lipgloss.Color("#8BE9FD")),
+	NullVal:     lipgloss.NewStyle().Foreground(lipgloss.Color("#6272A4")),
+	Punctuation: lipgloss.NewStyle().Foreground(lipgloss.Color("#44475A")),
+	LineNumber:  lipgloss.NewStyle().Foreground(lipgloss.Color("#6272A4")),
+	HashTag:     lipgloss.NewStyle().Foreground(lipgloss.Color("#FF79C6")),
+	StatTag:     lipgloss.NewStyle().Foreground(lipgloss.Color("#F1FA8C")),
+	ErrorStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5555")),
+	Banner:      lipgloss.NewStyle().Foreground(lipgloss.Color("#50FA7B")),
+	BannerOK:    lipgloss.NewStyle().Foreground(lipgloss.Color("#BD93F9")).Bold(true),
+}
+
+// Nord theme.
+var Nord = Theme{
+	ObjectKey:   lipgloss.NewStyle().Foreground(lipgloss.Color("#88C0D0")),
+	ArrayIndex:  lipgloss.NewStyle().Foreground(lipgloss.Color("#BF616A")),
+	StringVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#A3BE8C")),
+	NumberVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#EBCB8B")),
+	BoolVal:     lipgloss.NewStyle().Foreground(lipgloss.Color("#81A1C1")),
+	NullVal:     lipgloss.NewStyle().Foreground(lipgloss.Color("#4C566A")),
+	Punctuation: lipgloss.NewStyle().Foreground(lipgloss.Color("#434C5E")),
+	LineNumber:  lipgloss.NewStyle().Foreground(lipgloss.Color("#4C566A")),
+	HashTag:     lipgloss.NewStyle().Foreground(lipgloss.Color("#B48EAD")),
+	StatTag:     lipgloss.NewStyle().Foreground(lipgloss.Color("#EBCB8B")),
+	ErrorStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color("#BF616A")),
+	Banner:      lipgloss.NewStyle().Foreground(lipgloss.Color("#A3BE8C")),
+	BannerOK:    lipgloss.NewStyle().Foreground(lipgloss.Color("#88C0D0")).Bold(true),
+}
+
 // Matrix theme: green on black.
 var Matrix = Theme{
 	ObjectKey:   lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF41")),
