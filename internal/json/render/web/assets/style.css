@@ -64,11 +64,12 @@ body::after {
   flex-shrink: 0;
 }
 
-#header .brand {
+.brand {
   color: var(--key);
   font-weight: bold;
   letter-spacing: 0.1em;
   font-size: 14px;
+  white-space: nowrap;
 }
 
 #header .filename {
@@ -83,8 +84,9 @@ body::after {
 
 #header .stats {
   display: flex;
-  gap: 16px;
-  font-size: 11px;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: bold;
   color: var(--muted);
 }
 
