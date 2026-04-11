@@ -52,7 +52,7 @@ dockers:
     dockerfile: Dockerfile
     image_templates:
       - "ghcr.io/danielriddell21/unum:{{ .Tag }}"
-      - "ghcr.io/danielriddell21/unum:sha-{{ .ShortCommit }}"
+      - "ghcr.io/danielriddell21/unum:edge"
     use: buildx
     build_flag_templates:
       - "--platform=linux/amd64"
