@@ -7,13 +7,25 @@ const resultBody = document.getElementById('resultBody');
 const emptyHint = document.getElementById('empty');
 const historyList = document.getElementById('historyList');
 
+const MAX_HISTORY = 50;
+const STORAGE_KEY = 'unum-hash-history';
+
 async function derive(text) {
   if (!text.trim()) return;
   const res = await fetch('/api/derive?input=' + encodeURIComponent(text));
   if (!res.ok) return;
   const data = await res.json();
   renderResult(data);
-  await loadHistory(text);
+  appendHistory(text);
+  loadHistory(text);
+}
+
+function appendHistory(val) {
+  let entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  entries = entries.filter(e => e.input !== val);
+  entries.unshift({ input: val, time: new Date().toISOString() });
+  if (entries.length > MAX_HISTORY) entries = entries.slice(0, MAX_HISTORY);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }
 
 function renderResult(data) {
@@ -41,17 +53,14 @@ function renderResult(data) {
   }).join('');
 }
 
-async function loadHistory(activeInput) {
-  const res = await fetch('/api/history');
-  if (!res.ok) return;
-  const entries = await res.json();
+function loadHistory(activeInput) {
+  const entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 
   if (!entries || entries.length === 0) {
     historyList.innerHTML = '<li class="no-history">no history yet</li>';
     return;
   }
 
-  // HistoryEntry JSON tags are lowercase: { input, time }
   historyList.innerHTML = entries.map(e => {
     const cls = (activeInput !== undefined && e.input === activeInput) ? ' class="active"' : '';
     return `<li${cls} data-input="${escAttr(e.input)}" title="${escAttr(e.input)}">${escHtml(e.input)}</li>`;

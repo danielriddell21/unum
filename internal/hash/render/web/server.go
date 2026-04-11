@@ -26,22 +26,12 @@ type Options struct {
 	Quiet bool
 }
 
-// deriveFn and historyFns are injected to avoid import cycles.
-var (
-	deriveFn        func(input string) types.Result
-	appendHistoryFn func(input string) error
-	loadHistoryFn   func() []types.HistoryEntry
-)
+// deriveFn is injected to avoid import cycles.
+var deriveFn func(input string) types.Result
 
-// SetFuncs wires in the derivation and history functions.
-func SetFuncs(
-	derive func(string) types.Result,
-	appendHistory func(string) error,
-	loadHistory func() []types.HistoryEntry,
-) {
+// SetFuncs wires in the derivation function.
+func SetFuncs(derive func(string) types.Result) {
 	deriveFn = derive
-	appendHistoryFn = appendHistory
-	loadHistoryFn = loadHistory
 }
 
 // Start launches the hash web server, auto-opens the browser, and blocks until
@@ -73,7 +63,6 @@ func Start(opts Options) error {
 	mux.HandleFunc("/style.css", serveAsset("assets/style.css", "text/css"))
 	mux.HandleFunc("/app.js", serveAsset("assets/app.js", "application/javascript"))
 	mux.HandleFunc("/api/derive", handleDerive())
-	mux.HandleFunc("/api/history", handleHistory())
 	mux.HandleFunc("/", serveAsset("assets/index.html", "text/html"))
 
 	srv := &http.Server{Addr: addr, Handler: mux}
@@ -112,25 +101,8 @@ func handleDerive() http.HandlerFunc {
 			return
 		}
 		result := deriveFn(input)
-		if appendHistoryFn != nil {
-			_ = appendHistoryFn(input)
-		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(result)
-	}
-}
-
-func handleHistory() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var entries []types.HistoryEntry
-		if loadHistoryFn != nil {
-			entries = loadHistoryFn()
-		}
-		if entries == nil {
-			entries = []types.HistoryEntry{}
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(entries)
 	}
 }
 

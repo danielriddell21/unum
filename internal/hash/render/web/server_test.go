@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/danielriddell21/unum/internal/hash/types"
 )
@@ -32,13 +31,8 @@ func testDerive(input string) types.Result {
 	}
 }
 
-func testAppendHistory(_ string) error { return nil }
-func testLoadHistory() []types.HistoryEntry {
-	return []types.HistoryEntry{{Input: "test", Time: time.Now()}}
-}
-
 func init() {
-	SetFuncs(testDerive, testAppendHistory, testLoadHistory)
+	SetFuncs(testDerive)
 }
 
 func TestHandleDerive_ReturnsResult(t *testing.T) {
@@ -89,23 +83,5 @@ func TestHandleDerive_Deterministic(t *testing.T) {
 
 	if r1.Port != r2.Port || r1.Color != r2.Color {
 		t.Error("derive endpoint is not deterministic")
-	}
-}
-
-func TestHandleHistory_ReturnsJSON(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/history", nil)
-	w := httptest.NewRecorder()
-
-	handleHistory()(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status %d, want 200", w.Code)
-	}
-	if ct := w.Header().Get("Content-Type"); ct != "application/json" {
-		t.Errorf("Content-Type = %q, want application/json", ct)
-	}
-	var entries []types.HistoryEntry
-	if err := json.NewDecoder(w.Body).Decode(&entries); err != nil {
-		t.Fatalf("decode history: %v", err)
 	}
 }

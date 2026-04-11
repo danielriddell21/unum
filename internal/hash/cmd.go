@@ -87,7 +87,7 @@ func runHash(f *flags, args []string) error {
 	}
 
 	if f.web {
-		hashWeb.SetFuncs(Derive, AppendHistory, LoadHistory)
+		hashWeb.SetFuncs(Derive)
 		return hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet})
 	}
 
