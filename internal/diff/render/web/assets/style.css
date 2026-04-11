@@ -333,36 +333,41 @@ body::after {
   min-width: 0;
 }
 
-.upload-field input {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 12px;
-  padding: 5px 8px;
-  outline: none;
-  border-radius: 3px;
-  transition: border-color 0.15s;
-}
-
-.upload-field input:focus { border-color: var(--border-active); }
-
-.upload-field textarea {
+.drop-zone {
   flex: 1;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 12px;
-  padding: 8px;
-  outline: none;
-  resize: none;
-  border-radius: 3px;
-  transition: border-color 0.15s;
-  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--border-active);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  padding: 24px 16px;
+  text-align: center;
+  gap: 8px;
+  min-height: 160px;
 }
 
-.upload-field textarea:focus { border-color: var(--border-active); }
+.drop-zone:hover,
+.drop-zone.drag-over {
+  background: var(--bg-hover);
+}
+
+.drop-zone.loaded {
+  border-style: solid;
+  background: rgba(0, 212, 255, 0.04);
+}
+
+.drop-zone-label {
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.drop-zone.loaded .drop-zone-label {
+  color: var(--border-active);
+}
 
 .upload-controls {
   display: flex;

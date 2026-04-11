@@ -7,6 +7,10 @@
   let viewMode = 'unified'; // set properly in renderHeader once data arrives
   let searchQuery = '';
 
+  // File state for upload panel
+  let fileAContent = null, fileAName = '';
+  let fileBContent = null, fileBName = '';
+
   // ── Themes ───────────────────────────────────────────────────────────────────
 
   const THEMES = {
@@ -151,18 +155,24 @@
   function showUploadPanel() {
     document.getElementById('toolbar').style.display = 'none';
     document.getElementById('status-bar').style.display = 'none';
+    fileAContent = null; fileAName = '';
+    fileBContent = null; fileBName = '';
 
     const panel = document.getElementById('diff-panel');
     panel.innerHTML = `
       <div id="upload-panel">
         <div class="upload-row">
           <div class="upload-field">
-            <input id="up-name-a" placeholder="filename-a.json" autocomplete="off" spellcheck="false" />
-            <textarea id="up-content-a" placeholder="paste content A..." spellcheck="false"></textarea>
+            <div class="drop-zone" id="drop-a">
+              <span class="drop-zone-label" id="drop-a-label">drop file A here<br>or click to browse</span>
+              <input type="file" id="file-input-a" style="display:none" />
+            </div>
           </div>
           <div class="upload-field">
-            <input id="up-name-b" placeholder="filename-b.json" autocomplete="off" spellcheck="false" />
-            <textarea id="up-content-b" placeholder="paste content B..." spellcheck="false"></textarea>
+            <div class="drop-zone" id="drop-b">
+              <span class="drop-zone-label" id="drop-b-label">drop file B here<br>or click to browse</span>
+              <input type="file" id="file-input-b" style="display:none" />
+            </div>
           </div>
         </div>
         <div class="upload-controls">
@@ -178,26 +188,55 @@
       </div>
     `;
 
+    setupDropZone('drop-a', 'file-input-a', 'drop-a-label', (content, name) => {
+      fileAContent = content;
+      fileAName = name;
+    });
+    setupDropZone('drop-b', 'file-input-b', 'drop-b-label', (content, name) => {
+      fileBContent = content;
+      fileBName = name;
+    });
+
     document.getElementById('up-submit').addEventListener('click', submitDiff);
-    document.getElementById('up-content-a').addEventListener('keydown', handleUploadKey);
-    document.getElementById('up-content-b').addEventListener('keydown', handleUploadKey);
   }
 
-  function handleUploadKey(e) {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submitDiff();
+  function setupDropZone(zoneId, inputId, labelId, onLoad) {
+    const zone  = document.getElementById(zoneId);
+    const input = document.getElementById(inputId);
+    const label = document.getElementById(labelId);
+
+    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) loadDropFile(file, zone, label, onLoad);
+    });
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (file) loadDropFile(file, zone, label, onLoad);
+    });
+  }
+
+  function loadDropFile(file, zone, label, onLoad) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      onLoad(e.target.result, file.name);
+      zone.classList.add('loaded');
+      label.textContent = file.name;
+    };
+    reader.readAsText(file);
   }
 
   async function submitDiff() {
-    const nameA    = document.getElementById('up-name-a').value.trim() || 'a';
-    const contentA = document.getElementById('up-content-a').value;
-    const nameB    = document.getElementById('up-name-b').value.trim() || 'b';
-    const contentB = document.getElementById('up-content-b').value;
-    const fmt      = document.getElementById('up-format').value;
-    const errEl    = document.getElementById('up-error');
+    const fmt   = document.getElementById('up-format').value;
+    const errEl = document.getElementById('up-error');
 
     errEl.textContent = '';
-    if (!contentA || !contentB) {
-      errEl.textContent = 'both content fields required';
+    if (!fileAContent || !fileBContent) {
+      errEl.textContent = 'both files required';
       return;
     }
 
@@ -209,7 +248,13 @@
       const resp = await fetch('/api/diff', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nameA, contentA, nameB, contentB, format: fmt }),
+        body: JSON.stringify({
+          nameA: fileAName || 'a',
+          contentA: fileAContent,
+          nameB: fileBName || 'b',
+          contentB: fileBContent,
+          format: fmt,
+        }),
       });
       if (!resp.ok) {
         const msg = await resp.text();
