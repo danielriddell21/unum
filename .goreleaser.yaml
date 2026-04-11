@@ -45,10 +45,25 @@ changelog:
       - Merge pull request
       - Merge branch
 
+dockers:
+  - goos: linux
+    goarch: amd64
+    ids: [unum]
+    dockerfile: Dockerfile
+    image_templates:
+      - "ghcr.io/danielriddell21/unum:{{ .Tag }}"
+      - "ghcr.io/danielriddell21/unum:sha-{{ .ShortCommit }}"
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.source=https://github.com/danielriddell21/unum"
+
 release:
   github:
     owner: danielriddell21
     name: unum
+  prerelease: true
   name_template: "v{{ .Version }}"
 
 brews:
