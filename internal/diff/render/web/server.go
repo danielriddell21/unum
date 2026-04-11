@@ -6,6 +6,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -14,7 +15,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/danielriddell21/unum/internal/diff/format"
 	"github.com/danielriddell21/unum/internal/diff/node"
+	"github.com/danielriddell21/unum/internal/diff/parse"
 )
 
 //go:embed assets/*
@@ -29,6 +32,16 @@ type Options struct {
 // Start launches the diff web server, auto-opens the browser, and blocks until
 // Ctrl+C.
 func Start(d *node.Diff, opts Options) error {
+	host := "localhost"
+	autoOpen := true
+	if p := os.Getenv("PORT"); p != "" {
+		if n, err := strconv.Atoi(p); err == nil {
+			opts.Port = n
+		}
+		host = "0.0.0.0"
+		autoOpen = false
+	}
+
 	port := opts.Port
 	if port == 0 {
 		var err error
@@ -38,7 +51,7 @@ func Start(d *node.Diff, opts Options) error {
 		}
 	}
 
-	addr := "localhost:" + strconv.Itoa(port)
+	addr := host + ":" + strconv.Itoa(port)
 	url := "http://" + addr
 
 	payload, err := buildPayload(d)
@@ -64,7 +77,9 @@ func Start(d *node.Diff, opts Options) error {
 	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] DIFF VIEWER LIVE → %s\033[0m\n", url)
 	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
 
-	go openBrowser(url)
+	if autoOpen {
+		go openBrowser(url)
+	}
 
 	return srv.ListenAndServe()
 }
@@ -213,6 +228,120 @@ func kindString(k node.ChangeKind) string {
 		return "removed"
 	default:
 		return "unchanged"
+	}
+}
+
+// ─── Server mode (no pre-loaded diff) ────────────────────────────────────────
+
+// postDiffRequest is the body accepted by POST /api/diff in server mode.
+type postDiffRequest struct {
+	NameA    string `json:"nameA"`
+	ContentA string `json:"contentA"`
+	NameB    string `json:"nameB"`
+	ContentB string `json:"contentB"`
+	Format   string `json:"format"` // "json", "yaml", "text", or "" for auto-detect
+}
+
+// StartServer launches the diff web server in input mode with no pre-loaded diff.
+// GET /api/diff returns 204; POST /api/diff computes a diff from submitted content.
+func StartServer(opts Options) error {
+	host := "localhost"
+	autoOpen := true
+	if p := os.Getenv("PORT"); p != "" {
+		if n, err := strconv.Atoi(p); err == nil {
+			opts.Port = n
+		}
+		host = "0.0.0.0"
+		autoOpen = false
+	}
+
+	port := opts.Port
+	if port == 0 {
+		var err error
+		port, err = freePort()
+		if err != nil {
+			return fmt.Errorf("web: cannot find free port: %w", err)
+		}
+	}
+
+	addr := host + ":" + strconv.Itoa(port)
+	url := "http://" + addr
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/style.css", serveAsset("assets/style.css", "text/css"))
+	mux.HandleFunc("/app.js", serveAsset("assets/app.js", "application/javascript"))
+	mux.HandleFunc("/api/diff", handleServerDiff())
+	mux.HandleFunc("/", serveAsset("assets/index.html", "text/html"))
+
+	srv := &http.Server{Addr: addr, Handler: mux}
+
+	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] DIFF VIEWER LIVE → %s\033[0m\n", url)
+	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
+
+	if autoOpen {
+		go openBrowser(url)
+	}
+
+	return srv.ListenAndServe()
+}
+
+func handleServerDiff() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "cannot read body", http.StatusBadRequest)
+			return
+		}
+		var req postDiffRequest
+		if err := json.Unmarshal(body, &req); err != nil {
+			http.Error(w, "invalid JSON body", http.StatusBadRequest)
+			return
+		}
+		if req.ContentA == "" || req.ContentB == "" {
+			http.Error(w, "contentA and contentB required", http.StatusBadRequest)
+			return
+		}
+
+		dataA := []byte(req.ContentA)
+		dataB := []byte(req.ContentB)
+		fmt_ := format.Parse(req.Format, req.NameA, req.NameB)
+
+		var diff *node.Diff
+		switch fmt_ {
+		case node.FormatJSON:
+			diff, err = parse.JSON(dataA, dataB)
+		case node.FormatYAML:
+			diff, err = parse.YAML(dataA, dataB)
+		case node.FormatTerraform:
+			diff, err = parse.Terraform(dataA)
+		default:
+			diff, err = parse.Text(dataA, dataB, 3)
+		}
+		if err != nil {
+			http.Error(w, "diff: "+err.Error(), http.StatusUnprocessableEntity)
+			return
+		}
+		diff.FileA = req.NameA
+		diff.FileB = req.NameB
+		diff.Format = fmt_
+
+		payload, err := buildPayload(diff)
+		if err != nil {
+			http.Error(w, "build payload: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(payload)
 	}
 }
 

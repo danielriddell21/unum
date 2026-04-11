@@ -47,6 +47,16 @@ func SetFuncs(
 // Start launches the hash web server, auto-opens the browser, and blocks until
 // Ctrl+C.
 func Start(opts Options) error {
+	host := "localhost"
+	autoOpen := true
+	if p := os.Getenv("PORT"); p != "" {
+		if n, err := strconv.Atoi(p); err == nil {
+			opts.Port = n
+		}
+		host = "0.0.0.0"
+		autoOpen = false
+	}
+
 	port := opts.Port
 	if port == 0 {
 		var err error
@@ -56,7 +66,7 @@ func Start(opts Options) error {
 		}
 	}
 
-	addr := "localhost:" + strconv.Itoa(port)
+	addr := host + ":" + strconv.Itoa(port)
 	url := "http://" + addr
 
 	mux := http.NewServeMux()
@@ -71,7 +81,9 @@ func Start(opts Options) error {
 	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] HASH INTERFACE LIVE → %s\033[0m\n", url)
 	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
 
-	go openBrowser(url)
+	if autoOpen {
+		go openBrowser(url)
+	}
 
 	return srv.ListenAndServe()
 }

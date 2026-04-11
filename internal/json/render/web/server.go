@@ -40,6 +40,16 @@ type Options struct {
 // Start launches the web server, auto-opens the browser, and blocks until the
 // user presses Ctrl+C.
 func Start(root *node.Node, opts Options) error {
+	host := "localhost"
+	autoOpen := true
+	if p := os.Getenv("PORT"); p != "" {
+		if n, err := strconv.Atoi(p); err == nil {
+			opts.Port = n
+		}
+		host = "0.0.0.0"
+		autoOpen = false
+	}
+
 	port := opts.Port
 	if port == 0 {
 		var err error
@@ -49,7 +59,7 @@ func Start(root *node.Node, opts Options) error {
 		}
 	}
 
-	addr := "localhost:" + strconv.Itoa(port)
+	addr := host + ":" + strconv.Itoa(port)
 	url := "http://" + addr
 
 	// Pre-compute all analysis outputs once (not per-request)
@@ -86,7 +96,9 @@ func Start(root *node.Node, opts Options) error {
 	fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
 
 	// Auto-open browser
-	go openBrowser(url)
+	if autoOpen {
+		go openBrowser(url)
+	}
 
 	// Listen for Ctrl+C to gracefully shut down
 	go func() {
@@ -283,6 +295,16 @@ func StartBrowser(opts Options) error {
 		return err
 	}
 
+	host := "localhost"
+	autoOpen := true
+	if p := os.Getenv("PORT"); p != "" {
+		if n, nerr := strconv.Atoi(p); nerr == nil {
+			opts.Port = n
+		}
+		host = "0.0.0.0"
+		autoOpen = false
+	}
+
 	port := opts.Port
 	if port == 0 {
 		port, err = freePort()
@@ -291,7 +313,7 @@ func StartBrowser(opts Options) error {
 		}
 	}
 
-	addr := "localhost:" + strconv.Itoa(port)
+	addr := host + ":" + strconv.Itoa(port)
 	url := "http://" + addr
 
 	mux := http.NewServeMux()
@@ -308,7 +330,9 @@ func StartBrowser(opts Options) error {
 	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] NEURAL INTERFACE LIVE → %s\033[0m\n", url)
 	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
 
-	go openBrowser(url)
+	if autoOpen {
+		go openBrowser(url)
+	}
 	return srv.ListenAndServe()
 }
 
