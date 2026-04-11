@@ -4,9 +4,12 @@ package web
 
 import (
 	"context"
+	"crypto/rand"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -282,9 +285,11 @@ func maxDepth(n *node.Node) int {
 
 // ─── Browser mode ─────────────────────────────────────────────────────────────
 
-// rootCache stores parsed roots keyed by absolute file path so the query
-// endpoint can re-use them without re-parsing.
+// rootCache stores parsed roots keyed by absolute file path or upload key.
 var rootCache sync.Map // map[string]*node.Node
+
+// payloadCache stores pre-marshalled payloads keyed by upload key.
+var payloadCache sync.Map // map[string][]byte
 
 // StartBrowser launches the web server in file-browser mode (no pre-selected
 // file). The landing page lets the user navigate the filesystem and pick a
@@ -321,6 +326,7 @@ func StartBrowser(opts Options) error {
 	mux.HandleFunc("/app.js", serveAsset("assets/app.js", "application/javascript"))
 	mux.HandleFunc("/explore", serveAsset("assets/index.html", "text/html"))
 	mux.HandleFunc("/api/browse", handleBrowse(baseDir))
+	mux.HandleFunc("/api/upload", handleUpload())
 	mux.HandleFunc("/api/tree", handleDynamicTree(baseDir))
 	mux.HandleFunc("/api/query", handleDynamicQuery(baseDir))
 	mux.HandleFunc("/", serveAsset("assets/browse.html", "text/html"))
@@ -383,9 +389,21 @@ func handleBrowse(baseDir string) http.HandlerFunc {
 
 func handleDynamicTree(baseDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Upload key path — no filesystem access needed.
+		if key := r.URL.Query().Get("key"); key != "" {
+			v, ok := payloadCache.Load(key)
+			if !ok {
+				http.Error(w, "key not found", http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(v.([]byte))
+			return
+		}
+
 		file := r.URL.Query().Get("file")
 		if file == "" {
-			http.Error(w, "missing file param", http.StatusBadRequest)
+			http.Error(w, "missing file or key param", http.StatusBadRequest)
 			return
 		}
 		abs, err := filepath.Abs(file)
@@ -426,6 +444,17 @@ func handleDynamicTree(baseDir string) http.HandlerFunc {
 
 func handleDynamicQuery(baseDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Upload key path.
+		if key := r.URL.Query().Get("key"); key != "" {
+			v, ok := rootCache.Load(key)
+			if !ok {
+				writeJSON(w, queryResponse{Error: "key not found"})
+				return
+			}
+			handleQuery(v.(*node.Node))(w, r)
+			return
+		}
+
 		file := r.URL.Query().Get("file")
 		if file == "" {
 			writeJSON(w, queryResponse{Error: "no file context"})
@@ -443,4 +472,63 @@ func handleDynamicQuery(baseDir string) http.HandlerFunc {
 		}
 		handleQuery(v.(*node.Node))(w, r)
 	}
+}
+
+// uploadRequest is the body accepted by POST /api/upload.
+type uploadRequest struct {
+	Filename string `json:"filename"`
+	Content  string `json:"content"`
+}
+
+func handleUpload() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "cannot read body", http.StatusBadRequest)
+			return
+		}
+		var req uploadRequest
+		if err := json.Unmarshal(body, &req); err != nil {
+			http.Error(w, "invalid JSON body", http.StatusBadRequest)
+			return
+		}
+		if req.Content == "" {
+			http.Error(w, "content required", http.StatusBadRequest)
+			return
+		}
+		root, err := parse.Parse([]byte(req.Content))
+		if err != nil {
+			http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		payload, err := buildPayload(root, req.Filename)
+		if err != nil {
+			http.Error(w, "build payload: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		payload.SizeBytes = int64(len(req.Content))
+
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			http.Error(w, "marshal payload: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		key := generateKey()
+		rootCache.Store(key, root)
+		payloadCache.Store(key, payloadBytes)
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"key": key})
+	}
+}
+
+func generateKey() string {
+	b := make([]byte, 8)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
 }

@@ -3,225 +3,141 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>unum — pick a file</title>
+  <title>unum — JSON Explorer</title>
   <link rel="stylesheet" href="/style.css" />
   <style>
-    #browse-wrap {
-      display: flex;
-      flex-direction: column;
+    #upload-wrap {
       flex: 1;
-      overflow: hidden;
-      padding: 0 16px 16px;
-    }
-
-    #breadcrumb {
-      padding: 10px 0 6px;
-      font-size: 11px;
-      color: var(--muted);
       display: flex;
       align-items: center;
-      gap: 4px;
-      flex-wrap: wrap;
-      flex-shrink: 0;
+      justify-content: center;
+      padding: 32px;
     }
 
-    #breadcrumb .crumb {
-      color: var(--key);
-      cursor: pointer;
-      text-decoration: none;
-    }
-
-    #breadcrumb .crumb:hover { text-decoration: underline; }
-    #breadcrumb .sep { color: var(--muted); }
-
-    #file-list {
-      flex: 1;
-      overflow-y: auto;
-      border: 1px solid var(--border);
-    }
-
-    .entry {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 7px 14px;
-      cursor: pointer;
-      border-bottom: 1px solid var(--border);
-      transition: background 0.1s;
-      font-size: 13px;
-    }
-
-    .entry:last-child { border-bottom: none; }
-    .entry:hover { background: var(--bg-hover); }
-
-    .entry .icon { font-size: 14px; width: 20px; flex-shrink: 0; color: var(--muted); }
-    .entry.dir .icon { color: var(--key); }
-    .entry.json .icon { color: var(--string); }
-
-    .entry .name { flex: 1; }
-    .entry.dir .name { color: var(--key); }
-    .entry.json .name { color: var(--text); }
-
-    .entry .badge {
-      font-size: 10px;
-      padding: 1px 6px;
-      border: 1px solid var(--muted);
-      color: var(--muted);
-      border-radius: 2px;
-    }
-    .entry.json .badge { border-color: var(--string); color: var(--string); }
-
-    #empty {
-      padding: 40px;
+    #drop-zone {
+      border: 2px dashed var(--border-active);
+      border-radius: 6px;
+      padding: 56px 80px;
       text-align: center;
+      cursor: pointer;
+      transition: background 0.15s;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    #drop-zone:hover,
+    #drop-zone.drag-over {
+      background: var(--bg-hover);
+    }
+
+    .drop-title {
+      color: var(--border-active);
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .drop-hint {
       color: var(--muted);
       font-size: 12px;
     }
 
-    #search-bar { border-top: none; border-bottom: 1px solid var(--border); }
+    #upload-error {
+      color: #E06C75;
+      font-size: 12px;
+      margin-top: 16px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
 
   <div id="header">
     <span class="brand">[ UNUM ]</span>
-    <span class="filename">file picker</span>
+    <span class="filename">json explorer</span>
     <div class="stats">
-      <span style="color:var(--muted)">select a .json file to explore</span>
+      <span>upload a .json file to explore</span>
     </div>
   </div>
 
-  <div id="search-bar">
-    <label>/ filter</label>
-    <input id="filter-input" type="text" placeholder="filter files..." autocomplete="off" spellcheck="false" />
-  </div>
-
-  <div id="browse-wrap">
-    <div id="breadcrumb"></div>
-    <div id="file-list"></div>
+  <div id="upload-wrap">
+    <div>
+      <div id="drop-zone">
+        <div class="drop-title">drop .json file here</div>
+        <div class="drop-hint">or click to browse</div>
+        <input id="file-input" type="file" accept=".json,application/json" style="display:none" />
+      </div>
+      <div id="upload-error"></div>
+    </div>
   </div>
 
   <div id="status-bar">
-    <span id="status-path">.</span>
-    <span id="status-type"></span>
-    <span id="status-hints">click dir to navigate · click .json to explore</span>
+    <span></span>
+    <span id="status-hints">click or drag a .json file to begin</span>
   </div>
 
   <script>
   (function () {
     'use strict';
 
-    let currentDir = '';
-    let entries = [];
-    let filterQuery = '';
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const errEl = document.getElementById('upload-error');
 
-    async function loadDir(dir) {
-      const url = '/api/browse' + (dir ? '?dir=' + encodeURIComponent(dir) : '');
-      const resp = await fetch(url);
-      if (!resp.ok) { showError('failed to load directory'); return; }
-      entries = await resp.json();
-      currentDir = dir || entries[0]?.path?.replace(/[\\/][^\\/]+$/, '') || '.';
-      renderBreadcrumb();
-      renderList();
-      document.getElementById('status-path').textContent = currentDir;
+    // Apply saved theme
+    const THEMES = {
+      cyber:   { '--bg': '#0D0D0D', '--bg-panel': '#111111', '--bg-hover': '#1A1A2E', '--border': '#1E1E1E', '--border-active': '#00D4FF', '--text': '#C0C0C0', '--muted': '#3A3A3A' },
+      matrix:  { '--bg': '#0D0D0D', '--bg-panel': '#0A1A0A', '--bg-hover': '#001A00', '--border': '#003300', '--border-active': '#00FF41', '--text': '#00CC22', '--muted': '#005500' },
+      dracula: { '--bg': '#282A36', '--bg-panel': '#21222C', '--bg-hover': '#44475A', '--border': '#3D4050', '--border-active': '#BD93F9', '--text': '#F8F8F2', '--muted': '#6272A4' },
+      nord:    { '--bg': '#2E3440', '--bg-panel': '#272C36', '--bg-hover': '#3B4252', '--border': '#3B4252', '--border-active': '#88C0D0', '--text': '#ECEFF4', '--muted': '#4C566A' },
+    };
+    const saved = localStorage.getItem('unum-theme') || 'cyber';
+    const vars = THEMES[saved] || THEMES.cyber;
+    for (const [k, v] of Object.entries(vars)) {
+      document.documentElement.style.setProperty(k, v);
     }
 
-    function renderBreadcrumb() {
-      const el = document.getElementById('breadcrumb');
-      el.innerHTML = '';
+    dropZone.addEventListener('click', () => fileInput.click());
 
-      // Split path into parts
-      const sep = currentDir.includes('\\') ? '\\' : '/';
-      const parts = currentDir.split(sep).filter(Boolean);
-
-      // Reconstruct paths for each crumb
-      let accumulated = currentDir.startsWith('/') ? '/' : '';
-      for (let i = 0; i < parts.length; i++) {
-        accumulated += (i === 0 && !accumulated ? '' : sep) + parts[i];
-        const path = accumulated;
-        const crumb = document.createElement('span');
-        crumb.className = 'crumb';
-        crumb.textContent = parts[i] || sep;
-        crumb.onclick = () => loadDir(path);
-        el.appendChild(crumb);
-        if (i < parts.length - 1) {
-          const sepEl = document.createElement('span');
-          sepEl.className = 'sep';
-          sepEl.textContent = ' / ';
-          el.appendChild(sepEl);
-        }
-      }
-    }
-
-    function renderList() {
-      const list = document.getElementById('file-list');
-      list.innerHTML = '';
-
-      const filtered = filterQuery
-        ? entries.filter(e => e.name.toLowerCase().includes(filterQuery))
-        : entries;
-
-      if (!filtered.length) {
-        const empty = document.createElement('div');
-        empty.id = 'empty';
-        empty.textContent = filterQuery ? 'no matches' : 'empty directory';
-        list.appendChild(empty);
-        return;
-      }
-
-      // Dirs first, then files
-      const sorted = [
-        ...filtered.filter(e => e.isDir),
-        ...filtered.filter(e => !e.isDir),
-      ];
-
-      for (const entry of sorted) {
-        const row = document.createElement('div');
-        row.className = 'entry ' + (entry.isDir ? 'dir' : 'json');
-
-        const icon = document.createElement('span');
-        icon.className = 'icon';
-        icon.textContent = entry.isDir ? '▶' : '{}';
-        row.appendChild(icon);
-
-        const name = document.createElement('span');
-        name.className = 'name';
-        name.textContent = entry.name;
-        row.appendChild(name);
-
-        const badge = document.createElement('span');
-        badge.className = 'badge';
-        badge.textContent = entry.isDir ? 'dir' : 'json';
-        row.appendChild(badge);
-
-        if (entry.isDir) {
-          row.onclick = () => loadDir(entry.path);
-        } else {
-          row.onclick = () => {
-            window.location.href = '/explore?file=' + encodeURIComponent(entry.path);
-          };
-        }
-
-        list.appendChild(row);
-      }
-    }
-
-    function showError(msg) {
-      const list = document.getElementById('file-list');
-      list.innerHTML = '<div id="empty">✗ ' + msg + '</div>';
-    }
-
-    document.getElementById('filter-input').addEventListener('input', (e) => {
-      filterQuery = e.target.value.trim().toLowerCase();
-      renderList();
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (file) handleFile(file);
     });
 
-    document.addEventListener('keydown', (e) => {
-      if (e.target.tagName === 'INPUT') return;
-      if (e.key === '/') { e.preventDefault(); document.getElementById('filter-input').focus(); }
-    });
-
-    loadDir('');
+    function handleFile(file) {
+      errEl.textContent = '';
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const resp = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: file.name, content: e.target.result }),
+          });
+          if (!resp.ok) {
+            const msg = await resp.text();
+            throw new Error(msg.trim() || resp.statusText);
+          }
+          const { key } = await resp.json();
+          window.location.href = '/explore?key=' + encodeURIComponent(key);
+        } catch (err) {
+          errEl.textContent = '✗ ' + err.message;
+        }
+      };
+      reader.onerror = () => { errEl.textContent = '✗ failed to read file'; };
+      reader.readAsText(file);
+    }
   })();
   </script>
 </body>
