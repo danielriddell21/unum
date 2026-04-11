@@ -48,11 +48,17 @@ Output modes:
   (default)  Syntax-highlighted unified diff
   --ui       Interactive TUI (unified + split views, v to toggle)
   --web      Browser-based diff viewer`,
-		Args:         cobra.ExactArgs(2),
+		Args:         cobra.RangeArgs(0, 2),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			f.noColor = f.noColor || *globalNoColor
 			f.quiet = f.quiet || *globalQuiet
+			if len(args) == 0 {
+				if !f.web {
+					return fmt.Errorf("requires two file arguments (or --web for browser input mode)")
+				}
+				return diffweb.StartServer(diffweb.Options{Port: f.port, Quiet: f.quiet})
+			}
 			return runDiff(f, args[0], args[1])
 		},
 	}

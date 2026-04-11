@@ -131,6 +131,10 @@
     applyTheme(localStorage.getItem('unum-theme') || 'cyber');
     try {
       const resp = await fetch('/api/diff');
+      if (resp.status === 204) {
+        showUploadPanel();
+        return;
+      }
       if (!resp.ok) throw new Error('Failed to load diff: ' + resp.status);
       diffData = await resp.json();
       renderHeader();
@@ -139,6 +143,91 @@
       setupKeyboard();
     } catch (e) {
       document.getElementById('diff-panel').textContent = '✗ ' + e.message;
+    }
+  }
+
+  // ── Upload panel (server mode) ────────────────────────────────────────────────
+
+  function showUploadPanel() {
+    document.getElementById('toolbar').style.display = 'none';
+    document.getElementById('status-bar').style.display = 'none';
+
+    const panel = document.getElementById('diff-panel');
+    panel.innerHTML = `
+      <div id="upload-panel">
+        <div class="upload-row">
+          <div class="upload-field">
+            <input id="up-name-a" placeholder="filename-a.json" autocomplete="off" spellcheck="false" />
+            <textarea id="up-content-a" placeholder="paste content A..." spellcheck="false"></textarea>
+          </div>
+          <div class="upload-field">
+            <input id="up-name-b" placeholder="filename-b.json" autocomplete="off" spellcheck="false" />
+            <textarea id="up-content-b" placeholder="paste content B..." spellcheck="false"></textarea>
+          </div>
+        </div>
+        <div class="upload-controls">
+          <select id="up-format">
+            <option value="">auto-detect</option>
+            <option value="json">json</option>
+            <option value="yaml">yaml</option>
+            <option value="text">text</option>
+          </select>
+          <button id="up-submit">diff →</button>
+          <span id="up-error" class="upload-error"></span>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('up-submit').addEventListener('click', submitDiff);
+    document.getElementById('up-content-a').addEventListener('keydown', handleUploadKey);
+    document.getElementById('up-content-b').addEventListener('keydown', handleUploadKey);
+  }
+
+  function handleUploadKey(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submitDiff();
+  }
+
+  async function submitDiff() {
+    const nameA    = document.getElementById('up-name-a').value.trim() || 'a';
+    const contentA = document.getElementById('up-content-a').value;
+    const nameB    = document.getElementById('up-name-b').value.trim() || 'b';
+    const contentB = document.getElementById('up-content-b').value;
+    const fmt      = document.getElementById('up-format').value;
+    const errEl    = document.getElementById('up-error');
+
+    errEl.textContent = '';
+    if (!contentA || !contentB) {
+      errEl.textContent = 'both content fields required';
+      return;
+    }
+
+    const btn = document.getElementById('up-submit');
+    btn.textContent = 'computing...';
+    btn.disabled = true;
+
+    try {
+      const resp = await fetch('/api/diff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nameA, contentA, nameB, contentB, format: fmt }),
+      });
+      if (!resp.ok) {
+        const msg = await resp.text();
+        throw new Error(msg.trim() || resp.statusText);
+      }
+      diffData = await resp.json();
+      const panel = document.getElementById('diff-panel');
+      panel.innerHTML = '';
+      document.getElementById('toolbar').style.display = '';
+      document.getElementById('status-bar').style.display = '';
+      renderHeader();
+      renderDiff();
+      setupSearch();
+      setupKeyboard();
+    } catch (e) {
+      errEl.textContent = '✗ ' + e.message;
+      btn.textContent = 'diff →';
+      btn.disabled = false;
     }
   }
 

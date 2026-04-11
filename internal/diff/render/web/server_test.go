@@ -1,6 +1,10 @@
 package web
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/danielriddell21/unum/internal/diff/node"
@@ -69,6 +73,103 @@ func terraformDiff() *node.Diff {
 				{Kind: node.Added, Path: ".aws_instance.web", Key: "aws_instance.web"},
 			},
 		},
+	}
+}
+
+// ─── handleServerDiff ────────────────────────────────────────────────────────
+
+func TestHandleServerDiff_GET_Returns204(t *testing.T) {
+	handler := handleServerDiff()
+	req := httptest.NewRequest(http.MethodGet, "/api/diff", nil)
+	w := httptest.NewRecorder()
+	handler(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("GET /api/diff: status %d, want 204", w.Code)
+	}
+}
+
+func TestHandleServerDiff_POST_Text(t *testing.T) {
+	handler := handleServerDiff()
+	body := postDiffRequest{
+		NameA:    "a.txt",
+		ContentA: "hello\nworld\n",
+		NameB:    "b.txt",
+		ContentB: "hello\nunum\n",
+	}
+	b, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/api/diff", bytes.NewReader(b))
+	w := httptest.NewRecorder()
+	handler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("POST /api/diff: status %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	var p diffPayload
+	if err := json.NewDecoder(w.Body).Decode(&p); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if p.FileA != "a.txt" || p.FileB != "b.txt" {
+		t.Errorf("files: got %q %q, want a.txt b.txt", p.FileA, p.FileB)
+	}
+	if p.Format != "text" {
+		t.Errorf("format=%q, want text", p.Format)
+	}
+}
+
+func TestHandleServerDiff_POST_JSON(t *testing.T) {
+	handler := handleServerDiff()
+	body := postDiffRequest{
+		NameA:    "a.json",
+		ContentA: `{"version":"1.0"}`,
+		NameB:    "b.json",
+		ContentB: `{"version":"2.0"}`,
+	}
+	b, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/api/diff", bytes.NewReader(b))
+	w := httptest.NewRecorder()
+	handler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("POST /api/diff JSON: status %d; body: %s", w.Code, w.Body.String())
+	}
+	var p diffPayload
+	if err := json.NewDecoder(w.Body).Decode(&p); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if p.Format != "json" {
+		t.Errorf("format=%q, want json", p.Format)
+	}
+}
+
+func TestHandleServerDiff_POST_MissingContent(t *testing.T) {
+	handler := handleServerDiff()
+	body := postDiffRequest{NameA: "a.txt", ContentA: "hello"}
+	b, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/api/diff", bytes.NewReader(b))
+	w := httptest.NewRecorder()
+	handler(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("missing contentB: status %d, want 400", w.Code)
+	}
+}
+
+func TestHandleServerDiff_POST_InvalidJSON(t *testing.T) {
+	handler := handleServerDiff()
+	req := httptest.NewRequest(http.MethodPost, "/api/diff", bytes.NewReader([]byte("not json")))
+	w := httptest.NewRecorder()
+	handler(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("invalid JSON: status %d, want 400", w.Code)
+	}
+}
+
+func TestHandleServerDiff_MethodNotAllowed(t *testing.T) {
+	handler := handleServerDiff()
+	req := httptest.NewRequest(http.MethodDelete, "/api/diff", nil)
+	w := httptest.NewRecorder()
+	handler(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("DELETE: status %d, want 405", w.Code)
 	}
 }
 

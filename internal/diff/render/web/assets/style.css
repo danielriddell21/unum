@@ -307,6 +307,107 @@ body::after {
 #status-format { color: var(--border-active); font-weight: bold; }
 #status-hints  { margin-left: auto; color: var(--muted); }
 
+/* ── Upload panel ────────────────────────────────────────────────────────────── */
+
+#upload-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.upload-row {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.upload-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.upload-field input {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+  border-radius: 3px;
+  transition: border-color 0.15s;
+}
+
+.upload-field input:focus { border-color: var(--border-active); }
+
+.upload-field textarea {
+  flex: 1;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 8px;
+  outline: none;
+  resize: none;
+  border-radius: 3px;
+  transition: border-color 0.15s;
+  min-height: 200px;
+}
+
+.upload-field textarea:focus { border-color: var(--border-active); }
+
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.upload-controls select {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 8px;
+  outline: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.upload-controls select:focus { border-color: var(--border-active); }
+
+#up-submit {
+  background: none;
+  border: 1px solid var(--border-active);
+  color: var(--border-active);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 16px;
+  cursor: pointer;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  transition: all 0.15s;
+}
+
+#up-submit:hover {
+  background: var(--border-active);
+  color: var(--bg);
+}
+
+.upload-error {
+  color: var(--diff-removed);
+  font-size: 12px;
+}
+
 /* ── Scrollbars ──────────────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
