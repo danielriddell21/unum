@@ -130,6 +130,9 @@
     fileAContent = null; fileAName = '';
     fileBContent = null; fileBName = '';
 
+    document.getElementById('hdr-filea').textContent = 'drop two files to diff';
+    document.getElementById('sep-filea').style.display = '';
+
     const panel = document.getElementById('diff-panel');
     panel.innerHTML = `
       <div id="upload-panel">
@@ -251,17 +254,14 @@
   // ── Header ────────────────────────────────────────────────────────────────────
 
   function renderHeader() {
-    document.getElementById('file-a').textContent = diffData.fileA;
-    document.getElementById('file-b').textContent = diffData.fileB;
-    document.getElementById('stat-added').textContent = '+' + diffData.added;
-    document.getElementById('stat-removed').textContent = '-' + diffData.removed;
-    if (diffData.modified > 0) {
-      const modEl = document.createElement('span');
-      modEl.id = 'stat-modified';
-      modEl.className = 'stat-modified';
-      modEl.textContent = '~' + diffData.modified;
-      document.querySelector('.stats').appendChild(modEl);
-    }
+    document.getElementById('hdr-filea').textContent = diffData.fileA;
+    document.getElementById('sep-filea').style.display = '';
+    document.getElementById('hdr-fileb').textContent = diffData.fileB;
+    document.getElementById('sep-fileb').style.display = '';
+    let stats = `<span style="color:var(--diff-added)">+${diffData.added}</span> · <span style="color:var(--diff-removed)">-${diffData.removed}</span>`;
+    if (diffData.modified > 0) stats += ` · <span style="color:var(--search)">~${diffData.modified}</span>`;
+    document.getElementById('hdr-stats').innerHTML = stats;
+    document.getElementById('sep-stats').style.display = '';
     document.getElementById('status-format').textContent =
       diffData.format !== 'text' ? '[' + diffData.format + ']' : '';
 

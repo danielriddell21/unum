@@ -100,7 +100,7 @@ func Start(d *node.Diff, opts Options) error {
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 
-	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] DIFF VIEWER LIVE → %s\033[0m\n", url)
+	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] diff viewer  → %s\033[0m\n", url)
 	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
 
 	if autoOpen {
@@ -302,7 +302,7 @@ func StartServer(opts Options) error {
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 
-	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] DIFF VIEWER LIVE → %s\033[0m\n", url)
+	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] diff viewer  → %s\033[0m\n", url)
 	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
 
 	if autoOpen {

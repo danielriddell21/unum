@@ -72,20 +72,24 @@ body::after {
   white-space: nowrap;
 }
 
-#header .filename {
+.hdr-tool {
+  color: var(--key);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.hdr-sep {
   color: var(--muted);
   font-size: 12px;
 }
 
-#header .stats {
-  display: flex;
-  gap: 8px;
+.hdr-info {
+  color: var(--text);
   font-size: 12px;
-  font-weight: bold;
-  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-#header .stats span { color: var(--key); }
 
 /* ── Search bar ──────────────────────────────────────────────────────────────── */
 

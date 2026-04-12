@@ -60,9 +60,23 @@ body::after {
   white-space: nowrap;
 }
 
-.tool-name {
+.hdr-tool {
+  color: var(--border-active);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.hdr-sep {
   color: var(--muted);
   font-size: 12px;
+}
+
+.hdr-info {
+  color: var(--text);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Layout ─────────────────────────────────────────────────────────────────── */

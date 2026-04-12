@@ -138,8 +138,8 @@ func Start(root *node.Node, opts Options) error {
 	}
 
 	// Print startup message
-	fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] NEURAL INTERFACE LIVE → %s\033[0m\n", url)
-	fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
+	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] json explorer  → %s\033[0m\n", url)
+	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
 
 	// Auto-open browser
 	if autoOpen {
@@ -377,7 +377,7 @@ func StartBrowser(opts Options) error {
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 
-	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] NEURAL INTERFACE LIVE → %s\033[0m\n", url)
+	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] json explorer  → %s\033[0m\n", url)
 	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
 
 	if autoOpen {

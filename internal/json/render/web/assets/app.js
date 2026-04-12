@@ -128,10 +128,11 @@
   // ── Header ───────────────────────────────────────────────────────────────────
 
   function renderHeader() {
-    document.getElementById('filename').textContent = treeData.filename;
-    document.getElementById('stat-nodes').textContent = treeData.nodeCount;
-    document.getElementById('stat-depth').textContent = treeData.maxDepth;
-    document.getElementById('stat-size').textContent = humanBytes(treeData.sizeBytes);
+    document.getElementById('hdr-filename').textContent = treeData.filename;
+    document.getElementById('sep-file').style.display = '';
+    document.getElementById('hdr-meta').innerHTML =
+      `<span style="color:var(--key)">${treeData.nodeCount}</span> nodes · depth <span style="color:var(--key)">${treeData.maxDepth}</span> · <span style="color:var(--key)">${humanBytes(treeData.sizeBytes)}</span>`;
+    document.getElementById('sep-meta').style.display = '';
 
     const header = document.getElementById('header');
 

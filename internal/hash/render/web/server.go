@@ -93,7 +93,7 @@ func Start(opts Options) error {
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 
-	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] HASH INTERFACE LIVE → %s\033[0m\n", url)
+	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] hash deriver  → %s\033[0m\n", url)
 	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
 
 	if autoOpen {

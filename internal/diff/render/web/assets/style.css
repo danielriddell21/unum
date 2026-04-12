@@ -67,35 +67,25 @@ body::after {
   white-space: nowrap;
 }
 
-.files {
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  overflow: hidden;
+.hdr-tool {
+  color: var(--border-active);
+  font-size: 13px;
+  white-space: nowrap;
 }
 
-.file-name {
+.hdr-sep {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.hdr-info {
   color: var(--text);
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 240px;
+  max-width: 200px;
 }
-
-.files .arrow { color: var(--muted); }
-
-.stats {
-  display: flex;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: bold;
-  white-space: nowrap;
-}
-
-.stat-added    { color: var(--diff-added); }
-.stat-removed  { color: var(--diff-removed); }
-.stat-modified { color: var(--search); font-weight: bold; }
 
 /* ── Toolbar ─────────────────────────────────────────────────────────────────── */
 
