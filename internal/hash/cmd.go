@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/danielriddell21/unum/internal/config"
+	"github.com/danielriddell21/unum/internal/hash/derive"
+	"github.com/danielriddell21/unum/internal/hash/history"
 	"github.com/danielriddell21/unum/internal/hash/render/static"
 	hashTUI "github.com/danielriddell21/unum/internal/hash/render/tui"
 	hashWeb "github.com/danielriddell21/unum/internal/hash/render/web"
@@ -83,14 +85,15 @@ func runHash(f *flags, args []string) error {
 	if f.ui {
 		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
 		applyTUITheme(f.theme)
-		hashTUI.SetFuncs(Derive, AppendHistory, LoadHistory)
+		hashTUI.SetFuncs(derive.Derive, history.Append, history.Load)
 		p := tea.NewProgram(hashTUI.NewModel(), tea.WithAltScreen())
 		_, err := p.Run()
 		return err
 	}
 
 	if f.web {
-		hashWeb.SetFuncs(Derive)
+		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
+		hashWeb.SetFuncs(derive.Derive)
 		return hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme})
 	}
 
@@ -99,8 +102,8 @@ func runHash(f *flags, args []string) error {
 	}
 	input := args[0]
 
-	r := Derive(input)
-	_ = AppendHistory(input)
+	r := derive.Derive(input)
+	_ = history.Append(input)
 
 	switch {
 	case f.portOnly:

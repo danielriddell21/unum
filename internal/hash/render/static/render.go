@@ -71,12 +71,14 @@ func Boot(w io.Writer, opts Options) {
 		return
 	}
 	if opts.NoColor {
-		_, _ = fmt.Fprintln(w, "[ UNUM ] hash ✓")
+		_, _ = fmt.Fprintln(w, "[ UNUM ] hash  · ✓")
 		return
 	}
-	_, _ = fmt.Fprintf(w, "%s %s\n",
+	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A"))
+	_, _ = fmt.Fprintf(w, "%s %s  %s\n",
 		opts.Theme.Banner.Render("[ UNUM ]"),
-		opts.Theme.Banner.Render("hash ✓"),
+		opts.Theme.Banner.Render("hash"),
+		muted.Render("· ✓"),
 	)
 }
 

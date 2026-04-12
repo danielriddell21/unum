@@ -250,11 +250,11 @@ func (m Model) View() string {
 	if padding < 0 {
 		padding = 0
 	}
+	hintStyled := styleDim.Render(strings.Repeat(" ", padding) + sbHint + " ")
 	statusStyled := lipgloss.NewStyle().
 		Background(lipgloss.Color("#0D0D0D")).
-		Foreground(lipgloss.Color("#3A3A3A")).
 		Width(m.width).
-		Render(strings.Repeat(" ", padding) + sbHint + " ")
+		Render(hintStyled)
 
 	if m.showHelp {
 		return m.helpOverlay(body + "\n" + statusStyled)

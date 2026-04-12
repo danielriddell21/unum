@@ -1,6 +1,6 @@
-// Package hash implements the unum hash subcommand — a deterministic deriver
+// Package derive implements the unum hash subcommand — a deterministic deriver
 // that maps any string to a stable set of useful values via SHA256.
-package hash
+package derive
 
 import (
 	"crypto/sha256"

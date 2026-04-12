@@ -1,4 +1,4 @@
-package hash
+package history
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/types"
 )
 
-const maxHistory = 50
+const Max = 50
 
 // HistoryEntry is an alias for types.HistoryEntry so callers can use hash.HistoryEntry directly.
 type HistoryEntry = types.HistoryEntry
@@ -22,9 +22,9 @@ func historyPath() (string, error) {
 	return filepath.Join(dir, "unum", "hash-history.json"), nil
 }
 
-// LoadHistory reads the history file and returns entries newest-first.
+// Load reads the history file and returns entries newest-first.
 // Returns an empty slice if the file is absent or malformed.
-func LoadHistory() []HistoryEntry {
+func Load() []HistoryEntry {
 	path, err := historyPath()
 	if err != nil {
 		return nil
@@ -40,14 +40,14 @@ func LoadHistory() []HistoryEntry {
 	return entries
 }
 
-// AppendHistory adds input to the history file, capping at maxHistory entries.
-func AppendHistory(input string) error {
+// Append adds input to the history file, capping at maxHistory entries.
+func Append(input string) error {
 	path, err := historyPath()
 	if err != nil {
 		return err
 	}
 
-	entries := LoadHistory()
+	entries := Load()
 
 	// Deduplicate: remove existing entry for this input so it moves to front.
 	filtered := entries[:0]
@@ -61,8 +61,8 @@ func AppendHistory(input string) error {
 	entries = append([]HistoryEntry{{Input: input, Time: time.Now()}}, filtered...)
 
 	// Cap length.
-	if len(entries) > maxHistory {
-		entries = entries[:maxHistory]
+	if len(entries) > Max {
+		entries = entries[:Max]
 	}
 
 	data, err := json.MarshalIndent(entries, "", "  ")
