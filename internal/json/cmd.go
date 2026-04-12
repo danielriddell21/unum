@@ -125,7 +125,7 @@ func runJSON(f *flags, filename string) error {
 	// Strip UTF-8 BOM — some editors (Notepad, VS) add \xEF\xBB\xBF.
 	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
 
-	theme := resolveStaticTheme(f.theme)
+	theme := static.ResolveTheme(f.theme)
 	renderOpts := static.Options{
 		Theme:        theme,
 		ShowLineNums: true,
@@ -255,15 +255,3 @@ func runJSONNoFile(f *flags) error {
 	return fmt.Errorf("missing argument: <file> (or use --ui / --web to pick interactively)")
 }
 
-func resolveStaticTheme(name string) static.Theme {
-	switch name {
-	case "matrix":
-		return static.Matrix
-	case "dracula":
-		return static.Dracula
-	case "nord":
-		return static.Nord
-	default:
-		return static.Cyber
-	}
-}

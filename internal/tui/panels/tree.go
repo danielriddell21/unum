@@ -1,4 +1,4 @@
-// Package panels contains the three Bubble Tea sub-models for the TUI.
+// Package panels contains shared TUI panel components and the palette system.
 package panels
 
 import (

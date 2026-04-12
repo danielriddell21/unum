@@ -2,7 +2,7 @@ package tui
 
 import (
 	"github.com/charmbracelet/lipgloss"
-	"github.com/danielriddell21/unum/internal/json/render/tui/panels"
+	"github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 var (
@@ -25,6 +25,8 @@ var (
 			BorderForeground(lipgloss.Color(panels.PaletteCyber.BorderDim))
 
 	colorActiveBorder = panels.PaletteCyber.BorderActive
+
+	colorBG = panels.PaletteCyber.BG
 )
 
 // ApplyPalette rebuilds all tui-level style vars from the palette.
@@ -42,4 +44,5 @@ func ApplyPalette(p panels.Palette) {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color(p.BorderDim))
 	colorActiveBorder = p.BorderActive
+	colorBG = p.BG
 }

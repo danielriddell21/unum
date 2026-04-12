@@ -9,6 +9,7 @@ import (
 
 	"github.com/danielriddell21/unum/internal/json/node"
 	"github.com/danielriddell21/unum/internal/json/parse"
+	"github.com/danielriddell21/unum/internal/web/shared"
 )
 
 func mustParse(t *testing.T, src string) *node.Node {
@@ -125,8 +126,8 @@ func TestBuildPayload_Deterministic(t *testing.T) {
 }
 
 func TestServeIndex_InjectsConfig(t *testing.T) {
-	d := indexData{DarkTheme: "nord", LightTheme: "solarized"}
-	srv := httptest.NewServer(serveIndex(d))
+	d := shared.IndexData{DarkTheme: "nord", LightTheme: "solarized"}
+	srv := httptest.NewServer(shared.ServeTemplate(assets, "assets/index.html")(d))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL)
@@ -143,8 +144,8 @@ func TestServeIndex_InjectsConfig(t *testing.T) {
 }
 
 func TestServeIndex_DefaultThemes(t *testing.T) {
-	d := indexData{DarkTheme: "cyber", LightTheme: "clean"}
-	srv := httptest.NewServer(serveIndex(d))
+	d := shared.IndexData{DarkTheme: "cyber", LightTheme: "clean"}
+	srv := httptest.NewServer(shared.ServeTemplate(assets, "assets/index.html")(d))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL)

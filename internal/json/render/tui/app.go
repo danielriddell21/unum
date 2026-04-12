@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/danielriddell21/unum/internal/json/node"
 	"github.com/danielriddell21/unum/internal/json/parse"
-	"github.com/danielriddell21/unum/internal/json/render/tui/panels"
+	"github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 // applyTheme applies the named palette to both the panels and tui-level style vars.

@@ -15,6 +15,7 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/render/static"
 	hashTUI "github.com/danielriddell21/unum/internal/hash/render/tui"
 	hashWeb "github.com/danielriddell21/unum/internal/hash/render/web"
+	"github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 type flags struct {
@@ -84,7 +85,7 @@ Single-field flags (pipe-friendly, skips the table):
 func runHash(f *flags, args []string) error {
 	if f.ui {
 		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
-		applyTUITheme(f.theme)
+		hashTUI.ApplyPalette(panels.ResolvePalette(f.theme))
 		hashTUI.SetFuncs(derive.Derive, history.Append, history.Load)
 		p := tea.NewProgram(hashTUI.NewModel(), tea.WithAltScreen())
 		_, err := p.Run()
@@ -124,24 +125,9 @@ func runHash(f *flags, args []string) error {
 			NoColor: f.noColor,
 			Quiet:   f.quiet,
 		}
-		static.Boot(os.Stdout, opts)
+		static.Boot(os.Stderr, opts)
 		static.RenderTable(os.Stdout, r, opts)
 	}
 
 	return nil
-}
-
-// applyTUITheme maps a theme name to TUI styles.
-func applyTUITheme(name string) {
-	type palette struct{ accent, dim, value, border string }
-	themes := map[string]palette{
-		"matrix":  {"#00FF41", "#1A3A1A", "#CCFFCC", "#0A1A0A"},
-		"dracula": {"#BD93F9", "#44475A", "#F8F8F2", "#282A36"},
-		"nord":    {"#88C0D0", "#4C566A", "#ECEFF4", "#2E3440"},
-	}
-	p, ok := themes[name]
-	if !ok {
-		p = palette{"#00D4FF", "#3A3A3A", "#E5E5E5", "#1A1A2E"}
-	}
-	hashTUI.ApplyTheme(p.accent, p.dim, p.value, p.border)
 }

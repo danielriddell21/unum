@@ -10,7 +10,7 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/node"
 	"github.com/danielriddell21/unum/internal/diff/parse"
 	diffpanels "github.com/danielriddell21/unum/internal/diff/render/tui/panels"
-	jsonpanels "github.com/danielriddell21/unum/internal/json/render/tui/panels"
+	"github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 // Start launches the diff TUI.
@@ -87,7 +87,7 @@ func Start(d *node.Diff, theme string) error {
 }
 
 func applyTheme(theme string) {
-	p := jsonpanels.ResolvePalette(theme)
+	p := panels.ResolvePalette(theme)
 	ApplyPalette(p)
 	diffpanels.ApplyPalette(p)
 	diffpanels.ApplyDiffPalette(p)

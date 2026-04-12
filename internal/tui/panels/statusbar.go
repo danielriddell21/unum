@@ -22,11 +22,11 @@ func StatusBar(n *node.Node, width int, searchMode bool, searchQuery string, yan
 		close := styleSearchPrompt.Render(" ]")
 		hint := styleSBHint.Render("  type to filter · enter:confirm · esc:clear")
 		line := prompt + q + cursor + close + hint
-		return pad(line, width)
+		return Pad(line, width)
 	}
 
 	if n == nil {
-		return pad(styleSBHint.Render("  no selection"), width)
+		return Pad(styleSBHint.Render("  no selection"), width)
 	}
 
 	path := styleSBPath.Render("[ " + n.Path() + " ]")
@@ -68,7 +68,8 @@ func StatusBar(n *node.Node, width int, searchMode bool, searchQuery string, yan
 	return left + strings.Repeat(" ", mid) + right
 }
 
-func pad(s string, width int) string {
+// Pad right-pads s with spaces to fill width.
+func Pad(s string, width int) string {
 	w := lipgloss.Width(s)
 	if w < width {
 		s += strings.Repeat(" ", width-w)

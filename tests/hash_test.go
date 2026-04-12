@@ -1,9 +1,14 @@
 package tests_test
 
 import (
+	"fmt"
+	"net/http"
+	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 var hashUUIDRe = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
@@ -124,5 +129,38 @@ func TestHash_NoArgs_Error(t *testing.T) {
 	_, _, code := run("hash")
 	if code == 0 {
 		t.Error("expected non-zero exit when no text argument provided")
+	}
+}
+
+// ─── Web container mode ───────────────────────────────────────────────────────
+
+func TestHashWebContainerMode(t *testing.T) {
+	port := "19882"
+	cmd := exec.Command(unumBin, "hash", "--web")
+	cmd.Env = append(os.Environ(), "PORT="+port)
+
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start server: %v", err)
+	}
+	defer func() { _ = cmd.Process.Kill() }()
+
+	url := fmt.Sprintf("http://localhost:%s/api/derive?input=test", port)
+	deadline := time.Now().Add(5 * time.Second)
+	var resp *http.Response
+	var err error
+	for time.Now().Before(deadline) {
+		resp, err = http.Get(url) //nolint:noctx
+		if err == nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if err != nil {
+		t.Fatalf("server did not start within 5s: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("GET /api/derive?input=test: status %d, want 200", resp.StatusCode)
 	}
 }

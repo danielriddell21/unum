@@ -8,7 +8,9 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/danielriddell21/unum/internal/hash/types"
+	"github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 
@@ -239,22 +241,10 @@ func (m Model) View() string {
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 
-	var sbHint string
-	if m.focused == focusInput {
-		sbHint = "enter:derive  tab:history  ?:help  esc:quit"
-	} else {
-		sbHint = "↑↓:navigate  enter:re-derive  tab:back  ?:help  q:quit"
-	}
-	hintWidth := lipgloss.Width(sbHint)
-	padding := m.width - hintWidth - 1
-	if padding < 0 {
-		padding = 0
-	}
-	hintStyled := styleDim.Render(strings.Repeat(" ", padding) + sbHint + " ")
 	statusStyled := lipgloss.NewStyle().
-		Background(lipgloss.Color("#0D0D0D")).
+		Background(lipgloss.Color(colorBG)).
 		Width(m.width).
-		Render(hintStyled)
+		Render(m.statusBar())
 
 	if m.showHelp {
 		return m.helpOverlay(body + "\n" + statusStyled)
@@ -262,34 +252,32 @@ func (m Model) View() string {
 	return body + "\n" + statusStyled
 }
 
-func (m Model) helpOverlay(base string) string {
-	help := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(colorActive)).
-		Padding(1, 2).
-		Width(44).
-		Render(hashHelpText())
-
-	w := lipgloss.Width(base)
-	h := lipgloss.Height(base)
-	hw := lipgloss.Width(help)
-	hh := lipgloss.Height(help)
-	x := (w - hw) / 2
-	y := (h - hh) / 2
-
-	lines := strings.Split(base, "\n")
-	helpLines := strings.Split(help, "\n")
-	for i, hl := range helpLines {
-		row := y + i
-		if row >= 0 && row < len(lines) {
-			line := lines[row]
-			lw := lipgloss.Width(line)
-			if x >= 0 && x < lw {
-				lines[row] = line[:x] + hl
-			}
-		}
+func (m Model) statusBar() string {
+	var left string
+	if m.result != nil {
+		left = " " + styleTitle.Render("[ "+m.result.Input+" ]")
+	} else {
+		left = " " + styleHint.Render("no input yet")
 	}
-	return strings.Join(lines, "\n")
+
+	var hints string
+	if m.focused == focusInput {
+		hints = styleHint.Render("enter:derive  tab:history  ?:help  esc:quit") + " "
+	} else {
+		hints = styleHint.Render("↑↓:navigate  enter:re-derive  tab:back  ?:help  q:quit") + " "
+	}
+
+	leftW := lipgloss.Width(left)
+	rightW := lipgloss.Width(hints)
+	mid := m.width - leftW - rightW
+	if mid < 1 {
+		mid = 1
+	}
+	return left + strings.Repeat(" ", mid) + hints
+}
+
+func (m Model) helpOverlay(base string) string {
+	return panels.HelpOverlay(base, hashHelpText(), colorActive, 44)
 }
 
 func hashHelpText() string {
@@ -319,9 +307,14 @@ func (m Model) leftPanel(w int) string {
 		innerW = 10
 	}
 
-	title := styleTitle.Render(" HASH ")
+	var title string
+	if m.focused == focusInput {
+		title = styleTitle.Render(" HASH ")
+	} else {
+		title = styleTitleDim.Render(" HASH ")
+	}
 
-	sep := styleDim.Render(strings.Repeat("─", innerW))
+	sep := styleHint.Render(strings.Repeat("─", innerW))
 	inputLine := m.input.View()
 
 	var resultsBlock string
@@ -345,7 +338,7 @@ func (m Model) leftPanel(w int) string {
 		lines = append(lines, sep)
 		resultsBlock = strings.Join(lines, "\n")
 	} else {
-		resultsBlock = styleDim.Render("  type something and press enter")
+		resultsBlock = styleHint.Render("  type something and press enter")
 	}
 
 	content := strings.Join([]string{title, "", inputLine, "", resultsBlock}, "\n")
@@ -365,7 +358,12 @@ func (m Model) rightPanel(w int) string {
 	}
 
 	histFocused := m.focused == focusHistory
-	title := styleTitle.Render(" HISTORY ")
+	var title string
+	if histFocused {
+		title = styleTitle.Render(" HISTORY ")
+	} else {
+		title = styleTitleDim.Render(" HISTORY ")
+	}
 
 	visible, cursorInView := m.historyViewport()
 
@@ -373,7 +371,7 @@ func (m Model) rightPanel(w int) string {
 	lines = append(lines, title)
 
 	if len(visible) == 0 {
-		lines = append(lines, styleDim.Render("  no history"))
+		lines = append(lines, styleHint.Render("  no history"))
 	}
 	for i, e := range visible {
 		text := e.Input

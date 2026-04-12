@@ -7,18 +7,18 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/danielriddell21/unum/internal/diff/node"
-	jsonpanels "github.com/danielriddell21/unum/internal/json/render/tui/panels"
+	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 var (
-	sbAdded   = lipgloss.NewStyle().Foreground(lipgloss.Color(jsonpanels.PaletteCyber.Added)).Bold(true)
-	sbRemoved = lipgloss.NewStyle().Foreground(lipgloss.Color(jsonpanels.PaletteCyber.Removed)).Bold(true)
-	sbMuted   = lipgloss.NewStyle().Foreground(lipgloss.Color(jsonpanels.PaletteCyber.Muted))
-	sbAccent  = lipgloss.NewStyle().Foreground(lipgloss.Color(jsonpanels.PaletteCyber.AccentPrimary))
+	sbAdded   = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Added)).Bold(true)
+	sbRemoved = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Removed)).Bold(true)
+	sbMuted   = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted))
+	sbAccent  = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.AccentPrimary))
 )
 
 // ApplyPalette updates status bar styles from a palette.
-func ApplyPalette(p jsonpanels.Palette) {
+func ApplyPalette(p tuipanels.Palette) {
 	sbAdded = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Added)).Bold(true)
 	sbRemoved = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Removed)).Bold(true)
 	sbMuted = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted))
@@ -45,7 +45,7 @@ func StatusBar(d *node.Diff, view string, width int, searchMode bool, searchQuer
 		}
 		hint := sbMuted.Render("  type to filter · enter:confirm · esc:clear")
 		line := prompt + q + cursor + close + matchHint + hint
-		return pad(line, width)
+		return tuipanels.Pad(line, width)
 	}
 
 	added := sbAdded.Render(fmt.Sprintf("+%d", d.Added))
@@ -62,12 +62,4 @@ func StatusBar(d *node.Diff, view string, width int, searchMode bool, searchQuer
 		mid = 1
 	}
 	return left + strings.Repeat(" ", mid) + hints
-}
-
-func pad(s string, width int) string {
-	w := lipgloss.Width(s)
-	if w < width {
-		s += strings.Repeat(" ", width-w)
-	}
-	return s
 }

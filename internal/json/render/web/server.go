@@ -9,18 +9,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
-	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/danielriddell21/unum/internal/json/analyze"
 	"github.com/danielriddell21/unum/internal/json/lens/merkle"
@@ -29,6 +24,7 @@ import (
 	"github.com/danielriddell21/unum/internal/json/lens/typegen"
 	"github.com/danielriddell21/unum/internal/json/node"
 	"github.com/danielriddell21/unum/internal/json/parse"
+	"github.com/danielriddell21/unum/internal/web/shared"
 )
 
 //go:embed assets/*
@@ -43,44 +39,6 @@ type Options struct {
 	LightTheme string // clean | solarized
 }
 
-type indexData struct {
-	DarkTheme  string
-	LightTheme string
-}
-
-func serveIndex(d indexData) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		raw, err := assets.ReadFile("assets/index.html")
-		if err != nil {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-		}
-		tmpl, err := template.New("index").Parse(string(raw))
-		if err != nil {
-			http.Error(w, "template error", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html")
-		_ = tmpl.Execute(w, d)
-	}
-}
-
-func serveBrowse(d indexData) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		raw, err := assets.ReadFile("assets/browse.html")
-		if err != nil {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-		}
-		tmpl, err := template.New("browse").Parse(string(raw))
-		if err != nil {
-			http.Error(w, "template error", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html")
-		_ = tmpl.Execute(w, d)
-	}
-}
 
 // Start launches the web server, auto-opens the browser, and blocks until the
 // user presses Ctrl+C.
@@ -98,7 +56,7 @@ func Start(root *node.Node, opts Options) error {
 	port := opts.Port
 	if port == 0 {
 		var err error
-		port, err = freePort()
+		port, err = shared.FreePort()
 		if err != nil {
 			return fmt.Errorf("web: cannot find free port: %w", err)
 		}
@@ -120,10 +78,12 @@ func Start(root *node.Node, opts Options) error {
 	mux := http.NewServeMux()
 
 	// Static assets
-	d := indexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
-	mux.HandleFunc("/style.css", serveAsset("assets/style.css", "text/css"))
-	mux.HandleFunc("/app.js", serveAsset("assets/app.js", "application/javascript"))
-	mux.HandleFunc("/", serveIndex(d))
+	d := shared.IndexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
+	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
+	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
+	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
+	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
+	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 
 	// API
 	mux.HandleFunc("/api/tree", func(w http.ResponseWriter, r *http.Request) {
@@ -137,60 +97,15 @@ func Start(root *node.Node, opts Options) error {
 		Handler: mux,
 	}
 
-	// Print startup message
-	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] json explorer  → %s\033[0m\n", url)
-	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
+	shared.PrintStartupBanner("json explorer", url)
 
-	// Auto-open browser
 	if autoOpen {
-		go openBrowser(url)
+		go shared.OpenBrowser(url)
 	}
-
-	// Listen for Ctrl+C to gracefully shut down
-	go func() {
-		ch := make(chan os.Signal, 1)
-		// Use a context with cancel triggered by the signal package
-		// rather than importing signal, we listen on stdin close
-		_ = ch
-	}()
 
 	return srv.ListenAndServe()
 }
 
-func serveAsset(path, contentType string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		data, err := assets.ReadFile(path)
-		if err != nil {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-		}
-		w.Header().Set("Content-Type", contentType)
-		_, _ = w.Write(data)
-	}
-}
-
-func openBrowser(url string) {
-	time.Sleep(300 * time.Millisecond) // small delay for server to be ready
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", url)
-	case "darwin":
-		cmd = exec.Command("open", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
-	_ = cmd.Start()
-}
-
-func freePort() (int, error) {
-	l, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-	defer func() { _ = l.Close() }()
-	return l.Addr().(*net.TCPAddr).Port, nil
-}
 
 // ─── Payload ──────────────────────────────────────────────────────────────────
 
@@ -355,7 +270,7 @@ func StartBrowser(opts Options) error {
 
 	port := opts.Port
 	if port == 0 {
-		port, err = freePort()
+		port, err = shared.FreePort()
 		if err != nil {
 			return fmt.Errorf("web: cannot find free port: %w", err)
 		}
@@ -365,23 +280,24 @@ func StartBrowser(opts Options) error {
 	url := "http://" + addr
 
 	mux := http.NewServeMux()
-	d := indexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
-	mux.HandleFunc("/style.css", serveAsset("assets/style.css", "text/css"))
-	mux.HandleFunc("/app.js", serveAsset("assets/app.js", "application/javascript"))
-	mux.HandleFunc("/explore", serveIndex(d))
+	d := shared.IndexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
+	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
+	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
+	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
+	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
+	mux.HandleFunc("/explore", shared.ServeTemplate(assets, "assets/index.html")(d))
 	mux.HandleFunc("/api/browse", handleBrowse(baseDir))
 	mux.HandleFunc("/api/upload", handleUpload())
 	mux.HandleFunc("/api/tree", handleDynamicTree(baseDir))
 	mux.HandleFunc("/api/query", handleDynamicQuery(baseDir))
-	mux.HandleFunc("/", serveBrowse(d))
+	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/browse.html")(d))
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 
-	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] json explorer  → %s\033[0m\n", url)
-	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
+	shared.PrintStartupBanner("json explorer", url)
 
 	if autoOpen {
-		go openBrowser(url)
+		go shared.OpenBrowser(url)
 	}
 	return srv.ListenAndServe()
 }

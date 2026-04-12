@@ -6,19 +6,15 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
-	"net"
 	"net/http"
 	"os"
-	"os/exec"
-	"runtime"
 	"strconv"
-	"time"
 
 	"github.com/danielriddell21/unum/internal/diff/format"
 	"github.com/danielriddell21/unum/internal/diff/node"
 	"github.com/danielriddell21/unum/internal/diff/parse"
+	"github.com/danielriddell21/unum/internal/web/shared"
 )
 
 //go:embed assets/*
@@ -32,27 +28,6 @@ type Options struct {
 	LightTheme string // clean | solarized
 }
 
-type indexData struct {
-	DarkTheme  string
-	LightTheme string
-}
-
-func serveIndex(d indexData) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		raw, err := assets.ReadFile("assets/index.html")
-		if err != nil {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-		}
-		tmpl, err := template.New("index").Parse(string(raw))
-		if err != nil {
-			http.Error(w, "template error", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html")
-		_ = tmpl.Execute(w, d)
-	}
-}
 
 // Start launches the diff web server, auto-opens the browser, and blocks until
 // Ctrl+C.
@@ -70,7 +45,7 @@ func Start(d *node.Diff, opts Options) error {
 	port := opts.Port
 	if port == 0 {
 		var err error
-		port, err = freePort()
+		port, err = shared.FreePort()
 		if err != nil {
 			return fmt.Errorf("web: cannot find free port: %w", err)
 		}
@@ -88,62 +63,29 @@ func Start(d *node.Diff, opts Options) error {
 		return fmt.Errorf("web: marshal payload: %w", err)
 	}
 
-	idx := indexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
+	idx := shared.IndexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/style.css", serveAsset("assets/style.css", "text/css"))
-	mux.HandleFunc("/app.js", serveAsset("assets/app.js", "application/javascript"))
+	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
+	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
+	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
+	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
 	mux.HandleFunc("/api/diff", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(payloadBytes)
 	})
-	mux.HandleFunc("/", serveIndex(idx))
+	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(idx))
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 
-	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] diff viewer  → %s\033[0m\n", url)
-	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
+	shared.PrintStartupBanner("diff viewer", url)
 
 	if autoOpen {
-		go openBrowser(url)
+		go shared.OpenBrowser(url)
 	}
 
 	return srv.ListenAndServe()
 }
 
-func serveAsset(path, contentType string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		data, err := assets.ReadFile(path)
-		if err != nil {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-		}
-		w.Header().Set("Content-Type", contentType)
-		_, _ = w.Write(data)
-	}
-}
-
-func openBrowser(url string) {
-	time.Sleep(300 * time.Millisecond)
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", url)
-	case "darwin":
-		cmd = exec.Command("open", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
-	_ = cmd.Start()
-}
-
-func freePort() (int, error) {
-	l, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-	defer func() { _ = l.Close() }()
-	return l.Addr().(*net.TCPAddr).Port, nil
-}
 
 // ─── Payload ──────────────────────────────────────────────────────────────────
 
@@ -284,7 +226,7 @@ func StartServer(opts Options) error {
 	port := opts.Port
 	if port == 0 {
 		var err error
-		port, err = freePort()
+		port, err = shared.FreePort()
 		if err != nil {
 			return fmt.Errorf("web: cannot find free port: %w", err)
 		}
@@ -293,20 +235,21 @@ func StartServer(opts Options) error {
 	addr := host + ":" + strconv.Itoa(port)
 	url := "http://" + addr
 
-	d := indexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
+	d := shared.IndexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/style.css", serveAsset("assets/style.css", "text/css"))
-	mux.HandleFunc("/app.js", serveAsset("assets/app.js", "application/javascript"))
+	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
+	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
+	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
+	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
 	mux.HandleFunc("/api/diff", handleServerDiff())
-	mux.HandleFunc("/", serveIndex(d))
+	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 
-	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;51m[ UNUM ] diff viewer  → %s\033[0m\n", url)
-	_, _ = fmt.Fprintf(os.Stderr, "\033[38;5;240mPress Ctrl+C to stop\033[0m\n")
+	shared.PrintStartupBanner("diff viewer", url)
 
 	if autoOpen {
-		go openBrowser(url)
+		go shared.OpenBrowser(url)
 	}
 
 	return srv.ListenAndServe()

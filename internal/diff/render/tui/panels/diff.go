@@ -7,20 +7,20 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/danielriddell21/unum/internal/diff/node"
-	jsonpanels "github.com/danielriddell21/unum/internal/json/render/tui/panels"
+	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 var (
-	diffAdded      = lipgloss.NewStyle().Foreground(lipgloss.Color(jsonpanels.PaletteCyber.Added))
-	diffRemoved    = lipgloss.NewStyle().Foreground(lipgloss.Color(jsonpanels.PaletteCyber.Removed))
-	diffUnchanged  = lipgloss.NewStyle().Foreground(lipgloss.Color(jsonpanels.PaletteCyber.Muted))
-	diffHunkHdr    = lipgloss.NewStyle().Foreground(lipgloss.Color(jsonpanels.PaletteCyber.AccentPrimary))
-	diffLineNum    = lipgloss.NewStyle().Foreground(lipgloss.Color(jsonpanels.PaletteCyber.Muted))
-	diffSearchHL   = lipgloss.NewStyle().Background(lipgloss.Color(jsonpanels.PaletteCyber.Search)).Foreground(lipgloss.Color("#000000"))
+	diffAdded      = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Added))
+	diffRemoved    = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Removed))
+	diffUnchanged  = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted))
+	diffHunkHdr    = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.AccentPrimary))
+	diffLineNum    = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted))
+	diffSearchHL   = lipgloss.NewStyle().Background(lipgloss.Color(tuipanels.PaletteCyber.Search)).Foreground(lipgloss.Color("#000000"))
 )
 
 // ApplyDiffPalette updates diff panel style vars.
-func ApplyDiffPalette(p jsonpanels.Palette) {
+func ApplyDiffPalette(p tuipanels.Palette) {
 	diffAdded = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Added))
 	diffRemoved = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Removed))
 	diffUnchanged = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted))

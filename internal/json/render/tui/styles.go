@@ -2,7 +2,7 @@ package tui
 
 import (
 	"github.com/charmbracelet/lipgloss"
-	"github.com/danielriddell21/unum/internal/json/render/tui/panels"
+	"github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 var (
@@ -29,6 +29,8 @@ var (
 
 	// colorActiveBorder is kept for the help overlay border reference
 	colorActiveBorder = panels.PaletteCyber.BorderActive
+
+	colorBG = panels.PaletteCyber.BG
 )
 
 // ApplyPalette rebuilds tui-level style vars to match the given palette.
@@ -48,4 +50,5 @@ func ApplyPalette(p panels.Palette) {
 	styleHint = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(p.Muted))
 	colorActiveBorder = p.BorderActive
+	colorBG = p.BG
 }

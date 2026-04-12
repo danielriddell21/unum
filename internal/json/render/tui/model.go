@@ -2,14 +2,13 @@ package tui
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/danielriddell21/unum/internal/json/node"
-	"github.com/danielriddell21/unum/internal/json/render/tui/panels"
+	"github.com/danielriddell21/unum/internal/tui/panels"
 
 	"github.com/atotto/clipboard"
 )
@@ -277,21 +276,21 @@ func (m Model) View() string {
 	}
 
 	// Build left column (tree)
-	leftTitle := m.panelTitle("JSON TREE", m.focused == focusTree)
+	leftTitle := panelTitle("JSON TREE", m.focused == focusTree)
 	treeContent := m.tree.View()
-	leftPane := m.wrapPanel(leftTitle+"\n"+treeContent, m.focused == focusTree,
+	leftPane := wrapPanel(leftTitle+"\n"+treeContent, m.focused == focusTree,
 		int(float64(m.width)*0.38)-0, m.height-1)
 
 	// Build right column
 	// Top: preview
-	previewTitle := m.panelTitle("PREVIEW", m.focused == focusPreview)
+	previewTitle := panelTitle("PREVIEW", m.focused == focusPreview)
 	previewContent := m.preview.View()
-	previewPane := m.wrapPanel(previewTitle+"\n"+previewContent, m.focused == focusPreview,
+	previewPane := wrapPanel(previewTitle+"\n"+previewContent, m.focused == focusPreview,
 		m.width-int(float64(m.width)*0.38)-0, int(float64(m.height-1)*0.38))
 
 	// Bottom: lens
 	lensContent := m.lens.View()
-	lensPane := m.wrapPanel(lensContent, m.focused == focusLens,
+	lensPane := wrapPanel(lensContent, m.focused == focusLens,
 		m.width-int(float64(m.width)*0.38)-0, m.height-1-int(float64(m.height-1)*0.38))
 
 	rightCol := lipgloss.JoinVertical(lipgloss.Left, previewPane, lensPane)
@@ -302,8 +301,7 @@ func (m Model) View() string {
 	statusBar := panels.StatusBar(cursorNode, m.width, m.currentMode == modeSearch,
 		m.searchInput.Value(), m.yankFeedback)
 	statusStyled := lipgloss.NewStyle().
-		Background(lipgloss.Color("#0D0D0D")).
-		Foreground(lipgloss.Color("#3A3A3A")).
+		Background(lipgloss.Color(colorBG)).
 		Width(m.width).
 		Render(statusBar)
 
@@ -315,14 +313,14 @@ func (m Model) View() string {
 	return body + "\n" + statusStyled
 }
 
-func (m Model) panelTitle(title string, active bool) string {
+func panelTitle(title string, active bool) string {
 	if active {
 		return styleTitle.Render(" " + title + " ")
 	}
 	return styleTitleDim.Render(" " + title + " ")
 }
 
-func (m Model) wrapPanel(content string, active bool, width, height int) string {
+func wrapPanel(content string, active bool, width, height int) string {
 	if width < 4 {
 		width = 4
 	}
@@ -338,37 +336,7 @@ func (m Model) wrapPanel(content string, active bool, width, height int) string 
 }
 
 func (m Model) helpOverlay(base string) string {
-	help := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(colorActiveBorder)).
-		Padding(1, 2).
-		Width(50).
-		Render(helpText())
-
-	// Center overlay on base
-	w := lipgloss.Width(base)
-	h := lipgloss.Height(base)
-	hw := lipgloss.Width(help)
-	hh := lipgloss.Height(help)
-	x := (w - hw) / 2
-	y := (h - hh) / 2
-	_ = x
-	_ = y
-
-	lines := strings.Split(base, "\n")
-	helpLines := strings.Split(help, "\n")
-	for i, hl := range helpLines {
-		row := y + i
-		if row >= 0 && row < len(lines) {
-			line := lines[row]
-			lw := lipgloss.Width(line)
-			if x >= 0 && x < lw {
-				// Overlay help line onto base line
-				lines[row] = line[:x] + hl
-			}
-		}
-	}
-	return strings.Join(lines, "\n")
+	return panels.HelpOverlay(base, helpText(), colorActiveBorder, 50)
 }
 
 func helpText() string {

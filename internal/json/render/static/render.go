@@ -112,6 +112,20 @@ type Options struct {
 	Filename     string
 }
 
+// ResolveTheme returns the named theme, defaulting to Cyber.
+func ResolveTheme(name string) Theme {
+	switch name {
+	case "matrix":
+		return Matrix
+	case "dracula":
+		return Dracula
+	case "nord":
+		return Nord
+	default:
+		return Cyber
+	}
+}
+
 // DefaultOptions returns sensible defaults.
 func DefaultOptions() Options {
 	return Options{

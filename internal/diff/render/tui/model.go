@@ -2,13 +2,14 @@ package tui
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/danielriddell21/unum/internal/diff/node"
 	"github.com/danielriddell21/unum/internal/diff/render/tui/panels"
+	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 type viewMode int
@@ -242,8 +243,7 @@ func (m Model) View() string {
 	}
 	sb := panels.StatusBar(m.diff, viewLabel, m.width, m.mode == modeSearch, searchQ, mc)
 	statusStyled := lipgloss.NewStyle().
-		Background(lipgloss.Color("#0D0D0D")).
-		Foreground(lipgloss.Color("#3A3A3A")).
+		Background(lipgloss.Color(colorBG)).
 		Width(m.width).
 		Render(sb)
 
@@ -255,33 +255,7 @@ func (m Model) View() string {
 }
 
 func (m Model) helpOverlay(base string) string {
-	help := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(colorActiveBorder)).
-		Padding(1, 2).
-		Width(52).
-		Render(helpText())
-
-	w := lipgloss.Width(base)
-	h := lipgloss.Height(base)
-	hw := lipgloss.Width(help)
-	hh := lipgloss.Height(help)
-	x := (w - hw) / 2
-	y := (h - hh) / 2
-
-	lines := strings.Split(base, "\n")
-	helpLines := strings.Split(help, "\n")
-	for i, hl := range helpLines {
-		row := y + i
-		if row >= 0 && row < len(lines) {
-			line := lines[row]
-			lw := lipgloss.Width(line)
-			if x >= 0 && x < lw {
-				lines[row] = line[:x] + hl
-			}
-		}
-	}
-	return strings.Join(lines, "\n")
+	return tuipanels.HelpOverlay(base, helpText(), colorActiveBorder, 52)
 }
 
 func helpText() string {

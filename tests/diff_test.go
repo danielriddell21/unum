@@ -47,6 +47,14 @@ func TestDiffStat(t *testing.T) {
 	if !strings.Contains(stdout, "+") || !strings.Contains(stdout, "-") {
 		t.Errorf("expected count summary in stat output:\n%s", stdout)
 	}
+	// --stat must NOT print the diff body
+	if strings.Contains(stdout, "@@") {
+		t.Errorf("--stat output should not contain hunk headers:\n%s", stdout)
+	}
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	if len(lines) > 2 {
+		t.Errorf("--stat: expected ≤2 lines, got %d:\n%s", len(lines), stdout)
+	}
 }
 
 func TestDiffJSONSemantic(t *testing.T) {
