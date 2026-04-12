@@ -97,11 +97,6 @@ body::after {
 .stat-removed  { color: var(--diff-removed); }
 .stat-modified { color: var(--search); font-weight: bold; }
 
-.theme-btn.active {
-  border-color: var(--border-active) !important;
-  color: var(--border-active) !important;
-}
-
 /* ── Toolbar ─────────────────────────────────────────────────────────────────── */
 
 #toolbar {

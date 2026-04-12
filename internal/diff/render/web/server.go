@@ -6,6 +6,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"net"
 	"net/http"
@@ -25,8 +26,32 @@ var assets embed.FS
 
 // Options configures the diff web server.
 type Options struct {
-	Port  int
-	Quiet bool
+	Port       int
+	Quiet      bool
+	DarkTheme  string // cyber | matrix | dracula | nord
+	LightTheme string // clean | solarized
+}
+
+type indexData struct {
+	DarkTheme  string
+	LightTheme string
+}
+
+func serveIndex(d indexData) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		raw, err := assets.ReadFile("assets/index.html")
+		if err != nil {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		tmpl, err := template.New("index").Parse(string(raw))
+		if err != nil {
+			http.Error(w, "template error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		_ = tmpl.Execute(w, d)
+	}
 }
 
 // Start launches the diff web server, auto-opens the browser, and blocks until
@@ -63,6 +88,7 @@ func Start(d *node.Diff, opts Options) error {
 		return fmt.Errorf("web: marshal payload: %w", err)
 	}
 
+	idx := indexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/style.css", serveAsset("assets/style.css", "text/css"))
 	mux.HandleFunc("/app.js", serveAsset("assets/app.js", "application/javascript"))
@@ -70,7 +96,7 @@ func Start(d *node.Diff, opts Options) error {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(payloadBytes)
 	})
-	mux.HandleFunc("/", serveAsset("assets/index.html", "text/html"))
+	mux.HandleFunc("/", serveIndex(idx))
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 
@@ -267,11 +293,12 @@ func StartServer(opts Options) error {
 	addr := host + ":" + strconv.Itoa(port)
 	url := "http://" + addr
 
+	d := indexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/style.css", serveAsset("assets/style.css", "text/css"))
 	mux.HandleFunc("/app.js", serveAsset("assets/app.js", "application/javascript"))
 	mux.HandleFunc("/api/diff", handleServerDiff())
-	mux.HandleFunc("/", serveAsset("assets/index.html", "text/html"))
+	mux.HandleFunc("/", serveIndex(d))
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 

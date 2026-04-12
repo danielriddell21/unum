@@ -1,6 +1,10 @@
 package web
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/danielriddell21/unum/internal/json/node"
@@ -117,5 +121,41 @@ func TestBuildPayload_Deterministic(t *testing.T) {
 	p2, _ := buildPayload(root, "test.json")
 	if p1.MerkleRoot != p2.MerkleRoot {
 		t.Errorf("non-deterministic MerkleRoot: %q vs %q", p1.MerkleRoot, p2.MerkleRoot)
+	}
+}
+
+func TestServeIndex_InjectsConfig(t *testing.T) {
+	d := indexData{DarkTheme: "nord", LightTheme: "solarized"}
+	srv := httptest.NewServer(serveIndex(d))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+
+	want := `window.UNUM_CONFIG={darkTheme:"nord",lightTheme:"solarized"}`
+	if !strings.Contains(string(body), want) {
+		t.Errorf("response body does not contain %q\ngot: %s", want, body)
+	}
+}
+
+func TestServeIndex_DefaultThemes(t *testing.T) {
+	d := indexData{DarkTheme: "cyber", LightTheme: "clean"}
+	srv := httptest.NewServer(serveIndex(d))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+
+	want := `window.UNUM_CONFIG={darkTheme:"cyber",lightTheme:"clean"}`
+	if !strings.Contains(string(body), want) {
+		t.Errorf("response body does not contain %q\ngot: %s", want, body)
 	}
 }

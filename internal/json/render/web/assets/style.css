@@ -77,11 +77,6 @@ body::after {
   font-size: 12px;
 }
 
-.theme-btn.active {
-  border-color: var(--border-active) !important;
-  color: var(--border-active) !important;
-}
-
 #header .stats {
   display: flex;
   gap: 8px;

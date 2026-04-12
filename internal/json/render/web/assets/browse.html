@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>unum — JSON Explorer</title>
   <link rel="stylesheet" href="/style.css" />
+  <script>window.UNUM_CONFIG={darkTheme:"{{.DarkTheme}}",lightTheme:"{{.LightTheme}}"};</script>
   <style>
     #upload-wrap {
       flex: 1;
@@ -84,18 +85,14 @@
     const fileInput = document.getElementById('file-input');
     const errEl = document.getElementById('upload-error');
 
-    // Apply saved theme
-    const THEMES = {
-      cyber:   { '--bg': '#0D0D0D', '--bg-panel': '#111111', '--bg-hover': '#1A1A2E', '--border': '#1E1E1E', '--border-active': '#00D4FF', '--text': '#C0C0C0', '--muted': '#3A3A3A' },
-      matrix:  { '--bg': '#0D0D0D', '--bg-panel': '#0A1A0A', '--bg-hover': '#001A00', '--border': '#003300', '--border-active': '#00FF41', '--text': '#00CC22', '--muted': '#005500' },
-      dracula: { '--bg': '#282A36', '--bg-panel': '#21222C', '--bg-hover': '#44475A', '--border': '#3D4050', '--border-active': '#BD93F9', '--text': '#F8F8F2', '--muted': '#6272A4' },
-      nord:    { '--bg': '#2E3440', '--bg-panel': '#272C36', '--bg-hover': '#3B4252', '--border': '#3B4252', '--border-active': '#88C0D0', '--text': '#ECEFF4', '--muted': '#4C566A' },
-    };
-    const saved = localStorage.getItem('unum-theme') || 'cyber';
-    const vars = THEMES[saved] || THEMES.cyber;
-    for (const [k, v] of Object.entries(vars)) {
-      document.documentElement.style.setProperty(k, v);
-    }
+    // Apply dark/light mode from localStorage (default: dark)
+    (function() {
+      var mode = localStorage.getItem('unum-mode') === 'light' ? 'light' : 'dark';
+      var DARK  = {'--bg':'#0D0D0D','--bg-panel':'#111111','--bg-hover':'#1A1A2E','--border':'#1E1E1E','--border-active':'#00D4FF','--text':'#C0C0C0','--muted':'#3A3A3A'};
+      var LIGHT = {'--bg':'#F5F7FA','--bg-panel':'#EAECF0','--bg-hover':'#DDE3EE','--border':'#C8D0DC','--border-active':'#007ACC','--text':'#1A2332','--muted':'#95A5A6'};
+      var vars = mode === 'light' ? LIGHT : DARK;
+      for (var k in vars) document.documentElement.style.setProperty(k, vars[k]);
+    })();
 
     dropZone.addEventListener('click', () => fileInput.click());
 

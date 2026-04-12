@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"net"
 	"net/http"
@@ -35,9 +36,50 @@ var assets embed.FS
 
 // Options configures the web server.
 type Options struct {
-	Port     int    // 0 = find a free port
-	Filename string // original filename for display
-	Quiet    bool
+	Port       int    // 0 = find a free port
+	Filename   string // original filename for display
+	Quiet      bool
+	DarkTheme  string // cyber | matrix | dracula | nord
+	LightTheme string // clean | solarized
+}
+
+type indexData struct {
+	DarkTheme  string
+	LightTheme string
+}
+
+func serveIndex(d indexData) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		raw, err := assets.ReadFile("assets/index.html")
+		if err != nil {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		tmpl, err := template.New("index").Parse(string(raw))
+		if err != nil {
+			http.Error(w, "template error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		_ = tmpl.Execute(w, d)
+	}
+}
+
+func serveBrowse(d indexData) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		raw, err := assets.ReadFile("assets/browse.html")
+		if err != nil {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		tmpl, err := template.New("browse").Parse(string(raw))
+		if err != nil {
+			http.Error(w, "template error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		_ = tmpl.Execute(w, d)
+	}
 }
 
 // Start launches the web server, auto-opens the browser, and blocks until the
@@ -78,9 +120,10 @@ func Start(root *node.Node, opts Options) error {
 	mux := http.NewServeMux()
 
 	// Static assets
+	d := indexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
 	mux.HandleFunc("/style.css", serveAsset("assets/style.css", "text/css"))
 	mux.HandleFunc("/app.js", serveAsset("assets/app.js", "application/javascript"))
-	mux.HandleFunc("/", serveAsset("assets/index.html", "text/html"))
+	mux.HandleFunc("/", serveIndex(d))
 
 	// API
 	mux.HandleFunc("/api/tree", func(w http.ResponseWriter, r *http.Request) {
@@ -322,14 +365,15 @@ func StartBrowser(opts Options) error {
 	url := "http://" + addr
 
 	mux := http.NewServeMux()
+	d := indexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
 	mux.HandleFunc("/style.css", serveAsset("assets/style.css", "text/css"))
 	mux.HandleFunc("/app.js", serveAsset("assets/app.js", "application/javascript"))
-	mux.HandleFunc("/explore", serveAsset("assets/index.html", "text/html"))
+	mux.HandleFunc("/explore", serveIndex(d))
 	mux.HandleFunc("/api/browse", handleBrowse(baseDir))
 	mux.HandleFunc("/api/upload", handleUpload())
 	mux.HandleFunc("/api/tree", handleDynamicTree(baseDir))
 	mux.HandleFunc("/api/query", handleDynamicQuery(baseDir))
-	mux.HandleFunc("/", serveAsset("assets/browse.html", "text/html"))
+	mux.HandleFunc("/", serveBrowse(d))
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 
