@@ -15,7 +15,8 @@ import (
 type viewMode int
 
 const (
-	viewUnified viewMode = iota
+	viewSemantic viewMode = iota
+	viewUnified
 	viewSplit
 )
 
@@ -53,7 +54,7 @@ func NewModel(d *node.Diff) Model {
 
 	return Model{
 		diff:        d,
-		view:        viewUnified,
+
 		mode:        modeNormal,
 		searchInput: si,
 	}
@@ -64,6 +65,9 @@ func (m *Model) initPanels() {
 	m.unified = panels.NewUnifiedPanel(m.diff, dw, dh)
 	m.split = panels.NewSplitPanel(m.diff, dw, dh)
 	m.info = panels.NewInfoPanel(m.diff, iw, ih)
+	if m.diff.Root == nil {
+		m.view = viewUnified
+	}
 }
 
 // panelDimensions returns (diffW, diffH, infoW, infoH).
@@ -163,11 +167,25 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.ReloadRequest = true
 		return m, tea.Quit
 	case "v":
-		if m.view == viewUnified {
-			m.view = viewSplit
-		} else {
-			m.view = viewUnified
+		hasSemantic := m.diff.Root != nil
+		hasText := len(m.diff.Hunks) > 0
+		if hasSemantic && hasText {
+			switch m.view {
+			case viewSemantic:
+				m.view = viewUnified
+			case viewUnified:
+				m.view = viewSplit
+			default:
+				m.view = viewSemantic
+			}
+		} else if hasText {
+			if m.view == viewSplit {
+				m.view = viewUnified
+			} else {
+				m.view = viewSplit
+			}
 		}
+		// semantic-only (no hunks): v does nothing
 	case "/":
 		m.mode = modeSearch
 		m.searchInput.Focus()
@@ -215,10 +233,16 @@ func (m Model) View() string {
 	// Diff panel
 	var diffContent string
 	var viewLabel string
-	if m.view == viewUnified {
+	switch m.view {
+	case viewSemantic:
+		m.unified.SetTextOnly(false)
+		diffContent = m.unified.View()
+		viewLabel = "semantic"
+	case viewUnified:
+		m.unified.SetTextOnly(true)
 		diffContent = m.unified.View()
 		viewLabel = "unified"
-	} else {
+	default:
 		diffContent = m.split.View()
 		viewLabel = "split"
 	}
@@ -241,6 +265,7 @@ func (m Model) View() string {
 	if m.view == viewSplit {
 		mc = m.split.MatchCount()
 	}
+
 	sb := panels.StatusBar(m.diff, viewLabel, m.width, m.mode == modeSearch, searchQ, mc)
 	statusStyled := lipgloss.NewStyle().
 		Background(lipgloss.Color(colorBG)).
@@ -267,7 +292,7 @@ func helpText() string {
   n / N          Next / previous search match
 
 %s
-  v              Toggle unified / split view
+  v              Cycle view (semantic / unified / split)
   tab            Cycle focus (split view)
 
 %s

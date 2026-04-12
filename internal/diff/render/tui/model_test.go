@@ -90,19 +90,57 @@ func TestDiffModel_VKeyTogglesViewForTextDiff(t *testing.T) {
 	}
 }
 
-func TestDiffModel_VKeyTogglesViewForTreeDiff(t *testing.T) {
+func TestDiffModel_VKeyNoopForSemanticOnlyDiff(t *testing.T) {
 	m := NewModel(treeDiff())
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
-	if nm.view != viewUnified {
-		t.Fatalf("initial view=%v, want viewUnified", nm.view)
+	if nm.view != viewSemantic {
+		t.Fatalf("initial view=%v, want viewSemantic", nm.view)
 	}
 
 	next2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
 	nm2 := next2.(Model)
-	if nm2.view != viewSplit {
-		t.Errorf("v on tree diff: view=%v, want viewSplit", nm2.view)
+	if nm2.view != viewSemantic {
+		t.Errorf("v on semantic-only diff: view=%v, want viewSemantic (unchanged)", nm2.view)
+	}
+}
+
+func TestDiffModel_VKeyCyclesThreeModes(t *testing.T) {
+	// diff with both Root (semantic) and Hunks (text)
+	d := &node.Diff{
+		Format: node.FormatJSON,
+		Added:  1,
+		Root: &node.DiffNode{
+			Kind:     node.Unchanged,
+			Children: []*node.DiffNode{{Kind: node.Added, Path: ".key", NewValue: `"v"`}},
+		},
+		Hunks: []node.Hunk{{
+			OldStart: 1, OldCount: 1, NewStart: 1, NewCount: 1,
+			Lines: []node.Line{{Kind: node.Added, NewNum: 1, Content: `"key": "v"`}},
+		}},
+	}
+	m := NewModel(d)
+	next, _ := m.Update(windowMsg(120, 40))
+	nm := next.(Model)
+
+	if nm.view != viewSemantic {
+		t.Fatalf("initial view=%v, want viewSemantic", nm.view)
+	}
+	next, _ = nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	nm = next.(Model)
+	if nm.view != viewUnified {
+		t.Errorf("v #1: view=%v, want viewUnified", nm.view)
+	}
+	next, _ = nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	nm = next.(Model)
+	if nm.view != viewSplit {
+		t.Errorf("v #2: view=%v, want viewSplit", nm.view)
+	}
+	next, _ = nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	nm = next.(Model)
+	if nm.view != viewSemantic {
+		t.Errorf("v #3: view=%v, want viewSemantic", nm.view)
 	}
 }
 

@@ -91,6 +91,14 @@ func (p *TreePanel) Update(msg tea.KeyMsg) (changed bool) {
 				changed = true
 			}
 		}
+	case " ":
+		if n := p.CursorNode(); n != nil {
+			if n.Kind == node.KindObject || n.Kind == node.KindArray {
+				p.collapsed[n] = !p.collapsed[n]
+				p.reflatten()
+				changed = true
+			}
+		}
 	case "h", "left":
 		if n := p.CursorNode(); n != nil {
 			if (n.Kind == node.KindObject || n.Kind == node.KindArray) && !p.collapsed[n] {
