@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/charmbracelet/lipgloss"
+	jsonpanels "github.com/danielriddell21/unum/internal/json/render/tui/panels"
 	"github.com/danielriddell21/unum/internal/tui/panels"
 )
 
@@ -33,9 +34,10 @@ var (
 	colorBG = panels.PaletteCyber.BG
 )
 
-// ApplyPalette rebuilds tui-level style vars to match the given palette.
-// Call this (after panels.ApplyPalette) before running any TUI program.
+// ApplyPalette rebuilds all style vars to match the given palette.
+// Call this before running any TUI program.
 func ApplyPalette(p panels.Palette) {
+	jsonpanels.ApplyPalette(p)
 	styleTitle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(p.AccentPrimary)).
 		Bold(true)

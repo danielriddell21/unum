@@ -110,7 +110,7 @@ func (p *PreviewPanel) renderLeaf(n *node.Node) string {
 		valueStr = styleNull.Render("null")
 	}
 
-	path := styleSBPath.Render(n.Path())
+	path := stylePath.Render(n.Path())
 	return fmt.Sprintf("%s\n\n%s\n\n%s", typeLabel, valueStr, path)
 }
 
@@ -173,4 +173,3 @@ func colorizeValue(s string) string {
 		return plain + suffix
 	}
 }
-

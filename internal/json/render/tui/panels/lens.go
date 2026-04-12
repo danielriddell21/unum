@@ -57,8 +57,8 @@ type LensPanel struct {
 	cursorNode   *node.Node
 	active       LensID
 	typegenMode  TypeGenSubMode
-	queryInput string
-	content    string // cached rendered output
+	queryInput   string
+	content      string // cached rendered output
 	viewport     viewport.Model
 	width        int
 	height       int
@@ -361,7 +361,7 @@ func fmtF(f float64) string {
 	return fmt.Sprintf("%.4g", f)
 }
 
-// prettyJSON pretty-prints a node's value for the preview panel.
+// PrettyNode pretty-prints a node's value for the preview panel.
 func PrettyNode(n *node.Node) string {
 	b, err := n.MarshalJSON()
 	if err != nil {
@@ -371,4 +371,3 @@ func PrettyNode(n *node.Node) string {
 	_ = json.Indent(&buf, b, "", "  ")
 	return buf.String()
 }
-

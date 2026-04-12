@@ -8,14 +8,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/danielriddell21/unum/internal/json/node"
 	"github.com/danielriddell21/unum/internal/json/parse"
-	"github.com/danielriddell21/unum/internal/tui/panels"
+	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
-// applyTheme applies the named palette to both the panels and tui-level style vars.
+// applyTheme applies the named palette to all style vars.
 func applyTheme(theme string) {
-	p := panels.ResolvePalette(theme)
-	panels.ApplyPalette(p)
-	ApplyPalette(p)
+	ApplyPalette(tuipanels.ResolvePalette(theme))
 }
 
 // Start launches the TUI for the given node tree.

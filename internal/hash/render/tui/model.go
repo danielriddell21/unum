@@ -9,10 +9,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	hashpanels "github.com/danielriddell21/unum/internal/hash/render/tui/panels"
 	"github.com/danielriddell21/unum/internal/hash/types"
-	"github.com/danielriddell21/unum/internal/tui/panels"
+	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
-
 
 // deriveFunc and historyFuncs are injected at startup to avoid import cycles.
 var (
@@ -41,19 +41,14 @@ const (
 
 // Model is the root Bubble Tea model for the hash TUI.
 type Model struct {
-	input   textinput.Model
-	result  *types.Result
-	history []types.HistoryEntry
-	focused focus
-
-	// historyCursor is the selected index into m.history (0 = newest).
-	historyCursor int
-
-	showHelp bool
-
-	// Layout
-	width  int
-	height int
+	input         textinput.Model
+	result        *types.Result
+	focused       focus
+	hashPanel     hashpanels.HashPanel
+	historyPanel  hashpanels.HistoryPanel
+	showHelp      bool
+	width         int
+	height        int
 }
 
 // NewModel creates the root model, loading existing history.
@@ -63,15 +58,16 @@ func NewModel() Model {
 	ti.CharLimit = 200
 	ti.Focus()
 
-	var hist []types.HistoryEntry
+	hp := hashpanels.NewHistoryPanel(0, 0)
 	if loadHistoryFn != nil {
-		hist = loadHistoryFn()
+		hp.SetHistory(loadHistoryFn())
 	}
 
 	return Model{
-		input:   ti,
-		history: hist,
-		focused: focusInput,
+		input:        ti,
+		hashPanel:    hashpanels.NewHashPanel(0, 0),
+		historyPanel: hp,
+		focused:      focusInput,
 	}
 }
 
@@ -84,6 +80,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.resize()
 		return m, nil
 
 	case tea.KeyMsg:
@@ -93,6 +90,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
 	return m, cmd
+}
+
+func (m *Model) resize() {
+	lw, rw, h := m.panelDimensions()
+	m.hashPanel.Resize(lw, h)
+	m.historyPanel.Resize(rw, h)
+}
+
+func (m *Model) panelDimensions() (lw, rw, h int) {
+	lw = int(float64(m.width)*0.60) - 2
+	rw = m.width - int(float64(m.width)*0.60) - 2
+	h = m.height - 3
+	if lw < 10 {
+		lw = 10
+	}
+	if rw < 8 {
+		rw = 8
+	}
+	if h < 3 {
+		h = 3
+	}
+	return
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -140,22 +159,17 @@ func (m Model) handleHistoryKey(k string) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "up", "k":
-		if m.historyCursor > 0 {
-			m.historyCursor--
-		}
+		m.historyPanel.ScrollUp()
 
 	case "down", "j":
-		if m.historyCursor < len(m.history)-1 {
-			m.historyCursor++
-		}
+		m.historyPanel.ScrollDown()
 
 	case "enter":
-		if len(m.history) > 0 {
-			selected := m.history[m.historyCursor].Input
+		if selected := m.historyPanel.SelectedInput(); selected != "" {
 			m.input.SetValue(selected)
 			m.deriveAndSave(selected)
-			// Switch back to input so the user can edit
 			m.focused = focusInput
+			m.historyPanel.SetFocused(false)
 			m.input.Focus()
 			return m, textinput.Blink
 		}
@@ -168,10 +182,11 @@ func (m *Model) switchFocus() Model {
 	if m.focused == focusInput {
 		m.focused = focusHistory
 		m.input.Blur()
-		// Start cursor at top of history
-		m.historyCursor = 0
+		m.historyPanel.ResetCursor()
+		m.historyPanel.SetFocused(true)
 	} else {
 		m.focused = focusInput
+		m.historyPanel.SetFocused(false)
 		m.input.Focus()
 	}
 	return *m
@@ -186,46 +201,9 @@ func (m *Model) deriveAndSave(text string) {
 		_ = appendHistoryFn(text)
 	}
 	if loadHistoryFn != nil {
-		m.history = loadHistoryFn()
+		m.historyPanel.SetHistory(loadHistoryFn())
 	}
-	m.historyCursor = 0
-}
-
-func (m *Model) historyCapacity() int {
-	usable := m.height - 5
-	if usable < 1 {
-		return 1
-	}
-	return usable
-}
-
-// historyViewport returns the slice of history to display and the offset within it
-// of the cursor, keeping the cursor visible.
-func (m *Model) historyViewport() (visible []types.HistoryEntry, cursorInView int) {
-	cap := m.historyCapacity()
-	total := len(m.history)
-	if total == 0 {
-		return nil, 0
-	}
-
-	// Scroll window to keep cursor visible
-	start := m.historyCursor - cap + 1
-	if start < 0 {
-		start = 0
-	}
-	if start > total-cap {
-		start = total - cap
-	}
-	if start < 0 {
-		start = 0
-	}
-
-	end := start + cap
-	if end > total {
-		end = total
-	}
-
-	return m.history[start:end], m.historyCursor - start
+	m.historyPanel.ResetCursor()
 }
 
 func (m Model) View() string {
@@ -236,15 +214,20 @@ func (m Model) View() string {
 	leftW := int(float64(m.width) * 0.60)
 	rightW := m.width - leftW
 
-	left := m.leftPanel(leftW)
-	right := m.rightPanel(rightW)
+	hashTitle := panelTitle("HASH", m.focused == focusInput)
+	hashContent := hashTitle + "\n" + m.hashPanel.View(m.input.View(), m.result)
+	left := wrapPanel(hashContent, m.focused == focusInput, leftW, m.height-1)
+
+	histTitle := panelTitle("HISTORY", m.focused == focusHistory)
+	histContent := histTitle + "\n" + m.historyPanel.View()
+	right := wrapPanel(histContent, m.focused == focusHistory, rightW, m.height-1)
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 
 	statusStyled := lipgloss.NewStyle().
 		Background(lipgloss.Color(colorBG)).
 		Width(m.width).
-		Render(m.statusBar())
+		Render(statusBar(m.result, m.focused, m.width))
 
 	if m.showHelp {
 		return m.helpOverlay(body + "\n" + statusStyled)
@@ -252,32 +235,29 @@ func (m Model) View() string {
 	return body + "\n" + statusStyled
 }
 
-func (m Model) statusBar() string {
-	var left string
-	if m.result != nil {
-		left = " " + styleTitle.Render("[ "+m.result.Input+" ]")
-	} else {
-		left = " " + styleHint.Render("no input yet")
+func panelTitle(title string, active bool) string {
+	if active {
+		return styleTitle.Render(" " + title + " ")
 	}
+	return styleTitleDim.Render(" " + title + " ")
+}
 
-	var hints string
-	if m.focused == focusInput {
-		hints = styleHint.Render("enter:derive  tab:history  ?:help  esc:quit") + " "
-	} else {
-		hints = styleHint.Render("↑↓:navigate  enter:re-derive  tab:back  ?:help  q:quit") + " "
+func wrapPanel(content string, active bool, width, height int) string {
+	if width < 4 {
+		width = 4
 	}
-
-	leftW := lipgloss.Width(left)
-	rightW := lipgloss.Width(hints)
-	mid := m.width - leftW - rightW
-	if mid < 1 {
-		mid = 1
+	if height < 4 {
+		height = 4
 	}
-	return left + strings.Repeat(" ", mid) + hints
+	style := borderDim.Width(width - 2).Height(height - 2)
+	if active {
+		style = borderActive.Width(width - 2).Height(height - 2)
+	}
+	return style.Render(content)
 }
 
 func (m Model) helpOverlay(base string) string {
-	return panels.HelpOverlay(base, hashHelpText(), colorActive, 44)
+	return tuipanels.HelpOverlay(base, hashHelpText(), colorActive, 44)
 }
 
 func hashHelpText() string {
@@ -299,102 +279,4 @@ func hashHelpText() string {
 		styleTitle.Render("HISTORY"),
 		styleTitle.Render("ACTIONS"),
 	)
-}
-
-func (m Model) leftPanel(w int) string {
-	innerW := w - 2
-	if innerW < 10 {
-		innerW = 10
-	}
-
-	var title string
-	if m.focused == focusInput {
-		title = styleTitle.Render(" HASH ")
-	} else {
-		title = styleTitleDim.Render(" HASH ")
-	}
-
-	sep := styleHint.Render(strings.Repeat("─", innerW))
-	inputLine := m.input.View()
-
-	var resultsBlock string
-	if m.result != nil {
-		rows := []struct{ label, value string }{
-			{"input", m.result.Input},
-			{"port", fmt.Sprintf("%d", m.result.Port)},
-			{"uuid", m.result.UUID},
-			{"color", m.result.Color},
-			{"short", m.result.Short},
-			{"emoji", m.result.Emoji},
-			{"phrase", m.result.Phrase},
-		}
-		lines := make([]string, 0, len(rows)+2)
-		lines = append(lines, sep)
-		for _, row := range rows {
-			label := styleLabel.Render(fmt.Sprintf("  %-7s", row.label))
-			value := styleValue.Render(row.value)
-			lines = append(lines, fmt.Sprintf("%s  %s", label, value))
-		}
-		lines = append(lines, sep)
-		resultsBlock = strings.Join(lines, "\n")
-	} else {
-		resultsBlock = styleHint.Render("  type something and press enter")
-	}
-
-	content := strings.Join([]string{title, "", inputLine, "", resultsBlock}, "\n")
-
-	active := m.focused == focusInput
-	border := borderDim
-	if active {
-		border = borderActive
-	}
-	return border.Width(innerW).Height(m.height - 3).Render(content)
-}
-
-func (m Model) rightPanel(w int) string {
-	innerW := w - 2
-	if innerW < 8 {
-		innerW = 8
-	}
-
-	histFocused := m.focused == focusHistory
-	var title string
-	if histFocused {
-		title = styleTitle.Render(" HISTORY ")
-	} else {
-		title = styleTitleDim.Render(" HISTORY ")
-	}
-
-	visible, cursorInView := m.historyViewport()
-
-	lines := make([]string, 0, len(visible)+1)
-	lines = append(lines, title)
-
-	if len(visible) == 0 {
-		lines = append(lines, styleHint.Render("  no history"))
-	}
-	for i, e := range visible {
-		text := e.Input
-		maxLen := innerW - 4
-		if maxLen < 1 {
-			maxLen = 1
-		}
-		if len([]rune(text)) > maxLen {
-			runes := []rune(text)
-			text = string(runes[:maxLen]) + "…"
-		}
-		entry := fmt.Sprintf("  %s", text)
-		if histFocused && i == cursorInView {
-			lines = append(lines, styleHistorySelected.Render("> "+strings.TrimPrefix(entry, "  ")))
-		} else {
-			lines = append(lines, styleValue.Render(entry))
-		}
-	}
-
-	content := strings.Join(lines, "\n")
-	border := borderDim
-	if histFocused {
-		border = borderActive
-	}
-	return border.Width(innerW).Height(m.height - 3).Render(content)
 }

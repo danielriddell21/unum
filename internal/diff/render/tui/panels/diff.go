@@ -7,27 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/danielriddell21/unum/internal/diff/node"
-	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
-
-var (
-	diffAdded      = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Added))
-	diffRemoved    = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Removed))
-	diffUnchanged  = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted))
-	diffHunkHdr    = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.AccentPrimary))
-	diffLineNum    = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted))
-	diffSearchHL   = lipgloss.NewStyle().Background(lipgloss.Color(tuipanels.PaletteCyber.Search)).Foreground(lipgloss.Color("#000000"))
-)
-
-// ApplyDiffPalette updates diff panel style vars.
-func ApplyDiffPalette(p tuipanels.Palette) {
-	diffAdded = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Added))
-	diffRemoved = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Removed))
-	diffUnchanged = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted))
-	diffHunkHdr = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary))
-	diffLineNum = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted))
-	diffSearchHL = lipgloss.NewStyle().Background(lipgloss.Color(p.Search)).Foreground(lipgloss.Color("#000000"))
-}
 
 // UnifiedPanel renders the diff in classic unified format.
 type UnifiedPanel struct {
@@ -40,6 +20,7 @@ type UnifiedPanel struct {
 	matchIdx int
 	matches  []int // line indices with search matches
 	lines    []renderedLine
+	textOnly bool // force text hunk rendering even for semantic diffs
 }
 
 type renderedLine struct {
@@ -56,6 +37,13 @@ func NewUnifiedPanel(d *node.Diff, w, h int) UnifiedPanel {
 }
 
 func (p *UnifiedPanel) SetFocused(f bool) { p.focused = f }
+func (p *UnifiedPanel) SetTextOnly(v bool) {
+	if p.textOnly == v {
+		return
+	}
+	p.textOnly = v
+	p.build()
+}
 func (p *UnifiedPanel) Resize(w, h int) {
 	p.width = w
 	p.height = h
@@ -116,7 +104,7 @@ func (p *UnifiedPanel) build() {
 		return
 	}
 
-	if p.diff.Root != nil {
+	if p.diff.Root != nil && !p.textOnly {
 		p.buildJSON()
 		return
 	}
@@ -313,11 +301,6 @@ func (p *SplitPanel) View() string {
 
 func (p *SplitPanel) build() {
 	if p.diff == nil {
-		return
-	}
-	if p.diff.Root != nil {
-		p.left.SetContent(diffUnchanged.Render("  split view not available for semantic diffs — press v to return"))
-		p.right.SetContent("")
 		return
 	}
 	if len(p.diff.Hunks) == 0 {

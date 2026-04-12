@@ -1,4 +1,4 @@
-// Package panels contains shared TUI panel components and the palette system.
+// Package panels contains JSON TUI panel components.
 package panels
 
 import (
@@ -15,9 +15,9 @@ import (
 // TreeNode is a flattened representation of a node for the tree panel.
 // The flat list is pre-computed on expand/collapse; View() just slices it.
 type TreeNode struct {
-	Node     *node.Node
-	Depth    int
-	IsLast   bool
+	Node      *node.Node
+	Depth     int
+	IsLast    bool
 	Collapsed bool // only valid for KindObject and KindArray
 }
 
@@ -309,4 +309,3 @@ func max(a, b int) int {
 	}
 	return b
 }
-

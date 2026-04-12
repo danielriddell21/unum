@@ -7,10 +7,10 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/danielriddell21/unum/internal/json/node"
-	"github.com/danielriddell21/unum/internal/tui/panels"
-
 	"github.com/atotto/clipboard"
+	"github.com/danielriddell21/unum/internal/json/node"
+	jsonpanels "github.com/danielriddell21/unum/internal/json/render/tui/panels"
+	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 // focusedPanel identifies which panel is active.
@@ -41,9 +41,9 @@ type Model struct {
 	filename string
 
 	// Panels
-	tree    panels.TreePanel
-	preview panels.PreviewPanel
-	lens    panels.LensPanel
+	tree    jsonpanels.TreePanel
+	preview jsonpanels.PreviewPanel
+	lens    jsonpanels.LensPanel
 
 	// State
 	focused      focusedPanel
@@ -78,9 +78,9 @@ func NewModel(root *node.Node, filename string) Model {
 func (m *Model) initPanels() {
 	treeW, treeH, previewW, previewH, lensW, lensH := m.panelDimensions()
 
-	m.tree = panels.NewTreePanel(m.root, treeW, treeH)
-	m.preview = panels.NewPreviewPanel(previewW, previewH)
-	m.lens = panels.NewLensPanel(m.root, lensW, lensH)
+	m.tree = jsonpanels.NewTreePanel(m.root, treeW, treeH)
+	m.preview = jsonpanels.NewPreviewPanel(previewW, previewH)
+	m.lens = jsonpanels.NewLensPanel(m.root, lensW, lensH)
 
 	m.tree.SetFocused(true)
 	m.syncPanels()
@@ -298,7 +298,7 @@ func (m Model) View() string {
 
 	// Status bar
 	cursorNode := m.tree.CursorNode()
-	statusBar := panels.StatusBar(cursorNode, m.width, m.currentMode == modeSearch,
+	statusBar := jsonpanels.StatusBar(cursorNode, m.width, m.currentMode == modeSearch,
 		m.searchInput.Value(), m.yankFeedback)
 	statusStyled := lipgloss.NewStyle().
 		Background(lipgloss.Color(colorBG)).
@@ -336,7 +336,7 @@ func wrapPanel(content string, active bool, width, height int) string {
 }
 
 func (m Model) helpOverlay(base string) string {
-	return panels.HelpOverlay(base, helpText(), colorActiveBorder, 50)
+	return tuipanels.HelpOverlay(base, helpText(), colorActiveBorder, 50)
 }
 
 func helpText() string {

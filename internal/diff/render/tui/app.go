@@ -90,5 +90,4 @@ func applyTheme(theme string) {
 	p := panels.ResolvePalette(theme)
 	ApplyPalette(p)
 	diffpanels.ApplyPalette(p)
-	diffpanels.ApplyDiffPalette(p)
 }

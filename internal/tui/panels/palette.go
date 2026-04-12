@@ -1,7 +1,5 @@
 package panels
 
-import "github.com/charmbracelet/lipgloss"
-
 // Palette holds all themeable hex color strings for the TUI.
 type Palette struct {
 	AccentPrimary   string // active border, tab active, status type
@@ -151,70 +149,3 @@ func ResolvePalette(name string) Palette {
 	}
 }
 
-// ApplyPalette reassigns all package-level style variables to reflect the
-// given palette. Must be called before launching any TUI program.
-func ApplyPalette(p Palette) {
-	// tree.go vars
-	styleMuted = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted))
-	styleObjectKey = lipgloss.NewStyle().Foreground(lipgloss.Color(p.ObjectKey))
-	styleArrayIdx = lipgloss.NewStyle().Foreground(lipgloss.Color(p.ArrayIndex))
-	styleString = lipgloss.NewStyle().Foreground(lipgloss.Color(p.StringVal))
-	styleNumber = lipgloss.NewStyle().Foreground(lipgloss.Color(p.NumberVal))
-	styleBoolTrue = lipgloss.NewStyle().Foreground(lipgloss.Color(p.BoolTrue))
-	styleBoolFalse = lipgloss.NewStyle().Foreground(lipgloss.Color(p.BoolFalse))
-	styleNull = lipgloss.NewStyle().Foreground(lipgloss.Color(p.NullVal))
-	styleCursor = lipgloss.NewStyle().
-		Background(lipgloss.Color(p.BGSelected)).
-		Foreground(lipgloss.Color(p.Text))
-	connectorMid = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted)).Render("├─▶ ")
-	connectorLast = lipgloss.NewStyle().Foreground(lipgloss.Color(p.BorderDim)).Render("└─▷ ")
-	connectorOpen = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted)).Render("▼  ")
-	connectorClosed = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted)).Render("▶  ")
-
-	// lens.go vars
-	styleTabActive = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary)).Bold(true)
-	styleTabInactive = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted))
-	styleHash = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Hash))
-	styleStats = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Stats))
-	styleError = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Error))
-	styleSearchPrompt = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Search)).Bold(true)
-
-	// statusbar.go vars
-	styleSBPath = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Path)).Bold(true)
-	styleSBType = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary))
-	styleSBHint = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted))
-	styleSBSep = lipgloss.NewStyle().Foreground(lipgloss.Color(p.BorderDim)).Render(" · ")
-}
-
-// Package-level style variables — initialized with the cyber palette defaults.
-// ApplyPalette() reassigns all of these; do not set them elsewhere.
-var (
-	// tree.go
-	styleMuted      = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.Muted))
-	styleObjectKey  = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.ObjectKey))
-	styleArrayIdx   = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.ArrayIndex))
-	styleString     = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.StringVal))
-	styleNumber     = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.NumberVal))
-	styleBoolTrue   = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.BoolTrue))
-	styleBoolFalse  = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.BoolFalse))
-	styleNull       = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.NullVal))
-	styleCursor     = lipgloss.NewStyle().Background(lipgloss.Color(PaletteCyber.BGSelected)).Foreground(lipgloss.Color(PaletteCyber.Text))
-	connectorMid    = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.Muted)).Render("├─▶ ")
-	connectorLast   = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.BorderDim)).Render("└─▷ ")
-	connectorOpen   = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.Muted)).Render("▼  ")
-	connectorClosed = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.Muted)).Render("▶  ")
-
-	// lens.go
-	styleTabActive    = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.AccentPrimary)).Bold(true)
-	styleTabInactive  = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.Muted))
-	styleHash         = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.Hash))
-	styleStats        = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.Stats))
-	styleError        = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.Error))
-	styleSearchPrompt = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.Search)).Bold(true)
-
-	// statusbar.go
-	styleSBPath = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.Path)).Bold(true)
-	styleSBType = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.AccentPrimary))
-	styleSBHint = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.Muted))
-	styleSBSep  = lipgloss.NewStyle().Foreground(lipgloss.Color(PaletteCyber.BorderDim)).Render(" · ")
-)
