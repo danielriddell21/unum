@@ -245,11 +245,16 @@ func (m Model) View() string {
 	} else {
 		sbHint = "↑↓:navigate  enter:re-derive  tab:back  ?:help  q:quit"
 	}
+	hintWidth := lipgloss.Width(sbHint)
+	padding := m.width - hintWidth - 1
+	if padding < 0 {
+		padding = 0
+	}
 	statusStyled := lipgloss.NewStyle().
 		Background(lipgloss.Color("#0D0D0D")).
 		Foreground(lipgloss.Color("#3A3A3A")).
 		Width(m.width).
-		Render(" " + sbHint)
+		Render(strings.Repeat(" ", padding) + sbHint + " ")
 
 	if m.showHelp {
 		return m.helpOverlay(body + "\n" + statusStyled)
