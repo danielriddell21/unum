@@ -19,11 +19,11 @@ func Execute(version string) error {
 
 	root := &cobra.Command{
 		Use:   "unum",
-		Short: "A nerdy all-in-one dev tool suite",
-		Long: `unum (Latin: "one") — a collection of powerful developer tools with a nerdy twist.
+		Short: "A unified developer toolkit",
+		Long: `unum — a suite of focused developer tools for analysis, comparison, and identification.
 
-Each tool is useful on its own, with a unique analytical or technical angle
-baked in to make your daily workflow more interesting.`,
+Each tool is composable and works standalone, with consistent output modes
+across terminal, TUI, and web interfaces.`,
 		Version:      version,
 		SilenceUsage: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
