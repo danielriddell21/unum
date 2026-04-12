@@ -1,6 +1,4 @@
-// Package tests contains functional CLI tests that exercise the compiled unum
-// binary end-to-end. Run with: go test ./tests/...
-package tests_test
+package static_test
 
 import (
 	"bytes"
@@ -14,9 +12,7 @@ import (
 var unumBin string
 
 func TestMain(m *testing.M) {
-	// Tests run from the tests/ directory; step up to the repo root so that
-	// ./cmd/unum and testdata/ resolve correctly.
-	if err := os.Chdir(".."); err != nil {
+	if err := os.Chdir("../.."); err != nil {
 		fmt.Fprintf(os.Stderr, "chdir to repo root: %v\n", err)
 		os.Exit(1)
 	}
@@ -33,7 +29,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// buildBinary compiles the unum binary to a temp file and returns its path.
 func buildBinary() (string, error) {
 	ext := ""
 	if runtime.GOOS == "windows" {
@@ -52,7 +47,6 @@ func buildBinary() (string, error) {
 	return f.Name(), nil
 }
 
-// run executes the unum binary with the given args and returns stdout, stderr, and exit code.
 func run(args ...string) (stdout, stderr string, code int) {
 	cmd := exec.Command(unumBin, args...)
 	var outBuf, errBuf bytes.Buffer

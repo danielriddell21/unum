@@ -1,19 +1,13 @@
-package tests_test
+package static_test
 
 import (
-	"fmt"
-	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 )
 
 var sampleFile = filepath.Join("testdata", "sample.json")
-
-// ─── Static mode ─────────────────────────────────────────────────────────────
 
 func TestStaticMode(t *testing.T) {
 	stdout, _, code := run("json", sampleFile, "--no-color")
@@ -58,8 +52,6 @@ func TestCompactMode(t *testing.T) {
 	}
 }
 
-// ─── Stats lens ───────────────────────────────────────────────────────────────
-
 func TestStatsMode(t *testing.T) {
 	stdout, _, code := run("json", sampleFile, "--stats", "--no-color")
 	if code != 0 {
@@ -69,8 +61,6 @@ func TestStatsMode(t *testing.T) {
 		t.Errorf("expected stats annotation '//' in output:\n%s", stdout)
 	}
 }
-
-// ─── Merkle lens ──────────────────────────────────────────────────────────────
 
 func TestHashOnly(t *testing.T) {
 	stdout, _, code := run("json", sampleFile, "--merkle", "--hash-only")
@@ -91,8 +81,6 @@ func TestHashDeterministic(t *testing.T) {
 	}
 }
 
-// ─── Transform lens ───────────────────────────────────────────────────────────
-
 func TestTransformYAML(t *testing.T) {
 	stdout, _, code := run("json", sampleFile, "--transform")
 	if code != 0 {
@@ -105,8 +93,6 @@ func TestTransformYAML(t *testing.T) {
 		t.Errorf("output looks like JSON, not YAML:\n%s", stdout)
 	}
 }
-
-// ─── TypeGen lens ─────────────────────────────────────────────────────────────
 
 func TestTypegenGo(t *testing.T) {
 	stdout, _, code := run("json", sampleFile, "--typegen", "go")
@@ -141,8 +127,6 @@ func TestTypegenJSONSchema(t *testing.T) {
 	}
 }
 
-// ─── Query lens ───────────────────────────────────────────────────────────────
-
 func TestQuery(t *testing.T) {
 	stdout, _, code := run("json", sampleFile, "--query", ".corpus")
 	if code != 0 {
@@ -163,8 +147,6 @@ func TestQueryArrayLength(t *testing.T) {
 	}
 }
 
-// ─── Color tests ──────────────────────────────────────────────────────────────
-
 func TestJSONNoColor(t *testing.T) {
 	stdout, _, code := run("json", sampleFile, "--no-color")
 	if code != 0 {
@@ -174,8 +156,6 @@ func TestJSONNoColor(t *testing.T) {
 		t.Error("--no-color output contains ANSI escape codes")
 	}
 }
-
-// ─── Merkle annotated ─────────────────────────────────────────────────────────
 
 func TestMerkleAnnotated(t *testing.T) {
 	stdout, _, code := run("json", sampleFile, "--merkle", "--no-color")
@@ -187,35 +167,35 @@ func TestMerkleAnnotated(t *testing.T) {
 	}
 }
 
-// ─── Web container mode ───────────────────────────────────────────────────────
-
-func TestJSONWebContainerMode(t *testing.T) {
-	port := "19883"
-	cmd := exec.Command(unumBin, "json", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
-
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+func TestJSONTypegenGoOutput(t *testing.T) {
+	stdout, _, code := run("json", sampleFile, "--typegen", "go", "--no-color")
+	if code != 0 {
+		t.Fatalf("exit %d", code)
 	}
-	defer func() { _ = cmd.Process.Kill() }()
-
-	url := fmt.Sprintf("http://localhost:%s/api/browse", port)
-	deadline := time.Now().Add(5 * time.Second)
-	var resp *http.Response
-	var err error
-	for time.Now().Before(deadline) {
-		resp, err = http.Get(url) //nolint:noctx
-		if err == nil {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
+	if !strings.Contains(stdout, "type ") {
+		t.Errorf("--typegen go output does not contain 'type ':\n%s", stdout)
 	}
-	if err != nil {
-		t.Fatalf("server did not start within 5s: %v", err)
+	if !strings.Contains(stdout, "struct") {
+		t.Errorf("--typegen go output does not contain 'struct':\n%s", stdout)
 	}
-	defer func() { _ = resp.Body.Close() }()
+}
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("GET /api/browse: status %d, want 200", resp.StatusCode)
+func TestJSONTypegenTSOutput(t *testing.T) {
+	stdout, _, code := run("json", sampleFile, "--typegen", "ts", "--no-color")
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if !strings.Contains(stdout, "interface") && !strings.Contains(stdout, "type ") {
+		t.Errorf("--typegen ts output missing 'interface' or 'type':\n%s", stdout)
+	}
+}
+
+func TestJSONQueryNestedPath(t *testing.T) {
+	stdout, _, code := run("json", sampleFile, "--query", ".curator.nomen", "--no-color")
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if !strings.Contains(stdout, "Iohannes") {
+		t.Errorf("--query .curator.nomen: expected 'Iohannes', got:\n%s", stdout)
 	}
 }

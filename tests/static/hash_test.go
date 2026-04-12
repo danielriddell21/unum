@@ -1,18 +1,16 @@
-package tests_test
+package static_test
 
 import (
-	"fmt"
-	"net/http"
-	"os"
-	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
-	"time"
 )
 
-var hashUUIDRe = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
-var hashColorRe = regexp.MustCompile(`^#[0-9a-f]{6}$`)
+var (
+	hashUUIDRe  = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
+	hashColorRe = regexp.MustCompile(`^#[0-9a-f]{6}$`)
+)
 
 func TestHash_TableExitZero(t *testing.T) {
 	stdout, _, code := run("hash", "my-api-service")
@@ -38,7 +36,6 @@ func TestHash_NoColor(t *testing.T) {
 	if !strings.Contains(stdout, "my-api-service") {
 		t.Error("output should contain the input string")
 	}
-	// No ANSI escape codes
 	if strings.Contains(stdout, "\x1b[") {
 		t.Error("output should not contain ANSI escape codes with --no-color")
 	}
@@ -61,7 +58,6 @@ func TestHash_PortFlag(t *testing.T) {
 	if trimmed == "" {
 		t.Fatal("--port produced empty output")
 	}
-	// Should be a single number, nothing else
 	for _, ch := range trimmed {
 		if ch < '0' || ch > '9' {
 			t.Errorf("--port output %q contains non-digit %q", trimmed, ch)
@@ -132,35 +128,32 @@ func TestHash_NoArgs_Error(t *testing.T) {
 	}
 }
 
-// ─── Web container mode ───────────────────────────────────────────────────────
+func TestHashConcurrent(t *testing.T) {
+	inputs := []string{"service-alpha", "service-beta"}
+	results := make([]string, 2)
+	errs := make([]int, 2)
 
-func TestHashWebContainerMode(t *testing.T) {
-	port := "19882"
-	cmd := exec.Command(unumBin, "hash", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
-
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+	var wg sync.WaitGroup
+	for i, input := range inputs {
+		i, input := i, input
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			stdout, _, code := run("hash", input, "--no-color")
+			results[i] = stdout
+			errs[i] = code
+		}()
 	}
-	defer func() { _ = cmd.Process.Kill() }()
+	wg.Wait()
 
-	url := fmt.Sprintf("http://localhost:%s/api/derive?input=test", port)
-	deadline := time.Now().Add(5 * time.Second)
-	var resp *http.Response
-	var err error
-	for time.Now().Before(deadline) {
-		resp, err = http.Get(url) //nolint:noctx
-		if err == nil {
-			break
+	for i, code := range errs {
+		if code != 0 {
+			t.Errorf("goroutine %d: exit %d", i, code)
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
-	if err != nil {
-		t.Fatalf("server did not start within 5s: %v", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("GET /api/derive?input=test: status %d, want 200", resp.StatusCode)
+	for i, out := range results {
+		if !strings.Contains(out, inputs[i]) {
+			t.Errorf("goroutine %d: output missing input %q:\n%s", i, inputs[i], out)
+		}
 	}
 }
