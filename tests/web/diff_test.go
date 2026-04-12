@@ -18,6 +18,7 @@ var (
 	diffB     = filepath.Join("testdata", "diff-b.txt")
 	diffAJSON = filepath.Join("testdata", "diff-a.json")
 	diffBJSON = filepath.Join("testdata", "diff-b.json")
+	diffATF   = filepath.Join("testdata", "diff-a.tfplan.json")
 )
 
 // TestDiffWebContainerMode checks the diff --web server starts and returns 204
@@ -201,6 +202,67 @@ func TestDiffWebAPI_PostMissingContentReturns400(t *testing.T) {
 
 	if postResp.StatusCode != http.StatusBadRequest {
 		t.Errorf("missing contentB: status %d, want 400", postResp.StatusCode)
+	}
+}
+
+// TestDiffWebAPI_PostTerraformDiffReturnsSemanticTree sends a Terraform plan
+// file via POST /api/diff and asserts the response includes a semantic tree
+// and the terraform format label.
+func TestDiffWebAPI_PostTerraformDiffReturnsSemanticTree(t *testing.T) {
+	const port = "19856"
+	cmd := exec.Command(unumBin, "diff", "--web")
+	cmd.Env = append(os.Environ(), "PORT="+port)
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start server: %v", err)
+	}
+	defer func() { _ = cmd.Process.Kill() }()
+
+	resp := waitForServer(t, fmt.Sprintf("http://localhost:%s/api/diff", port))
+	_ = resp.Body.Close()
+
+	content, err := os.ReadFile(diffATF)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	reqBody, _ := json.Marshal(map[string]string{
+		"nameA":    "plan.tfplan.json",
+		"contentA": string(content),
+		"nameB":    "plan.tfplan.json",
+		"contentB": string(content),
+		"format":   "terraform",
+	})
+
+	postResp, err := http.Post( //nolint:noctx
+		fmt.Sprintf("http://localhost:%s/api/diff", port),
+		"application/json",
+		bytes.NewReader(reqBody),
+	)
+	if err != nil {
+		t.Fatalf("POST /api/diff: %v", err)
+	}
+	defer func() { _ = postResp.Body.Close() }()
+
+	if postResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(postResp.Body)
+		t.Fatalf("POST /api/diff: status %d, want 200\nbody: %s", postResp.StatusCode, body)
+	}
+
+	body, err := io.ReadAll(postResp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("response not JSON: %v\nbody: %s", err, body)
+	}
+
+	if format, _ := payload["format"].(string); format != "terraform" {
+		t.Errorf("format = %q, want terraform", format)
+	}
+	if _, ok := payload["tree"]; !ok {
+		t.Errorf("terraform diff payload missing 'tree'; keys: %v", keys(payload))
 	}
 }
 

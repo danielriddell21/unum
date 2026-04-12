@@ -207,7 +207,7 @@ type postDiffRequest struct {
 	ContentA string `json:"contentA"`
 	NameB    string `json:"nameB"`
 	ContentB string `json:"contentB"`
-	Format   string `json:"format"` // "json", "yaml", "text", or "" for auto-detect
+	Format   string `json:"format"` // "json", "yaml", "terraform", "text", or "" for auto-detect
 }
 
 // StartServer launches the diff web server in input mode with no pre-loaded diff.

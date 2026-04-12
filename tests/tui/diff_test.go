@@ -20,6 +20,7 @@ var (
 	diffB     = filepath.Join("testdata", "diff-b.txt")
 	diffAJSON = filepath.Join("testdata", "diff-a.json")
 	diffBJSON = filepath.Join("testdata", "diff-b.json")
+	diffATF   = filepath.Join("testdata", "diff-a.tfplan.json")
 )
 
 func mustParseDiffFiles(t *testing.T, pathA, pathB string) *diffnode.Diff {
@@ -122,6 +123,37 @@ func TestTUIDiff_ViewToggle(t *testing.T) {
 // files shows the DIFF panel.
 func TestTUIDiff_SemanticViewRendersJSON(t *testing.T) {
 	d := mustParseJSONDiffFiles(t, diffAJSON, diffBJSON)
+	m := difftui.NewModel(d)
+	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
+
+	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
+		return bytes.Contains(b, []byte("DIFF"))
+	}, teatest.WithDuration(5*time.Second))
+
+	tm.Send(tea.KeyMsg{Type: tea.KeyCtrlC})
+	tm.WaitFinished(t, teatest.WithFinalTimeout(3*time.Second))
+}
+
+func mustParseTerraformDiff(t *testing.T, path string) *diffnode.Diff {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	d, err := diffparse.Terraform(data)
+	if err != nil {
+		t.Fatalf("terraform diff: %v", err)
+	}
+	d.FileA = path
+	d.FileB = path
+	d.Format = diffnode.FormatTerraform
+	return d
+}
+
+// TestTUIDiff_SemanticViewRendersTerraform checks the semantic diff view for a
+// Terraform plan file shows the DIFF panel.
+func TestTUIDiff_SemanticViewRendersTerraform(t *testing.T) {
+	d := mustParseTerraformDiff(t, diffATF)
 	m := difftui.NewModel(d)
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 

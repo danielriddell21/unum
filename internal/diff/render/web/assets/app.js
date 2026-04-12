@@ -64,6 +64,7 @@
             <option value="">auto-detect</option>
             <option value="json">json</option>
             <option value="yaml">yaml</option>
+            <option value="terraform">terraform</option>
             <option value="text">text</option>
           </select>
           <button id="up-submit">diff →</button>
