@@ -104,6 +104,7 @@
 
   async function boot() {
     applyMode(resolveMode());
+    document.getElementById('header').appendChild(renderModeToggle());
     try {
       const resp = await fetch('/api/diff');
       if (resp.status === 204) {
@@ -263,8 +264,6 @@
     }
     document.getElementById('status-format').textContent =
       diffData.format !== 'text' ? '[' + diffData.format + ']' : '';
-
-    document.getElementById('header').appendChild(renderModeToggle());
 
     // Set default view mode and wire up the toolbar toggle
     viewMode = diffData.tree ? 'semantic' : 'unified';
