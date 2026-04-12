@@ -12,7 +12,7 @@
 just build      # build to bin/unum
 just test       # run unit tests
 just test -v    # verbose unit test output
-just yeet       # run CLI functional tests (tests/)
+just yeet       # run functional tests (static, TUI, web — requires Chromium)
 just lint       # golangci-lint
 just ci         # full gate: lint + test + yeet + build
 ```
@@ -67,7 +67,10 @@ internal/
       tui/          Bubble Tea TUI (unified + split views)
       web/          embedded HTTP server + browser diff UI
 testdata/           fixture files used by justfile recipes and tests
-tests/              CLI functional tests (go test ./tests/...)
+tests/
+  static/           CLI binary tests — exit codes, flags, no-color
+  tui/              Bubble Tea TUI tests via teatest (headless, no PTY)
+  web/              HTTP API + browser tests via rod (requires Chromium)
 ```
 
 ## Adding a new tool
