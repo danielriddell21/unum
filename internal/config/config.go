@@ -9,7 +9,8 @@ import (
 
 // Config holds persistent user preferences for unum.
 type Config struct {
-	Theme string `json:"theme"` // cyber | matrix | dracula | nord
+	DarkTheme  string `json:"dark_theme"`  // cyber | matrix | dracula | nord
+	LightTheme string `json:"light_theme"` // clean | solarized
 }
 
 // Load reads the config file from the OS config directory.
@@ -18,7 +19,7 @@ type Config struct {
 //
 //	%APPDATA%\unum\config.json             (Windows)
 func Load() Config {
-	cfg := Config{Theme: "cyber"}
+	cfg := Config{DarkTheme: "cyber", LightTheme: "clean"}
 
 	dir, err := os.UserConfigDir()
 	if err != nil {

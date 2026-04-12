@@ -16,12 +16,13 @@ import (
 )
 
 type flags struct {
-	ui      bool
-	web     bool
-	theme   string
-	webPort int
-	quiet   bool
-	noColor bool
+	ui         bool
+	web        bool
+	theme      string
+	lightTheme string
+	webPort    int
+	quiet      bool
+	noColor    bool
 
 	// Single-field output flags
 	portOnly   bool
@@ -36,6 +37,8 @@ type flags struct {
 func Command(globalNoColor *bool, globalQuiet *bool) *cobra.Command {
 	f := &flags{}
 	cfg := config.Load()
+	f.theme = cfg.DarkTheme
+	f.lightTheme = cfg.LightTheme
 
 	cmd := &cobra.Command{
 		Use:   "hash [text]",
@@ -65,7 +68,6 @@ Single-field flags (pipe-friendly, skips the table):
 	cmd.Flags().BoolVar(&f.ui, "ui", false, "launch interactive TUI with history")
 	cmd.Flags().BoolVar(&f.web, "web", false, "launch web UI in browser")
 	cmd.Flags().IntVar(&f.webPort, "web-port", 0, "port for --web (default: random free port)")
-	cmd.Flags().StringVar(&f.theme, "theme", cfg.Theme, "color theme: cyber, matrix, dracula, nord")
 	cmd.Flags().BoolVar(&f.quiet, "quiet", false, "suppress the boot line")
 	cmd.Flags().BoolVar(&f.portOnly, "port", false, "print derived port only")
 	cmd.Flags().BoolVar(&f.uuidOnly, "uuid", false, "print UUID only")
@@ -88,7 +90,7 @@ func runHash(f *flags, args []string) error {
 
 	if f.web {
 		hashWeb.SetFuncs(Derive)
-		return hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet})
+		return hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme})
 	}
 
 	if len(args) == 0 {

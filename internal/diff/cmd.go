@@ -17,21 +17,24 @@ import (
 )
 
 type flags struct {
-	ui      bool
-	web     bool
-	format  string
-	theme   string
-	context int
-	stat    bool
-	port    int
-	quiet   bool
-	noColor bool
+	ui         bool
+	web        bool
+	format     string
+	theme      string
+	lightTheme string
+	context    int
+	stat       bool
+	port       int
+	quiet      bool
+	noColor    bool
 }
 
 // Command returns the cobra command for `unum diff`.
 func Command(globalNoColor *bool, globalQuiet *bool) *cobra.Command {
 	f := &flags{}
 	cfg := config.Load()
+	f.theme = cfg.DarkTheme
+	f.lightTheme = cfg.LightTheme
 
 	cmd := &cobra.Command{
 		Use:   "diff <file-a> <file-b>",
@@ -57,7 +60,7 @@ Output modes:
 				if !f.web {
 					return fmt.Errorf("requires two file arguments (or --web for browser input mode)")
 				}
-				return diffweb.StartServer(diffweb.Options{Port: f.port, Quiet: f.quiet})
+				return diffweb.StartServer(diffweb.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme})
 			}
 			return runDiff(f, args[0], args[1])
 		},
@@ -67,7 +70,6 @@ Output modes:
 	cmd.Flags().BoolVar(&f.web, "web", false, "launch web UI in browser")
 	cmd.Flags().IntVar(&f.port, "port", 0, "port for --web (default: random free port)")
 	cmd.Flags().StringVar(&f.format, "format", "", "force format: text, json, yaml, terraform (default: auto)")
-	cmd.Flags().StringVar(&f.theme, "theme", cfg.Theme, "color theme: cyber, matrix, dracula, nord")
 	cmd.Flags().IntVar(&f.context, "context", 3, "lines of context around each change")
 	cmd.Flags().BoolVar(&f.stat, "stat", false, "show summary only (no diff body)")
 	cmd.Flags().BoolVar(&f.quiet, "quiet", false, "suppress the boot line")
@@ -120,7 +122,7 @@ func runDiff(f *flags, fileA, fileB string) error {
 		return tui.Start(diff, f.theme)
 	}
 	if f.web {
-		return diffweb.Start(diff, diffweb.Options{Port: f.port, Quiet: f.quiet})
+		return diffweb.Start(diff, diffweb.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme})
 	}
 
 	return static.Render(os.Stdout, diff, opts)

@@ -33,6 +33,7 @@ type flags struct {
 	validateOnly bool
 	compact      bool
 	theme        string
+	lightTheme   string
 
 	// Annotation lenses
 	showStats  bool
@@ -58,6 +59,8 @@ type flags struct {
 func Command(globalNoColor *bool, globalQuiet *bool) *cobra.Command {
 	f := &flags{}
 	cfg := config.Load()
+	f.theme = cfg.DarkTheme
+	f.lightTheme = cfg.LightTheme
 
 	cmd := &cobra.Command{
 		Use:   "json [file]",
@@ -72,7 +75,7 @@ Three output modes:
 Omit [file] with --ui or --web to open an interactive file picker.
 
 Config file (~/.config/unum/config.json):
-  { "theme": "cyber" }   — cyber | matrix | dracula | nord`,
+  { "dark_theme": "cyber", "light_theme": "clean", "mode": "dark" }`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			f.noColor = f.noColor || *globalNoColor
@@ -93,7 +96,7 @@ Config file (~/.config/unum/config.json):
 	// Static output
 	cmd.Flags().BoolVar(&f.validateOnly, "validate-only", false, "exit 0/1 based on validity only")
 	cmd.Flags().BoolVar(&f.compact, "compact", false, "output minified JSON")
-	cmd.Flags().StringVar(&f.theme, "theme", cfg.Theme, "color theme: cyber, matrix, dracula, nord")
+
 
 	// Annotation lenses
 	cmd.Flags().BoolVar(&f.showStats, "stats", false, "annotate numeric arrays with statistics")
@@ -223,9 +226,11 @@ func runJSON(f *flags, filename string) error {
 
 	if f.web {
 		return web.Start(root, web.Options{
-			Port:     f.port,
-			Filename: filename,
-			Quiet:    f.quiet,
+			Port:       f.port,
+			Filename:   filename,
+			Quiet:      f.quiet,
+			DarkTheme:  f.theme,
+			LightTheme: f.lightTheme,
 		})
 	}
 
@@ -245,7 +250,7 @@ func runJSONNoFile(f *flags) error {
 		return tui.StartWithPicker(cwd, f.theme)
 	}
 	if f.web {
-		return web.StartBrowser(web.Options{Port: f.port, Quiet: f.quiet})
+		return web.StartBrowser(web.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme})
 	}
 	return fmt.Errorf("missing argument: <file> (or use --ui / --web to pick interactively)")
 }
