@@ -83,7 +83,11 @@ func keys(m map[string]any) []string {
 // test ends. Fails the test if Chromium is not installed.
 func newBrowser(t *testing.T) *rod.Browser {
 	t.Helper()
-	u, err := launcher.New().Headless(true).Leakless(false).Launch()
+	l := launcher.New().Headless(true).Leakless(false)
+	if os.Getenv("CI") != "" {
+		l = l.Set("no-sandbox")
+	}
+	u, err := l.Launch()
 	if err != nil {
 		t.Fatalf("failed to launch browser (is Chromium installed?): %v", err)
 	}
