@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/danielriddell21/unum/internal/diff/node"
@@ -103,17 +104,29 @@ type Options struct {
 	Quiet   bool
 }
 
-// Boot prints the diff header line to w.
-func Boot(w io.Writer, fileA, fileB string, opts Options) {
+// Boot prints the diff boot sequence to w.
+// Call before parsing; invoke the returned func after parsing to complete the line.
+func Boot(w io.Writer, fileA, fileB string, opts Options) func(added, removed, modified int, elapsed time.Duration) {
+	noop := func(int, int, int, time.Duration) {}
 	if opts.Quiet {
-		return
+		return noop
+	}
+	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A"))
+	if opts.NoColor {
+		return func(added, removed, modified int, elapsed time.Duration) {
+			_, _ = fmt.Fprintf(w, "[ UNUM ] diff  +%d -%d · %dms ✓\n", added, removed, elapsed.Milliseconds())
+		}
 	}
 	t := opts.Theme
-	if opts.NoColor {
-		_, _ = fmt.Fprintf(w, "[ UNUM ] diff  %s  →  %s\n", fileA, fileB)
-		return
+	return func(added, removed, modified int, elapsed time.Duration) {
+		addedStr := t.StatAdded.Render(fmt.Sprintf("+%d", added))
+		removedStr := t.StatRemoved.Render(fmt.Sprintf("-%d", removed))
+		_, _ = fmt.Fprintf(w, "%s %s  %s\n",
+			t.Banner.Render("[ UNUM ]"),
+			t.Banner.Render("diff  ")+addedStr+" "+removedStr,
+			muted.Render(fmt.Sprintf("· %dms ✓", elapsed.Milliseconds())),
+		)
 	}
-	_, _ = fmt.Fprintln(w, t.Banner.Render(fmt.Sprintf("[ UNUM ] diff  %s  →  %s", fileA, fileB)))
 }
 
 // Render writes the coloured diff to w.

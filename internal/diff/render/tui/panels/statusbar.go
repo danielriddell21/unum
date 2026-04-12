@@ -26,7 +26,7 @@ func ApplyPalette(p jsonpanels.Palette) {
 }
 
 // StatusBar renders the bottom status bar for the diff TUI.
-func StatusBar(d *node.Diff, view string, width int, searchMode bool, searchQuery string) string {
+func StatusBar(d *node.Diff, view string, width int, searchMode bool, searchQuery string, matchCount int) string {
 	if searchMode {
 		prompt := sbAccent.Render("[ SEARCH > ")
 		cursor := sbAccent.Render("█")
@@ -35,8 +35,16 @@ func StatusBar(d *node.Diff, view string, width int, searchMode bool, searchQuer
 			q = sbAccent.Render(searchQuery)
 		}
 		close := sbAccent.Render(" ]")
+		var matchHint string
+		if searchQuery != "" {
+			if matchCount == 0 {
+				matchHint = sbMuted.Render("  no matches")
+			} else {
+				matchHint = sbMuted.Render(fmt.Sprintf("  %d matches", matchCount))
+			}
+		}
 		hint := sbMuted.Render("  type to filter · enter:confirm · esc:clear")
-		line := prompt + q + cursor + close + hint
+		line := prompt + q + cursor + close + matchHint + hint
 		return pad(line, width)
 	}
 
@@ -45,7 +53,7 @@ func StatusBar(d *node.Diff, view string, width int, searchMode bool, searchQuer
 	viewLabel := sbMuted.Render("[" + view + "]")
 
 	left := " " + added + "  " + removed + "  " + viewLabel
-	hints := sbMuted.Render("v:toggle  j/k:scroll  /:search  n/N:match  q:quit") + " "
+	hints := sbMuted.Render("v:toggle  j/k:scroll  /:search  n/N:match  ?:help  q:quit") + " "
 
 	leftW := lipgloss.Width(left)
 	rightW := lipgloss.Width(hints)

@@ -133,7 +133,7 @@ func TestServeIndex_InjectsConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 
 	want := `window.UNUM_CONFIG={darkTheme:"nord",lightTheme:"solarized"}`
@@ -151,7 +151,7 @@ func TestServeIndex_DefaultThemes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 
 	want := `window.UNUM_CONFIG={darkTheme:"cyber",lightTheme:"clean"}`

@@ -90,15 +90,60 @@ func TestDiffModel_VKeyTogglesViewForTextDiff(t *testing.T) {
 	}
 }
 
-func TestDiffModel_VKeyNoOpForTreeDiff(t *testing.T) {
+func TestDiffModel_VKeyTogglesViewForTreeDiff(t *testing.T) {
 	m := NewModel(treeDiff())
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
+	if nm.view != viewUnified {
+		t.Fatalf("initial view=%v, want viewUnified", nm.view)
+	}
+
 	next2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
 	nm2 := next2.(Model)
-	if nm2.view != viewUnified {
-		t.Errorf("v on tree diff changed view to %v, want viewUnified (no-op)", nm2.view)
+	if nm2.view != viewSplit {
+		t.Errorf("v on tree diff: view=%v, want viewSplit", nm2.view)
+	}
+}
+
+func TestDiffModel_QuestionMarkEntersHelpMode(t *testing.T) {
+	m := NewModel(textDiff())
+	next, _ := m.Update(windowMsg(120, 40))
+	nm := next.(Model)
+
+	if nm.mode != modeNormal {
+		t.Fatalf("initial mode=%v, want modeNormal", nm.mode)
+	}
+
+	next2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
+	nm2 := next2.(Model)
+	if nm2.mode != modeHelp {
+		t.Errorf("after ?: mode=%v, want modeHelp", nm2.mode)
+	}
+}
+
+func TestDiffModel_EscExitsHelpMode(t *testing.T) {
+	m := NewModel(textDiff())
+	next, _ := m.Update(windowMsg(120, 40))
+	nm := next.(Model)
+	nm.mode = modeHelp
+
+	next2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	nm2 := next2.(Model)
+	if nm2.mode != modeNormal {
+		t.Errorf("after esc in help: mode=%v, want modeNormal", nm2.mode)
+	}
+}
+
+func TestDiffModel_OKeySetsReloadRequest(t *testing.T) {
+	m := NewModel(textDiff())
+	next, _ := m.Update(windowMsg(120, 40))
+	nm := next.(Model)
+
+	next2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("o")})
+	nm2 := next2.(Model)
+	if !nm2.ReloadRequest {
+		t.Error("o key should set ReloadRequest=true")
 	}
 }
 

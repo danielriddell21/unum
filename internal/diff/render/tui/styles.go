@@ -13,6 +13,9 @@ var (
 	styleTitleDim = lipgloss.NewStyle().
 			Foreground(lipgloss.Color(panels.PaletteCyber.Muted))
 
+	styleHint = lipgloss.NewStyle().
+			Foreground(lipgloss.Color(panels.PaletteCyber.Muted))
+
 	borderActive = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color(panels.PaletteCyber.BorderActive))
@@ -21,6 +24,7 @@ var (
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color(panels.PaletteCyber.BorderDim))
 
+	colorActiveBorder = panels.PaletteCyber.BorderActive
 )
 
 // ApplyPalette rebuilds all tui-level style vars from the palette.
@@ -29,10 +33,13 @@ func ApplyPalette(p panels.Palette) {
 		Foreground(lipgloss.Color(p.AccentPrimary)).Bold(true)
 	styleTitleDim = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(p.Muted))
+	styleHint = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(p.Muted))
 	borderActive = lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color(p.BorderActive))
 	borderDim = lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color(p.BorderDim))
+	colorActiveBorder = p.BorderActive
 }

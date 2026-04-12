@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -22,6 +23,7 @@ type inputMode int
 const (
 	modeNormal inputMode = iota
 	modeSearch
+	modeHelp
 )
 
 // Model is the root Bubble Tea model for the diff TUI.
@@ -36,9 +38,10 @@ type Model struct {
 	mode        inputMode
 	searchInput textinput.Model
 
-	width       int
-	height      int
-	initialized bool
+	width         int
+	height        int
+	initialized   bool
+	ReloadRequest bool
 }
 
 // NewModel creates the diff TUI model.
@@ -140,18 +143,29 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Help mode
+	if m.mode == modeHelp {
+		if k == "?" || k == "q" || k == "esc" {
+			m.mode = modeNormal
+		}
+		return m, nil
+	}
+
 	// Normal mode
 	switch k {
 	case "q", "esc":
 		return m, tea.Quit
+	case "?":
+		m.mode = modeHelp
+		return m, nil
+	case "o":
+		m.ReloadRequest = true
+		return m, tea.Quit
 	case "v":
-		// Split view is only meaningful for text (hunk-based) diffs.
-		if m.diff != nil && m.diff.Root == nil {
-			if m.view == viewUnified {
-				m.view = viewSplit
-			} else {
-				m.view = viewUnified
-			}
+		if m.view == viewUnified {
+			m.view = viewSplit
+		} else {
+			m.view = viewUnified
 		}
 	case "/":
 		m.mode = modeSearch
@@ -222,14 +236,76 @@ func (m Model) View() string {
 	if m.mode == modeSearch {
 		searchQ = m.searchInput.Value()
 	}
-	sb := panels.StatusBar(m.diff, viewLabel, m.width, m.mode == modeSearch, searchQ)
+	mc := m.unified.MatchCount()
+	if m.view == viewSplit {
+		mc = m.split.MatchCount()
+	}
+	sb := panels.StatusBar(m.diff, viewLabel, m.width, m.mode == modeSearch, searchQ, mc)
 	statusStyled := lipgloss.NewStyle().
 		Background(lipgloss.Color("#0D0D0D")).
 		Foreground(lipgloss.Color("#3A3A3A")).
 		Width(m.width).
 		Render(sb)
 
+	if m.mode == modeHelp {
+		return m.helpOverlay(body + "\n" + statusStyled)
+	}
+
 	return body + "\n" + statusStyled
+}
+
+func (m Model) helpOverlay(base string) string {
+	help := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(colorActiveBorder)).
+		Padding(1, 2).
+		Width(52).
+		Render(helpText())
+
+	w := lipgloss.Width(base)
+	h := lipgloss.Height(base)
+	hw := lipgloss.Width(help)
+	hh := lipgloss.Height(help)
+	x := (w - hw) / 2
+	y := (h - hh) / 2
+
+	lines := strings.Split(base, "\n")
+	helpLines := strings.Split(help, "\n")
+	for i, hl := range helpLines {
+		row := y + i
+		if row >= 0 && row < len(lines) {
+			line := lines[row]
+			lw := lipgloss.Width(line)
+			if x >= 0 && x < lw {
+				lines[row] = line[:x] + hl
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func helpText() string {
+	return fmt.Sprintf(`%s
+
+%s
+  j/k  ↑/↓      Scroll diff
+  d/u  ctrl+D/U  Half-page scroll
+  n / N          Next / previous search match
+
+%s
+  v              Toggle unified / split view
+  tab            Cycle focus (split view)
+
+%s
+  /              Enter search mode
+  o              Open new files
+  ?              Toggle this help
+  q / esc        Quit`,
+		styleTitle.Render("UNUM DIFF — keyboard reference"),
+		styleTitle.Render("NAVIGATION"),
+		styleTitle.Render("VIEWS"),
+		styleTitle.Render("ACTIONS"),
+	)
 }
 
 func panelTitle(title string, active bool) string {
@@ -253,15 +329,4 @@ func wrapPanel(content string, active bool, width, height int) string {
 	return style.Render(content)
 }
 
-// Search bar shown inline in status when mode=modeSearch
-func (m Model) searchBar() string {
-	if m.mode != modeSearch {
-		return ""
-	}
-	return m.searchInput.View()
-}
 
-// ensure searchBar is used (it's referenced in View indirectly via status bar)
-var _ = (&Model{}).searchBar
-
-var _ = strings.Join // ensure strings import is used

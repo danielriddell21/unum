@@ -11,6 +11,7 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/types"
 )
 
+
 // deriveFunc and historyFuncs are injected at startup to avoid import cycles.
 var (
 	deriveFn        func(input string) types.Result
@@ -45,6 +46,8 @@ type Model struct {
 
 	// historyCursor is the selected index into m.history (0 = newest).
 	historyCursor int
+
+	showHelp bool
 
 	// Layout
 	width  int
@@ -97,6 +100,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch k {
 	case "ctrl+c":
 		return m, tea.Quit
+	case "?":
+		m.showHelp = !m.showHelp
+		return m, nil
 	case "tab":
 		return m.switchFocus(), textinput.Blink
 	}
@@ -184,7 +190,7 @@ func (m *Model) deriveAndSave(text string) {
 }
 
 func (m *Model) historyCapacity() int {
-	usable := m.height - 4
+	usable := m.height - 5
 	if usable < 1 {
 		return 1
 	}
@@ -231,7 +237,75 @@ func (m Model) View() string {
 	left := m.leftPanel(leftW)
 	right := m.rightPanel(rightW)
 
-	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	body := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+
+	var sbHint string
+	if m.focused == focusInput {
+		sbHint = "enter:derive  tab:history  ?:help  esc:quit"
+	} else {
+		sbHint = "↑↓:navigate  enter:re-derive  tab:back  ?:help  q:quit"
+	}
+	statusStyled := lipgloss.NewStyle().
+		Background(lipgloss.Color("#0D0D0D")).
+		Foreground(lipgloss.Color("#3A3A3A")).
+		Width(m.width).
+		Render(" " + sbHint)
+
+	if m.showHelp {
+		return m.helpOverlay(body + "\n" + statusStyled)
+	}
+	return body + "\n" + statusStyled
+}
+
+func (m Model) helpOverlay(base string) string {
+	help := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(colorActive)).
+		Padding(1, 2).
+		Width(44).
+		Render(hashHelpText())
+
+	w := lipgloss.Width(base)
+	h := lipgloss.Height(base)
+	hw := lipgloss.Width(help)
+	hh := lipgloss.Height(help)
+	x := (w - hw) / 2
+	y := (h - hh) / 2
+
+	lines := strings.Split(base, "\n")
+	helpLines := strings.Split(help, "\n")
+	for i, hl := range helpLines {
+		row := y + i
+		if row >= 0 && row < len(lines) {
+			line := lines[row]
+			lw := lipgloss.Width(line)
+			if x >= 0 && x < lw {
+				lines[row] = line[:x] + hl
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func hashHelpText() string {
+	return fmt.Sprintf(`%s
+
+%s
+  enter       Derive hash values
+  tab         Switch to history panel
+
+%s (when focused)
+  ↑/↓  j/k   Navigate entries
+  enter       Re-derive selected
+
+%s
+  ?           Toggle this help
+  esc / q     Quit`,
+		styleTitle.Render("UNUM HASH — keyboard reference"),
+		styleTitle.Render("INPUT"),
+		styleTitle.Render("HISTORY"),
+		styleTitle.Render("ACTIONS"),
+	)
 }
 
 func (m Model) leftPanel(w int) string {
@@ -240,13 +314,7 @@ func (m Model) leftPanel(w int) string {
 		innerW = 10
 	}
 
-	var hint string
-	if m.focused == focusInput {
-		hint = styleDim.Render("enter → derive  tab → history  esc → quit")
-	} else {
-		hint = styleDim.Render("tab → back to input  q/esc → quit")
-	}
-	title := styleTitle.Render(" HASH ") + "  " + hint
+	title := styleTitle.Render(" HASH ")
 
 	sep := styleDim.Render(strings.Repeat("─", innerW))
 	inputLine := m.input.View()
@@ -282,7 +350,7 @@ func (m Model) leftPanel(w int) string {
 	if active {
 		border = borderActive
 	}
-	return border.Width(innerW).Height(m.height - 2).Render(content)
+	return border.Width(innerW).Height(m.height - 3).Render(content)
 }
 
 func (m Model) rightPanel(w int) string {
@@ -292,11 +360,7 @@ func (m Model) rightPanel(w int) string {
 	}
 
 	histFocused := m.focused == focusHistory
-	var hint string
-	if histFocused {
-		hint = styleDim.Render(" ↑↓ select  enter re-derive")
-	}
-	title := styleTitle.Render(" HISTORY ") + hint
+	title := styleTitle.Render(" HISTORY ")
 
 	visible, cursorInView := m.historyViewport()
 
@@ -329,5 +393,5 @@ func (m Model) rightPanel(w int) string {
 	if histFocused {
 		border = borderActive
 	}
-	return border.Width(innerW).Height(m.height - 2).Render(content)
+	return border.Width(innerW).Height(m.height - 3).Render(content)
 }

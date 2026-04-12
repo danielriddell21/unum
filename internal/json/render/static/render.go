@@ -124,26 +124,24 @@ func DefaultOptions() Options {
 // Call before Render. Suppressed when opts.Quiet is true.
 func Boot(w io.Writer, filename string, opts Options) func(nodeCount int, elapsed time.Duration) {
 	if opts.Quiet || opts.NoColor {
-		return func(int, time.Duration) {
+		return func(nodeCount int, elapsed time.Duration) {
 			if !opts.Quiet {
-				_, _ = fmt.Fprintf(w, "[ UNUM ] %s\n", filename)
+				_, _ = fmt.Fprintf(w, "[ UNUM ] json  %d nodes · %dms ✓\n", nodeCount, elapsed.Milliseconds())
 			}
 		}
 	}
 
 	t := opts.Theme
 	_, _ = fmt.Fprintf(w, "%s %s\r",
-		t.Banner.Render("[ UNUM ]"),
-		t.Punctuation.Render("scanning "+filename+"..."),
+		t.BannerOK.Render("[ UNUM ]"),
+		t.Punctuation.Render("json  scanning..."),
 	)
 
 	return func(nodeCount int, elapsed time.Duration) {
-		bar := strings.Repeat("█", 16)
-		_, _ = fmt.Fprintf(w, "%s %s %s · %s\n",
+		_, _ = fmt.Fprintf(w, "%s %s  %s\n",
 			t.BannerOK.Render("[ UNUM ]"),
-			t.Punctuation.Render(bar),
-			t.BannerOK.Render(fmt.Sprintf("%d nodes", nodeCount)),
-			t.Punctuation.Render(fmt.Sprintf("%dms ✓", elapsed.Milliseconds())),
+			t.BannerOK.Render(fmt.Sprintf("json  %d nodes", nodeCount)),
+			t.Punctuation.Render(fmt.Sprintf("· %dms ✓", elapsed.Milliseconds())),
 		)
 	}
 }

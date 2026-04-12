@@ -71,10 +71,13 @@ func Boot(w io.Writer, opts Options) {
 		return
 	}
 	if opts.NoColor {
-		_, _ = fmt.Fprintln(w, "[ UNUM ] hash")
+		_, _ = fmt.Fprintln(w, "[ UNUM ] hash ✓")
 		return
 	}
-	_, _ = fmt.Fprintln(w, opts.Theme.Banner.Render("[ UNUM ] hash"))
+	_, _ = fmt.Fprintf(w, "%s %s\n",
+		opts.Theme.Banner.Render("[ UNUM ]"),
+		opts.Theme.Banner.Render("hash ✓"),
+	)
 }
 
 // RenderTable prints the full derivation table for r.

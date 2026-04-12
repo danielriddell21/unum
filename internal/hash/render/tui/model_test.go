@@ -145,6 +145,28 @@ func TestHashTUI_QTypesInInputMode(t *testing.T) {
 	}
 }
 
+func TestHashTUI_HelpToggle(t *testing.T) {
+	m := NewModel()
+	next, _ := m.Update(windowMsg(120, 40))
+	nm := next.(Model)
+
+	if nm.showHelp {
+		t.Fatal("showHelp should be false initially")
+	}
+
+	nm2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
+	nm = nm2.(Model)
+	if !nm.showHelp {
+		t.Error("after ?: showHelp should be true")
+	}
+
+	nm3, _ := nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
+	nm = nm3.(Model)
+	if nm.showHelp {
+		t.Error("after second ?: showHelp should be false")
+	}
+}
+
 func TestHashTUI_HistoryNavigation(t *testing.T) {
 	m := NewModel()
 	next, _ := m.Update(windowMsg(120, 40))

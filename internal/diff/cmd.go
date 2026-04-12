@@ -4,6 +4,7 @@ package difftool
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -98,7 +99,8 @@ func runDiff(f *flags, fileA, fileB string) error {
 		Quiet:   f.quiet,
 	}
 
-	static.Boot(os.Stderr, fileA, fileB, opts)
+	bootDone := static.Boot(os.Stderr, fileA, fileB, opts)
+	start := time.Now()
 
 	var diff *node.Diff
 	switch fmt_ {
@@ -114,6 +116,7 @@ func runDiff(f *flags, fileA, fileB string) error {
 	if err != nil {
 		return fmt.Errorf("diff: %w", err)
 	}
+	bootDone(diff.Added, diff.Removed, diff.Modified, time.Since(start))
 	diff.FileA = fileA
 	diff.FileB = fileB
 	diff.Format = fmt_

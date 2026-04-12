@@ -81,6 +81,7 @@ Single-field flags (pipe-friendly, skips the table):
 
 func runHash(f *flags, args []string) error {
 	if f.ui {
+		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
 		applyTUITheme(f.theme)
 		hashTUI.SetFuncs(Derive, AppendHistory, LoadHistory)
 		p := tea.NewProgram(hashTUI.NewModel(), tea.WithAltScreen())

@@ -312,7 +312,15 @@ func (p *SplitPanel) View() string {
 }
 
 func (p *SplitPanel) build() {
-	if p.diff == nil || len(p.diff.Hunks) == 0 {
+	if p.diff == nil {
+		return
+	}
+	if p.diff.Root != nil {
+		p.left.SetContent(diffUnchanged.Render("  split view not available for semantic diffs — press v to return"))
+		p.right.SetContent("")
+		return
+	}
+	if len(p.diff.Hunks) == 0 {
 		p.left.SetContent(diffUnchanged.Render("(no differences)"))
 		p.right.SetContent(diffUnchanged.Render("(no differences)"))
 		return
