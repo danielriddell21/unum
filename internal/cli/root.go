@@ -40,6 +40,7 @@ baked in to make your daily workflow more interesting.`,
 	root.AddCommand(jsontool.Command(&noColor, &quiet))
 	root.AddCommand(difftool.Command(&noColor, &quiet))
 	root.AddCommand(hashtool.Command(&noColor, &quiet))
+	root.AddCommand(completionCmd())
 
 	return root.Execute()
 }
