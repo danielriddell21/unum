@@ -2,11 +2,15 @@
 package difftool
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/danielriddell21/unum/internal/config"
 	"github.com/danielriddell21/unum/internal/diff/format"
@@ -15,6 +19,7 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/render/static"
 	"github.com/danielriddell21/unum/internal/diff/render/tui"
 	diffweb "github.com/danielriddell21/unum/internal/diff/render/web"
+	"github.com/danielriddell21/unum/internal/telemetry"
 )
 
 type flags struct {
@@ -29,12 +34,14 @@ type flags struct {
 	quiet      bool
 	noColor    bool
 	version    string
+	tel        *telemetry.Telemetry
 }
 
 // Command returns the cobra command for `unum diff`.
-func Command(globalNoColor *bool, globalQuiet *bool, version string) *cobra.Command {
+func Command(globalNoColor *bool, globalQuiet *bool, version string, tel *telemetry.Telemetry) *cobra.Command {
 	f := &flags{}
 	f.version = version
+	f.tel = tel
 	cfg := config.Load()
 	f.theme = cfg.DarkTheme
 	f.lightTheme = cfg.LightTheme
@@ -63,6 +70,15 @@ Output modes:
 				if !f.web {
 					return fmt.Errorf("requires two file arguments (or --web for browser input mode)")
 				}
+				_, span := f.tel.Tracer().Start(context.Background(), "diff.execute",
+					trace.WithAttributes(
+						attribute.String("tool", "diff"),
+						attribute.String("mode", "web"),
+						attribute.String("os", runtime.GOOS),
+						attribute.String("arch", runtime.GOARCH),
+					),
+				)
+				defer span.End()
 				return diffweb.StartServer(diffweb.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version})
 			}
 			return runDiff(f, args[0], args[1])
@@ -81,6 +97,23 @@ Output modes:
 }
 
 func runDiff(f *flags, fileA, fileB string) error {
+	mode := "cli"
+	if f.ui {
+		mode = "tui"
+	} else if f.web {
+		mode = "web"
+	}
+	_, span := f.tel.Tracer().Start(context.Background(), "diff.execute",
+		trace.WithAttributes(
+			attribute.String("tool", "diff"),
+			attribute.String("mode", mode),
+			attribute.String("os", runtime.GOOS),
+			attribute.String("arch", runtime.GOARCH),
+			attribute.StringSlice("flags", activeDiffFlags(f)),
+		),
+	)
+	defer span.End()
+
 	dataA, err := os.ReadFile(fileA)
 	if err != nil {
 		return fmt.Errorf("cannot read %s: %w", fileA, err)
@@ -140,4 +173,18 @@ func runDiff(f *flags, fileA, fileB string) error {
 		return fmt.Errorf("diff render: %w", err)
 	}
 	return nil
+}
+
+func activeDiffFlags(f *flags) []string {
+	var flags []string
+	if f.format != "" {
+		flags = append(flags, "format")
+	}
+	if f.stat {
+		flags = append(flags, "stat")
+	}
+	if f.context != 3 {
+		flags = append(flags, "context")
+	}
+	return flags
 }

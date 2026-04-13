@@ -6,9 +6,12 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/danielriddell21/unum/internal/config"
 	"github.com/danielriddell21/unum/internal/json/analyze"
@@ -21,6 +24,7 @@ import (
 	"github.com/danielriddell21/unum/internal/json/render/static"
 	"github.com/danielriddell21/unum/internal/json/render/tui"
 	"github.com/danielriddell21/unum/internal/json/render/web"
+	"github.com/danielriddell21/unum/internal/telemetry"
 )
 
 // flags holds all flag values for the json subcommand.
@@ -54,12 +58,14 @@ type flags struct {
 	quiet   bool
 	noColor bool
 	version string
+	tel     *telemetry.Telemetry
 }
 
 // Command returns the cobra command for `unum json`.
-func Command(globalNoColor *bool, globalQuiet *bool, version string) *cobra.Command {
+func Command(globalNoColor *bool, globalQuiet *bool, version string, tel *telemetry.Telemetry) *cobra.Command {
 	f := &flags{}
 	f.version = version
+	f.tel = tel
 	cfg := config.Load()
 	f.theme = cfg.DarkTheme
 	f.lightTheme = cfg.LightTheme
@@ -118,6 +124,23 @@ Config file (~/.config/unum/config.json):
 }
 
 func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // dispatch on output flags + render modes; each branch is a distinct user-facing mode
+	mode := "cli"
+	if f.ui {
+		mode = "tui"
+	} else if f.web {
+		mode = "web"
+	}
+	ctx, span := f.tel.Tracer().Start(context.Background(), "json.execute",
+		trace.WithAttributes(
+			attribute.String("tool", "json"),
+			attribute.String("mode", mode),
+			attribute.String("os", runtime.GOOS),
+			attribute.String("arch", runtime.GOARCH),
+			attribute.StringSlice("flags", activeJSONFlags(f)),
+		),
+	)
+	defer span.End()
+
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("cannot read %s: %w", filename, err)
@@ -140,7 +163,8 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 	if f.validateOnly {
 		if err := parse.Validate(data); err != nil {
 			static.RenderError(os.Stderr, err, renderOpts)
-			os.Exit(1)
+			span.End()
+			os.Exit(1) //nolint:gocritic // validate-only mode requires hard exit for CI tooling
 		}
 		return nil
 	}
@@ -151,7 +175,8 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 	if err := parse.Validate(data); err != nil {
 		fmt.Fprintln(os.Stderr)
 		static.RenderError(os.Stderr, err, renderOpts)
-		os.Exit(1)
+		span.End()
+		os.Exit(1) //nolint:gocritic // validation failure requires hard exit for CI tooling
 	}
 
 	root, err := parse.Parse(data)
@@ -162,15 +187,14 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 	nodeCount := root.CountNodes()
 	done(nodeCount, time.Since(start))
 
-	ctx := context.Background()
-
 	// ── Output-mode lenses (mutually exclusive) ───────────────────────────────
 
 	if f.jqExpr != "" {
 		result, err := query.Execute(root, f.jqExpr)
 		if err != nil {
 			static.RenderError(os.Stderr, err, renderOpts)
-			os.Exit(2)
+			span.End()
+			os.Exit(2) //nolint:gocritic // query failure requires hard exit with distinct code
 		}
 		fmt.Println(result)
 		return nil
@@ -253,6 +277,20 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 }
 
 func runJSONNoFile(f *flags) error {
+	mode := "tui"
+	if f.web {
+		mode = "web"
+	}
+	_, span := f.tel.Tracer().Start(context.Background(), "json.execute",
+		trace.WithAttributes(
+			attribute.String("tool", "json"),
+			attribute.String("mode", mode),
+			attribute.String("os", runtime.GOOS),
+			attribute.String("arch", runtime.GOARCH),
+		),
+	)
+	defer span.End()
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		cwd = "."
@@ -264,10 +302,39 @@ func runJSONNoFile(f *flags) error {
 		return nil
 	}
 	if f.web {
-		if err := web.StartBrowser(web.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version}); err != nil {
+		if err := web.StartServer(web.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version}); err != nil {
 			return fmt.Errorf("json web: %w", err)
 		}
 		return nil
 	}
 	return fmt.Errorf("missing argument: <file> (or use --ui / --web to pick interactively)")
+}
+
+func activeJSONFlags(f *flags) []string {
+	var flags []string
+	if f.showStats {
+		flags = append(flags, "stats")
+	}
+	if f.showMerkle {
+		flags = append(flags, "merkle")
+	}
+	if f.hashOnly {
+		flags = append(flags, "hash-only")
+	}
+	if f.transformYAML {
+		flags = append(flags, "transform")
+	}
+	if f.typegenTarget != "" {
+		flags = append(flags, "typegen")
+	}
+	if f.jqExpr != "" {
+		flags = append(flags, "query")
+	}
+	if f.compact {
+		flags = append(flags, "compact")
+	}
+	if f.validateOnly {
+		flags = append(flags, "validate-only")
+	}
+	return flags
 }

@@ -3,11 +3,15 @@
 package hash
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"runtime"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/danielriddell21/unum/internal/config"
 	"github.com/danielriddell21/unum/internal/hash/derive"
@@ -15,6 +19,7 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/render/static"
 	hashTUI "github.com/danielriddell21/unum/internal/hash/render/tui"
 	hashWeb "github.com/danielriddell21/unum/internal/hash/render/web"
+	"github.com/danielriddell21/unum/internal/telemetry"
 	"github.com/danielriddell21/unum/internal/tui/panels"
 )
 
@@ -28,6 +33,7 @@ type flags struct {
 	noColor    bool
 
 	version string
+	tel     *telemetry.Telemetry
 
 	// Single-field output flags
 	portOnly   bool
@@ -39,9 +45,10 @@ type flags struct {
 }
 
 // Command returns the cobra command for `unum hash`.
-func Command(globalNoColor *bool, globalQuiet *bool, version string) *cobra.Command {
+func Command(globalNoColor *bool, globalQuiet *bool, version string, tel *telemetry.Telemetry) *cobra.Command {
 	f := &flags{}
 	f.version = version
+	f.tel = tel
 	cfg := config.Load()
 	f.theme = cfg.DarkTheme
 	f.lightTheme = cfg.LightTheme
@@ -86,6 +93,23 @@ Single-field flags (pipe-friendly, skips the table):
 }
 
 func runHash(f *flags, args []string) error {
+	mode := "cli"
+	if f.ui {
+		mode = "tui"
+	} else if f.web {
+		mode = "web"
+	}
+	_, span := f.tel.Tracer().Start(context.Background(), "hash.execute",
+		trace.WithAttributes(
+			attribute.String("tool", "hash"),
+			attribute.String("mode", mode),
+			attribute.String("os", runtime.GOOS),
+			attribute.String("arch", runtime.GOARCH),
+			attribute.StringSlice("flags", activeHashFlags(f)),
+		),
+	)
+	defer span.End()
+
 	if f.ui {
 		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
 		hashTUI.ApplyPalette(panels.ResolvePalette(f.theme))
@@ -139,4 +163,27 @@ func runHash(f *flags, args []string) error {
 	}
 
 	return nil
+}
+
+func activeHashFlags(f *flags) []string {
+	var flags []string
+	if f.portOnly {
+		flags = append(flags, "port")
+	}
+	if f.uuidOnly {
+		flags = append(flags, "uuid")
+	}
+	if f.colorOnly {
+		flags = append(flags, "color")
+	}
+	if f.shortOnly {
+		flags = append(flags, "short")
+	}
+	if f.emojiOnly {
+		flags = append(flags, "emoji")
+	}
+	if f.phraseOnly {
+		flags = append(flags, "phrase")
+	}
+	return flags
 }
