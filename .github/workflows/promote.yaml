@@ -1,4 +1,4 @@
-name: Promote release to latest
+name: Promote Release
 
 on:
   release:
@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   retag:
-    name: Retag image as latest
+    name: Retag image
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v3
