@@ -91,3 +91,113 @@ func TestLoad_MissingFile(t *testing.T) {
 		t.Error("DarkTheme should not be empty")
 	}
 }
+
+func boolPtr(v bool) *bool { return &v }
+
+func TestTelemetryEnabled_Default(t *testing.T) {
+	t.Setenv("DO_NOT_TRACK", "")
+	t.Setenv("UNUM_NO_TELEMETRY", "")
+
+	cfg := Config{}
+	if !cfg.TelemetryEnabled() {
+		t.Error("nil Telemetry pointer should default to enabled")
+	}
+}
+
+func TestTelemetryEnabled_ExplicitFalse(t *testing.T) {
+	t.Setenv("DO_NOT_TRACK", "")
+	t.Setenv("UNUM_NO_TELEMETRY", "")
+
+	cfg := Config{Telemetry: boolPtr(false)}
+	if cfg.TelemetryEnabled() {
+		t.Error("explicit false should disable telemetry")
+	}
+}
+
+func TestTelemetryEnabled_ExplicitTrue(t *testing.T) {
+	t.Setenv("DO_NOT_TRACK", "")
+	t.Setenv("UNUM_NO_TELEMETRY", "")
+
+	cfg := Config{Telemetry: boolPtr(true)}
+	if !cfg.TelemetryEnabled() {
+		t.Error("explicit true should enable telemetry")
+	}
+}
+
+func TestTelemetryEnabled_DONotTrack(t *testing.T) {
+	t.Setenv("DO_NOT_TRACK", "1")
+	t.Setenv("UNUM_NO_TELEMETRY", "")
+
+	cfg := Config{Telemetry: boolPtr(true)}
+	if cfg.TelemetryEnabled() {
+		t.Error("DO_NOT_TRACK=1 should override config")
+	}
+}
+
+func TestTelemetryEnabled_UnumNoTelemetry(t *testing.T) {
+	t.Setenv("DO_NOT_TRACK", "")
+	t.Setenv("UNUM_NO_TELEMETRY", "1")
+
+	cfg := Config{Telemetry: boolPtr(true)}
+	if cfg.TelemetryEnabled() {
+		t.Error("UNUM_NO_TELEMETRY=1 should override config")
+	}
+}
+
+func TestSave_RoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("APPDATA", dir)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	original := Config{
+		DarkTheme:  "nord",
+		LightTheme: "solarized",
+		Telemetry:  boolPtr(false),
+		ClientID:   "test-uuid",
+	}
+	if err := Save(original); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	loaded := Load()
+	if loaded.DarkTheme != original.DarkTheme {
+		t.Errorf("DarkTheme=%q, want %q", loaded.DarkTheme, original.DarkTheme)
+	}
+	if loaded.LightTheme != original.LightTheme {
+		t.Errorf("LightTheme=%q, want %q", loaded.LightTheme, original.LightTheme)
+	}
+	if loaded.Telemetry == nil || *loaded.Telemetry != false {
+		t.Error("Telemetry should be false after round-trip")
+	}
+	if loaded.ClientID != original.ClientID {
+		t.Errorf("ClientID=%q, want %q", loaded.ClientID, original.ClientID)
+	}
+}
+
+func TestEnsureClientID_Generates(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("APPDATA", dir)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	cfg := EnsureClientID()
+	if cfg.ClientID == "" {
+		t.Fatal("EnsureClientID should generate a UUID")
+	}
+	if len(cfg.ClientID) != 36 {
+		t.Errorf("ClientID=%q, want UUID format (36 chars)", cfg.ClientID)
+	}
+}
+
+func TestEnsureClientID_Idempotent(t *testing.T) {
+	dir := writeConfig(t, map[string]string{
+		"dark_theme": "cyber",
+		"client_id":  "existing-id",
+	})
+	t.Setenv("APPDATA", dir)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	cfg := EnsureClientID()
+	if cfg.ClientID != "existing-id" {
+		t.Errorf("ClientID=%q, want \"existing-id\" (should not overwrite)", cfg.ClientID)
+	}
+}
