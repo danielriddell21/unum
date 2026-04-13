@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
 	"github.com/danielriddell21/unum/internal/diff/format"
 	"github.com/danielriddell21/unum/internal/diff/node"
 	"github.com/danielriddell21/unum/internal/diff/parse"
@@ -76,8 +78,10 @@ func Start(d *node.Diff, opts Options) error {
 		_, _ = w.Write(payloadBytes)
 	})
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(idx))
+	shared.RegisterMetrics(mux)
+	shared.RegisterUmamiProxy(mux)
 
-	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Addr: addr, Handler: otelhttp.NewHandler(mux, "unum-diff"), ReadHeaderTimeout: 10 * time.Second}
 
 	shared.PrintStartupBanner("diff viewer", url)
 
@@ -247,8 +251,10 @@ func StartServer(opts Options) error {
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
 	mux.HandleFunc("/api/diff", handleServerDiff())
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
+	shared.RegisterMetrics(mux)
+	shared.RegisterUmamiProxy(mux)
 
-	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Addr: addr, Handler: otelhttp.NewHandler(mux, "unum-diff"), ReadHeaderTimeout: 10 * time.Second}
 
 	shared.PrintStartupBanner("diff viewer", url)
 

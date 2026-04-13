@@ -20,7 +20,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X main.version={{.Version}}
+      - -s -w -X main.version={{.Version}} -X github.com/danielriddell21/unum/internal/telemetry.otelAuthToken={{.Env.OTEL_AUTH_TOKEN}} -X github.com/danielriddell21/unum/internal/telemetry.otelEndpoint={{.Env.OTEL_ENDPOINT}}
 
 archives:
   - id: unum

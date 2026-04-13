@@ -12,11 +12,11 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/danielriddell21/unum/internal/json/analyze"
 	"github.com/danielriddell21/unum/internal/json/lens/merkle"
@@ -103,10 +103,12 @@ func Start(root *node.Node, opts Options) error {
 	})
 	mux.HandleFunc("/api/upload", handleUpload())
 	mux.HandleFunc("/api/query", handleQuery(root))
+	shared.RegisterMetrics(mux)
+	shared.RegisterUmamiProxy(mux)
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           mux,
+		Handler:           otelhttp.NewHandler(mux, "unum-json"),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -272,27 +274,22 @@ func maxDepth(n *node.Node) int {
 	return max + 1
 }
 
-// ─── Browser mode ─────────────────────────────────────────────────────────────
+// ─── Input mode (no pre-selected file) ───────────────────────────────────────
 
-// rootCache stores parsed roots keyed by absolute file path or upload key.
+// rootCache stores parsed roots keyed by upload key.
 var rootCache sync.Map // map[string]*node.Node
 
 // payloadCache stores pre-marshalled payloads keyed by upload key.
 var payloadCache sync.Map // map[string][]byte
 
-// StartBrowser launches the web server in file-browser mode (no pre-selected
-// file). The landing page lets the user navigate the filesystem and pick a
-// .json file to explore.
-func StartBrowser(opts Options) error {
-	baseDir, err := filepath.Abs(".")
-	if err != nil {
-		return fmt.Errorf("resolve dir: %w", err)
-	}
-
+// StartServer launches the json web server with no pre-loaded file.
+// GET /api/tree returns 204; the frontend shows a drop/paste zone.
+// POST /api/upload accepts JSON content and returns a key for later retrieval.
+func StartServer(opts Options) error {
 	host := "localhost"
 	autoOpen := true
 	if p := os.Getenv("PORT"); p != "" {
-		if n, nerr := strconv.Atoi(p); nerr == nil {
+		if n, err := strconv.Atoi(p); err == nil {
 			opts.Port = n
 		}
 		host = "0.0.0.0"
@@ -300,6 +297,7 @@ func StartBrowser(opts Options) error {
 	}
 
 	port := opts.Port
+	var err error
 	if port == 0 {
 		port, err = shared.FreePort()
 		if err != nil {
@@ -310,20 +308,20 @@ func StartBrowser(opts Options) error {
 	addr := host + ":" + strconv.Itoa(port)
 	url := "http://" + addr
 
-	mux := http.NewServeMux()
 	d := shared.NewIndexData(opts.DarkTheme, opts.LightTheme, opts.Version)
+	mux := http.NewServeMux()
 	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
 	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
 	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
-	mux.HandleFunc("/explore", shared.ServeTemplate(assets, "assets/index.html")(d))
-	mux.HandleFunc("/api/browse", handleBrowse(baseDir))
+	mux.HandleFunc("/api/tree", handleKeyedTree())
 	mux.HandleFunc("/api/upload", handleUpload())
-	mux.HandleFunc("/api/tree", handleDynamicTree(baseDir))
-	mux.HandleFunc("/api/query", handleDynamicQuery(baseDir))
-	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/browse.html")(d))
+	mux.HandleFunc("/api/query", handleKeyedQuery())
+	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
+	shared.RegisterMetrics(mux)
+	shared.RegisterUmamiProxy(mux)
 
-	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Addr: addr, Handler: otelhttp.NewHandler(mux, "unum-json"), ReadHeaderTimeout: 10 * time.Second}
 
 	shared.PrintStartupBanner("json explorer", url)
 
@@ -336,135 +334,40 @@ func StartBrowser(opts Options) error {
 	return nil
 }
 
-// dirEntry is a serialisable filesystem entry for the browse API.
-type dirEntry struct {
-	Name  string `json:"name"`
-	IsDir bool   `json:"isDir"`
-	Path  string `json:"path"`
-}
-
-func handleBrowse(baseDir string) http.HandlerFunc {
+// handleKeyedTree serves GET /api/tree — returns 204 when no key is given
+// (signals the frontend to show the upload panel), or the pre-built payload
+// for a key returned by /api/upload.
+func handleKeyedTree() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		dir := r.URL.Query().Get("dir")
-		if dir == "" {
-			dir = baseDir
-		}
-		abs, err := filepath.Abs(dir)
-		if err != nil || !strings.HasPrefix(abs, baseDir) {
-			http.Error(w, "forbidden", http.StatusForbidden)
+		key := r.URL.Query().Get("key")
+		if key == "" {
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-
-		entries, err := os.ReadDir(abs)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		v, ok := payloadCache.Load(key)
+		if !ok {
+			http.Error(w, "key not found", http.StatusNotFound)
 			return
 		}
-
-		var result []dirEntry
-		for _, e := range entries {
-			name := e.Name()
-			if strings.HasPrefix(name, ".") {
-				continue
-			}
-			if e.IsDir() || strings.HasSuffix(strings.ToLower(name), ".json") {
-				result = append(result, dirEntry{
-					Name:  name,
-					IsDir: e.IsDir(),
-					Path:  filepath.Join(abs, name),
-				})
-			}
-		}
-
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(result)
+		_, _ = w.Write(v.([]byte)) //nolint:gosec // v is always []byte; type assertion is safe
 	}
 }
 
-func handleDynamicTree(baseDir string) http.HandlerFunc {
+// handleKeyedQuery serves POST /api/query — requires a key from /api/upload.
+func handleKeyedQuery() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Upload key path — no filesystem access needed.
-		if key := r.URL.Query().Get("key"); key != "" {
-			v, ok := payloadCache.Load(key)
-			if !ok {
-				http.Error(w, "key not found", http.StatusNotFound)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(v.([]byte)) //nolint:gosec // v is always []byte here; type assertion is safe, no user-controlled input
-			return
-		}
-
-		file := r.URL.Query().Get("file")
-		if file == "" {
-			http.Error(w, "missing file or key param", http.StatusBadRequest)
-			return
-		}
-		abs, err := filepath.Abs(file)
-		if err != nil || !strings.HasPrefix(abs, baseDir) {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
-
-		data, err := os.ReadFile(abs) //nolint:gosec // path is resolved from user-provided filename; intentional file read, G304 suppressed globally but kept explicit here
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		root, err := parse.Parse(data)
-		if err != nil {
-			http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		rootCache.Store(abs, root)
-
-		payload, err := buildPayload(root, abs)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		payload.SizeBytes = int64(len(data))
-
-		payloadBytes, err := json.Marshal(payload)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(payloadBytes)
-	}
-}
-
-func handleDynamicQuery(baseDir string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Upload key path.
-		if key := r.URL.Query().Get("key"); key != "" {
-			v, ok := rootCache.Load(key)
-			if !ok {
-				writeJSON(w, queryResponse{Error: "key not found"})
-				return
-			}
-			handleQuery(v.(*node.Node))(w, r)
-			return
-		}
-
-		file := r.URL.Query().Get("file")
-		if file == "" {
+		key := r.URL.Query().Get("key")
+		if key == "" {
 			writeJSON(w, queryResponse{Error: "no file context"})
 			return
 		}
-		abs, err := filepath.Abs(file)
-		if err != nil || !strings.HasPrefix(abs, baseDir) {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
-		v, ok := rootCache.Load(abs)
+		v, ok := rootCache.Load(key)
 		if !ok {
-			writeJSON(w, queryResponse{Error: "file not yet loaded — open it first"})
+			writeJSON(w, queryResponse{Error: "key not found"})
 			return
 		}
-		handleQuery(v.(*node.Node))(w, r)
+		handleQuery(v.(*node.Node))(w, r) //nolint:gosec // v is always *node.Node; type assertion is safe
 	}
 }
 

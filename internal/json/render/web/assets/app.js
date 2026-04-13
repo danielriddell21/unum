@@ -11,16 +11,13 @@
 
   // ── Boot ────────────────────────────────────────────────────────────────────
 
-  // fileParam / keyParam are set when navigating from the browser picker.
-  const fileParam = new URLSearchParams(window.location.search).get('file');
-  const keyParam  = new URLSearchParams(window.location.search).get('key');
+  const keyParam = new URLSearchParams(window.location.search).get('key');
 
   async function boot() {
     try {
-      let treeURL = '/api/tree';
-      if (fileParam) treeURL = '/api/tree?file=' + encodeURIComponent(fileParam);
-      else if (keyParam) treeURL = '/api/tree?key=' + encodeURIComponent(keyParam);
+      const treeURL = keyParam ? '/api/tree?key=' + encodeURIComponent(keyParam) : '/api/tree';
       const resp = await fetch(treeURL);
+      if (resp.status === 204) { showUploadPanel(); return; }
       if (!resp.ok) throw new Error('Failed to load tree: ' + resp.status);
       treeData = await resp.json();
       renderHeader();
@@ -376,9 +373,7 @@
       const expr = input.value.trim();
       if (!expr) return;
       try {
-        let queryURL = '/api/query';
-        if (fileParam) queryURL = '/api/query?file=' + encodeURIComponent(fileParam);
-        else if (keyParam) queryURL = '/api/query?key=' + encodeURIComponent(keyParam);
+        const queryURL = keyParam ? '/api/query?key=' + encodeURIComponent(keyParam) : '/api/query';
         const resp = await fetch(queryURL, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},

@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/style.css" />
   <script>window.UNUM_CONFIG={darkTheme:"{{.DarkTheme}}",lightTheme:"{{.LightTheme}}",version:"{{.Version}}",themes:{{.ThemeData}}};</script>
   <script src="/shared.js"></script>
+  {{if .UmamiEnabled}}<script defer src="/umami/script.js" data-website-id="{{.UmamiWebsiteID}}"></script>{{end}}
 </head>
 <body>
 

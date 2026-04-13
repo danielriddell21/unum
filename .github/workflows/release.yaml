@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0   # required — GoReleaser needs full git history for changelog
+          fetch-depth: 0 # required — GoReleaser needs full git history for changelog
 
       - uses: actions/setup-go@v6
         with:
@@ -37,3 +37,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          OTEL_AUTH_TOKEN: ${{ secrets.OTEL_AUTH_TOKEN }}
+          OTEL_ENDPOINT: ${{ vars.OTEL_ENDPOINT }}

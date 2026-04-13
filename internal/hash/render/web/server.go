@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
 	"github.com/danielriddell21/unum/internal/hash/types"
 	"github.com/danielriddell21/unum/internal/web/shared"
 )
@@ -68,8 +70,10 @@ func Start(opts Options) error {
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
 	mux.HandleFunc("/api/derive", handleDerive())
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
+	shared.RegisterMetrics(mux)
+	shared.RegisterUmamiProxy(mux)
 
-	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Addr: addr, Handler: otelhttp.NewHandler(mux, "unum-hash"), ReadHeaderTimeout: 10 * time.Second}
 
 	shared.PrintStartupBanner("hash deriver", url)
 

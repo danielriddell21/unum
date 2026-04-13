@@ -7,22 +7,27 @@ import (
 	"html/template"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/danielriddell21/unum/internal/theme"
 )
 
 // IndexData holds the theme config injected into HTML templates.
 type IndexData struct {
-	DarkTheme  string
-	LightTheme string
-	Version    string
-	ThemeData  template.JS // JSON: {dark:{cyber:{...},...}, light:{clean:{...},...}}
+	DarkTheme      string
+	LightTheme     string
+	Version        string
+	ThemeData      template.JS // JSON: {dark:{cyber:{...},...}, light:{clean:{...},...}}
+	UmamiEnabled   bool        // true if UMAMI_URL is set — enables JS tracking snippet
+	UmamiWebsiteID string      // Umami website ID for the tracking snippet
 }
 
 // NewIndexData builds IndexData with all palette CSS vars pre-serialised.
@@ -44,11 +49,14 @@ func NewIndexData(dark, light, version string) IndexData {
 		},
 	}
 	b, _ := json.Marshal(ts)
+	umamiURL := os.Getenv("UMAMI_URL")
 	return IndexData{
-		DarkTheme:  dark,
-		LightTheme: light,
-		Version:    version,
-		ThemeData:  template.JS(b), //nolint:gosec // controlled palette data, not user input
+		DarkTheme:      dark,
+		LightTheme:     light,
+		Version:        version,
+		ThemeData:      template.JS(b), //nolint:gosec // controlled palette data, not user input
+		UmamiEnabled:   umamiURL != "" && os.Getenv("UMAMI_WEBSITE_ID") != "",
+		UmamiWebsiteID: os.Getenv("UMAMI_WEBSITE_ID"),
 	}
 }
 
@@ -124,4 +132,24 @@ func ServeAsset(fs embed.FS, path, contentType string) http.HandlerFunc {
 // ServeSharedAsset serves a file from the shared Assets embed.
 func ServeSharedAsset(path, contentType string) http.HandlerFunc {
 	return ServeAsset(Assets, path, contentType)
+}
+
+// RegisterUmamiProxy registers /umami/* routes that reverse-proxy to the
+// internal Umami instance. No-op if UMAMI_URL is empty.
+func RegisterUmamiProxy(mux *http.ServeMux) {
+	umamiURL := os.Getenv("UMAMI_URL")
+	if umamiURL == "" {
+		return
+	}
+	target, err := url.Parse(umamiURL)
+	if err != nil {
+		return
+	}
+	proxy := httputil.NewSingleHostReverseProxy(target) //nolint:gosec // UMAMI_URL is operator-controlled infrastructure config, not user input
+	mux.Handle("/umami/", http.StripPrefix("/umami", proxy))
+}
+
+// RegisterMetrics registers the /metrics endpoint for Prometheus scraping.
+func RegisterMetrics(mux *http.ServeMux) {
+	mux.Handle("/metrics", promhttp.Handler())
 }
