@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
+
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
@@ -144,7 +145,7 @@ func colorizeLine(line string) string {
 	return indent + colorizeValue(trimmed)
 }
 
-func colorizeValue(s string) string {
+func colorizeValue(s string) string { //nolint:cyclop // colorizes every JSON value kind by prefix-matching; each case maps a syntax token to a colour
 	// Strip trailing comma
 	suffix := ""
 	plain := s

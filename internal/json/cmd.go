@@ -97,7 +97,6 @@ Config file (~/.config/unum/config.json):
 	cmd.Flags().BoolVar(&f.validateOnly, "validate-only", false, "exit 0/1 based on validity only")
 	cmd.Flags().BoolVar(&f.compact, "compact", false, "output minified JSON")
 
-
 	// Annotation lenses
 	cmd.Flags().BoolVar(&f.showStats, "stats", false, "annotate numeric arrays with statistics")
 	cmd.Flags().BoolVar(&f.showMerkle, "merkle", false, "annotate nodes with SHA256 hashes")
@@ -116,7 +115,7 @@ Config file (~/.config/unum/config.json):
 	return cmd
 }
 
-func runJSON(f *flags, filename string) error {
+func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // dispatch on output flags + render modes; each branch is a distinct user-facing mode
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("cannot read %s: %w", filename, err)
@@ -221,24 +220,33 @@ func runJSON(f *flags, filename string) error {
 	// ── TUI / Web modes ───────────────────────────────────────────────────────
 
 	if f.ui {
-		return tui.Start(root, filename, f.theme)
+		if err := tui.Start(root, filename, f.theme); err != nil {
+			return fmt.Errorf("json TUI: %w", err)
+		}
+		return nil
 	}
 
 	if f.web {
-		return web.Start(root, web.Options{
+		if err := web.Start(root, web.Options{
 			Port:       f.port,
 			Filename:   filename,
 			Quiet:      f.quiet,
 			DarkTheme:  f.theme,
 			LightTheme: f.lightTheme,
-		})
+		}); err != nil {
+			return fmt.Errorf("json web: %w", err)
+		}
+		return nil
 	}
 
 	// ── Default: static render ────────────────────────────────────────────────
 
 	renderOpts.ShowStats = f.showStats
 	renderOpts.ShowMerkle = f.showMerkle
-	return static.Render(os.Stdout, root, renderOpts)
+	if err := static.Render(os.Stdout, root, renderOpts); err != nil {
+		return fmt.Errorf("json render: %w", err)
+	}
+	return nil
 }
 
 func runJSONNoFile(f *flags) error {
@@ -247,11 +255,16 @@ func runJSONNoFile(f *flags) error {
 		cwd = "."
 	}
 	if f.ui {
-		return tui.StartWithPicker(cwd, f.theme)
+		if err := tui.StartWithPicker(cwd, f.theme); err != nil {
+			return fmt.Errorf("json TUI: %w", err)
+		}
+		return nil
 	}
 	if f.web {
-		return web.StartBrowser(web.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme})
+		if err := web.StartBrowser(web.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme}); err != nil {
+			return fmt.Errorf("json web: %w", err)
+		}
+		return nil
 	}
 	return fmt.Errorf("missing argument: <file> (or use --ui / --web to pick interactively)")
 }
-

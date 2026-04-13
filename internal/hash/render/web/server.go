@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/danielriddell21/unum/internal/hash/types"
 	"github.com/danielriddell21/unum/internal/web/shared"
@@ -24,7 +25,6 @@ type Options struct {
 	DarkTheme  string // cyber | matrix | dracula | nord
 	LightTheme string // clean | solarized
 }
-
 
 // deriveFn is injected to avoid import cycles.
 var deriveFn func(input string) types.Result
@@ -68,7 +68,7 @@ func Start(opts Options) error {
 	mux.HandleFunc("/api/derive", handleDerive())
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 
-	srv := &http.Server{Addr: addr, Handler: mux}
+	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
 	shared.PrintStartupBanner("hash deriver", url)
 
@@ -76,10 +76,11 @@ func Start(opts Options) error {
 		go shared.OpenBrowser(url)
 	}
 
-	return srv.ListenAndServe()
+	if err := srv.ListenAndServe(); err != nil {
+		return fmt.Errorf("listen: %w", err)
+	}
+	return nil
 }
-
-
 
 func handleDerive() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -97,4 +98,3 @@ func handleDerive() http.HandlerFunc {
 		_ = json.NewEncoder(w).Encode(result)
 	}
 }
-

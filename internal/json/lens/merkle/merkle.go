@@ -33,7 +33,10 @@ func (a Analyzer) Run(ctx context.Context, root *node.Node, _ analyze.Options) e
 			Value: h,
 		})
 	})
-	return ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("cancelled: %w", err)
+	}
+	return nil
 }
 
 // RootHash returns the merkle hash of the root node after Run has been called.

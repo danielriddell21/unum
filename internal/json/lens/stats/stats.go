@@ -2,6 +2,7 @@ package stats
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sort"
 	"strconv"
@@ -28,7 +29,10 @@ func (a Analyzer) Run(ctx context.Context, root *node.Node, _ analyze.Options) e
 		}
 		return true
 	})
-	return ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("cancelled: %w", err)
+	}
+	return nil
 }
 
 func annotateArray(n *node.Node) {

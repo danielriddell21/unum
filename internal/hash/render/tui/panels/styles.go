@@ -2,6 +2,7 @@ package panels
 
 import (
 	"github.com/charmbracelet/lipgloss"
+
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 

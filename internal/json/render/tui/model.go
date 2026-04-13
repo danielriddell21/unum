@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/atotto/clipboard"
+
 	"github.com/danielriddell21/unum/internal/json/node"
 	jsonpanels "github.com/danielriddell21/unum/internal/json/render/tui/panels"
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
@@ -101,14 +102,14 @@ func (m *Model) panelDimensions() (tw, th, pw, ph, lw, lh int) {
 	lh = usable - ph
 
 	// Border widths (each border takes 2 chars: left+right)
-	tw = tw - 2
-	rw = rw - 2
+	tw -= 2
+	rw -= 2
 	pw = rw
 	lw = rw
 
 	th = usable - 2
-	ph = ph - 2
-	lh = lh - 2
+	ph -= 2
+	lh -= 2
 
 	if tw < 10 {
 		tw = 10
@@ -128,7 +129,6 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
@@ -150,7 +150,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) { //nolint:cyclop // key dispatch switch covers every navigation + action key; extracting helpers would obscure control flow
 	k := msg.String()
 
 	// Global quit (always)

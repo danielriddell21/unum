@@ -9,7 +9,7 @@ func TestObjPath(t *testing.T) {
 		{".", "version", ".version"},          // root: no double-dot
 		{".", "name", ".name"},                // root: no double-dot
 		{".parent", "child", ".parent.child"}, // nested
-		{".a.b", "c", ".a.b.c"},              // deeply nested
+		{".a.b", "c", ".a.b.c"},               // deeply nested
 	}
 	for _, tt := range tests {
 		got := objPath(tt.parent, tt.key)

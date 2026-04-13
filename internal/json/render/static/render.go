@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/danielriddell21/unum/internal/json/lens/merkle"
 	"github.com/danielriddell21/unum/internal/json/lens/stats"
 	"github.com/danielriddell21/unum/internal/json/node"
@@ -50,7 +51,7 @@ var Cyber = Theme{
 }
 
 // Dracula theme.
-var Dracula = Theme{
+var Dracula = Theme{ //nolint:dupl // theme vars share identical struct shape; refactoring into a factory would obscure the per-theme colour palette
 	ObjectKey:   lipgloss.NewStyle().Foreground(lipgloss.Color("#BD93F9")),
 	ArrayIndex:  lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5555")),
 	StringVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#50FA7B")),
@@ -67,7 +68,7 @@ var Dracula = Theme{
 }
 
 // Nord theme.
-var Nord = Theme{
+var Nord = Theme{ //nolint:dupl // theme vars share identical struct shape; refactoring into a factory would obscure the per-theme colour palette
 	ObjectKey:   lipgloss.NewStyle().Foreground(lipgloss.Color("#88C0D0")),
 	ArrayIndex:  lipgloss.NewStyle().Foreground(lipgloss.Color("#BF616A")),
 	StringVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#A3BE8C")),
@@ -167,13 +168,13 @@ func Render(w io.Writer, root *node.Node, opts Options) error {
 	if opts.Compact {
 		b, err := root.MarshalJSON()
 		if err != nil {
-			return err
+			return fmt.Errorf("marshal: %w", err)
 		}
 		_, _ = fmt.Fprintln(w, string(b))
 		return nil
 	}
 
-	r.renderNode(root, 0, true)
+	r.renderNode(root, 0)
 	_, _ = fmt.Fprintln(w)
 	return nil
 }
@@ -194,7 +195,7 @@ type renderer struct {
 	buf     strings.Builder
 }
 
-func (r *renderer) renderNode(n *node.Node, depth int, isLast bool) {
+func (r *renderer) renderNode(n *node.Node, depth int) {
 	indent := strings.Repeat("  ", depth)
 
 	switch n.Kind {
@@ -203,7 +204,7 @@ func (r *renderer) renderNode(n *node.Node, depth int, isLast bool) {
 	case node.KindArray:
 		r.renderArray(n, depth, indent)
 	default:
-		r.renderLeaf(n, depth, indent)
+		r.renderLeaf(n, indent)
 	}
 }
 
@@ -289,12 +290,12 @@ func (r *renderer) renderArray(n *node.Node, depth int, indent string) {
 	r.writeLine(indent + t.Punctuation.Render("]"))
 }
 
-func (r *renderer) renderLeaf(n *node.Node, depth int, indent string) {
+func (r *renderer) renderLeaf(n *node.Node, indent string) {
 	r.writeLine(indent + r.leafColor(n))
 }
 
 // renderInline renders an object or array opening + children inline from the current position.
-func (r *renderer) renderInline(n *node.Node, depth int) {
+func (r *renderer) renderInline(n *node.Node, depth int) { //nolint:gocognit // renders every value kind inline; branching on kind is the algorithm
 	t := r.opts.Theme
 	indent := strings.Repeat("  ", depth)
 

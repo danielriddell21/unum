@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -17,16 +18,16 @@ import (
 func testDerive(input string) types.Result {
 	h := sha256.Sum256([]byte(input))
 	n := binary.BigEndian.Uint16(h[0:2])
-	port := uint16(1024 + n%(65535-1024+1))
+	port := 1024 + n%(65535-1024+1)
 	color := "#" + hex.EncodeToString(h[0:3])
 	short := hex.EncodeToString(h[0:4])
 	return types.Result{
-		Input: input,
-		Port:  port,
-		UUID:  fmt.Sprintf("test-uuid-%s", short),
-		Color: color,
-		Short: short,
-		Emoji: "🦊",
+		Input:  input,
+		Port:   port,
+		UUID:   fmt.Sprintf("test-uuid-%s", short),
+		Color:  color,
+		Short:  short,
+		Emoji:  "🦊",
 		Phrase: "alpha-bravo-charlie",
 	}
 }
@@ -36,7 +37,7 @@ func init() {
 }
 
 func TestHandleDerive_ReturnsResult(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/derive?input=my-service", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/derive?input=my-service", nil)
 	w := httptest.NewRecorder()
 
 	handleDerive()(w, req)
@@ -58,7 +59,7 @@ func TestHandleDerive_ReturnsResult(t *testing.T) {
 }
 
 func TestHandleDerive_MissingInput(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/derive", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/derive", nil)
 	w := httptest.NewRecorder()
 
 	handleDerive()(w, req)
@@ -70,7 +71,7 @@ func TestHandleDerive_MissingInput(t *testing.T) {
 
 func TestHandleDerive_Deterministic(t *testing.T) {
 	makeReq := func() types.Result {
-		req := httptest.NewRequest(http.MethodGet, "/api/derive?input=test-svc", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/derive?input=test-svc", nil)
 		w := httptest.NewRecorder()
 		handleDerive()(w, req)
 		var r types.Result

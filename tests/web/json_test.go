@@ -85,7 +85,7 @@ func TestJSONWebAPI_TreeBodyHasExpectedFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	fileURL := fmt.Sprintf("http://localhost:%s/api/tree?file=%s/testdata/sample.json", port, absPath)
-	resp, err := http.Get(fileURL) //nolint:noctx
+	resp, err := http.Get(fileURL) //nolint:noctx // integration test hitting local server; context not needed in tests
 	if err != nil {
 		t.Fatalf("GET /api/tree: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestJSONWebAPI_Upload(t *testing.T) {
 	_ = waitForServer(t, fmt.Sprintf("http://localhost:%s/api/browse", port))
 
 	uploadBody := `{"filename":"test.json","content":"{\"hello\":\"world\"}"}`
-	resp, err := http.Post( //nolint:noctx
+	resp, err := http.Post( //nolint:noctx // integration test hitting local server; context not needed in tests
 		fmt.Sprintf("http://localhost:%s/api/upload", port),
 		"application/json",
 		strings.NewReader(uploadBody),
@@ -160,7 +160,7 @@ func TestJSONWebAPI_Upload(t *testing.T) {
 		t.Fatalf("upload response missing key: %s", body)
 	}
 
-	treeResp, err := http.Get(fmt.Sprintf("http://localhost:%s/api/tree?key=%s", port, key)) //nolint:noctx
+	treeResp, err := http.Get(fmt.Sprintf("http://localhost:%s/api/tree?key=%s", port, key)) //nolint:noctx // integration test hitting local server; context not needed in tests
 	if err != nil {
 		t.Fatalf("GET /api/tree?key=: %v", err)
 	}
@@ -222,7 +222,7 @@ func TestWebFrontend_JSONUIExploreLoads(t *testing.T) {
 		"filename": "sample.json",
 		"content":  string(content),
 	})
-	upResp, err := http.Post( //nolint:noctx
+	upResp, err := http.Post( //nolint:noctx // integration test hitting local server; context not needed in tests
 		fmt.Sprintf("http://localhost:%s/api/upload", port),
 		"application/json",
 		bytes.NewReader(uploadPayload),

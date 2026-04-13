@@ -41,14 +41,14 @@ const (
 
 // Model is the root Bubble Tea model for the hash TUI.
 type Model struct {
-	input         textinput.Model
-	result        *types.Result
-	focused       focus
-	hashPanel     hashpanels.HashPanel
-	historyPanel  hashpanels.HistoryPanel
-	showHelp      bool
-	width         int
-	height        int
+	input        textinput.Model
+	result       *types.Result
+	focused      focus
+	hashPanel    hashpanels.HashPanel
+	historyPanel hashpanels.HistoryPanel
+	showHelp     bool
+	width        int
+	height       int
 }
 
 // NewModel creates the root model, loading existing history.

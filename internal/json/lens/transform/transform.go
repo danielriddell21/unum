@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/danielriddell21/unum/internal/json/node"
 	"gopkg.in/yaml.v3"
+
+	"github.com/danielriddell21/unum/internal/json/node"
 )
 
 // ToYAML converts a node tree to YAML bytes.
@@ -67,7 +68,7 @@ func toYAMLNode(n *node.Node) (*yaml.Node, error) {
 	case node.KindString:
 		var s string
 		if err := json.Unmarshal([]byte(n.Raw), &s); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshal: %w", err)
 		}
 		return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: s}, nil
 
@@ -99,5 +100,9 @@ func toYAMLNode(n *node.Node) (*yaml.Node, error) {
 }
 
 func marshalOrdered(n *node.Node) ([]byte, error) {
-	return n.MarshalJSON()
+	b, err := n.MarshalJSON()
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+	return b, nil
 }

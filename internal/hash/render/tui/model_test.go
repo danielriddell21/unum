@@ -9,6 +9,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/danielriddell21/unum/internal/hash/types"
 )
 
@@ -16,7 +17,7 @@ import (
 func testDerive(input string) types.Result {
 	h := sha256.Sum256([]byte(input))
 	n := binary.BigEndian.Uint16(h[0:2])
-	port := uint16(1024 + n%(65535-1024+1))
+	port := 1024 + n%(65535-1024+1)
 	color := "#" + hex.EncodeToString(h[0:3])
 	short := hex.EncodeToString(h[0:4])
 	return types.Result{
@@ -30,8 +31,10 @@ func testDerive(input string) types.Result {
 	}
 }
 
-func testAppendHistory(_ string) error        { return nil }
-func testLoadHistory() []types.HistoryEntry   { return []types.HistoryEntry{{Input: "prev", Time: time.Now()}} }
+func testAppendHistory(_ string) error { return nil }
+func testLoadHistory() []types.HistoryEntry {
+	return []types.HistoryEntry{{Input: "prev", Time: time.Now()}}
+}
 
 func init() {
 	SetFuncs(testDerive, testAppendHistory, testLoadHistory)

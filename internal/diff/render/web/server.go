@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/danielriddell21/unum/internal/diff/format"
 	"github.com/danielriddell21/unum/internal/diff/node"
@@ -27,7 +28,6 @@ type Options struct {
 	DarkTheme  string // cyber | matrix | dracula | nord
 	LightTheme string // clean | solarized
 }
-
 
 // Start launches the diff web server, auto-opens the browser, and blocks until
 // Ctrl+C.
@@ -54,10 +54,7 @@ func Start(d *node.Diff, opts Options) error {
 	addr := host + ":" + strconv.Itoa(port)
 	url := "http://" + addr
 
-	payload, err := buildPayload(d)
-	if err != nil {
-		return fmt.Errorf("web: build payload: %w", err)
-	}
+	payload := buildPayload(d)
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("web: marshal payload: %w", err)
@@ -75,7 +72,7 @@ func Start(d *node.Diff, opts Options) error {
 	})
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(idx))
 
-	srv := &http.Server{Addr: addr, Handler: mux}
+	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
 	shared.PrintStartupBanner("diff viewer", url)
 
@@ -83,9 +80,11 @@ func Start(d *node.Diff, opts Options) error {
 		go shared.OpenBrowser(url)
 	}
 
-	return srv.ListenAndServe()
+	if err := srv.ListenAndServe(); err != nil {
+		return fmt.Errorf("listen: %w", err)
+	}
+	return nil
 }
-
 
 // ─── Payload ──────────────────────────────────────────────────────────────────
 
@@ -125,7 +124,7 @@ type webLine struct {
 	Content string `json:"content"`
 }
 
-func buildPayload(d *node.Diff) (*diffPayload, error) {
+func buildPayload(d *node.Diff) *diffPayload {
 	p := &diffPayload{
 		FileA:    d.FileA,
 		FileB:    d.FileB,
@@ -154,7 +153,7 @@ func buildPayload(d *node.Diff) (*diffPayload, error) {
 		}
 		p.Hunks = append(p.Hunks, wh)
 	}
-	return p, nil
+	return p
 }
 
 func toWebDiffNode(dn *node.DiffNode) *webDiffNode {
@@ -244,7 +243,7 @@ func StartServer(opts Options) error {
 	mux.HandleFunc("/api/diff", handleServerDiff())
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 
-	srv := &http.Server{Addr: addr, Handler: mux}
+	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
 	shared.PrintStartupBanner("diff viewer", url)
 
@@ -252,7 +251,10 @@ func StartServer(opts Options) error {
 		go shared.OpenBrowser(url)
 	}
 
-	return srv.ListenAndServe()
+	if err := srv.ListenAndServe(); err != nil {
+		return fmt.Errorf("listen: %w", err)
+	}
+	return nil
 }
 
 func handleServerDiff() http.HandlerFunc {
@@ -304,11 +306,7 @@ func handleServerDiff() http.HandlerFunc {
 		diff.FileB = req.NameB
 		diff.Format = fmt_
 
-		payload, err := buildPayload(diff)
-		if err != nil {
-			http.Error(w, "build payload: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
+		payload := buildPayload(diff)
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(payload)

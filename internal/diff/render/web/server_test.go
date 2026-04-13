@@ -2,6 +2,7 @@ package web
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -12,10 +13,10 @@ import (
 
 func textDiff() *node.Diff {
 	return &node.Diff{
-		Format: node.FormatText,
-		FileA:  "a.txt",
-		FileB:  "b.txt",
-		Added:  2,
+		Format:  node.FormatText,
+		FileA:   "a.txt",
+		FileB:   "b.txt",
+		Added:   2,
 		Removed: 1,
 		Hunks: []node.Hunk{
 			{
@@ -80,7 +81,7 @@ func terraformDiff() *node.Diff {
 
 func TestHandleServerDiff_GET_Returns204(t *testing.T) {
 	handler := handleServerDiff()
-	req := httptest.NewRequest(http.MethodGet, "/api/diff", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/diff", nil)
 	w := httptest.NewRecorder()
 	handler(w, req)
 	if w.Code != http.StatusNoContent {
@@ -97,7 +98,7 @@ func TestHandleServerDiff_POST_Text(t *testing.T) {
 		ContentB: "hello\nunum\n",
 	}
 	b, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/diff", bytes.NewReader(b))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/diff", bytes.NewReader(b))
 	w := httptest.NewRecorder()
 	handler(w, req)
 
@@ -125,7 +126,7 @@ func TestHandleServerDiff_POST_JSON(t *testing.T) {
 		ContentB: `{"version":"2.0"}`,
 	}
 	b, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/diff", bytes.NewReader(b))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/diff", bytes.NewReader(b))
 	w := httptest.NewRecorder()
 	handler(w, req)
 
@@ -145,7 +146,7 @@ func TestHandleServerDiff_POST_MissingContent(t *testing.T) {
 	handler := handleServerDiff()
 	body := postDiffRequest{NameA: "a.txt", ContentA: "hello"}
 	b, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/diff", bytes.NewReader(b))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/diff", bytes.NewReader(b))
 	w := httptest.NewRecorder()
 	handler(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -155,7 +156,7 @@ func TestHandleServerDiff_POST_MissingContent(t *testing.T) {
 
 func TestHandleServerDiff_POST_InvalidJSON(t *testing.T) {
 	handler := handleServerDiff()
-	req := httptest.NewRequest(http.MethodPost, "/api/diff", bytes.NewReader([]byte("not json")))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/diff", bytes.NewReader([]byte("not json")))
 	w := httptest.NewRecorder()
 	handler(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -165,7 +166,7 @@ func TestHandleServerDiff_POST_InvalidJSON(t *testing.T) {
 
 func TestHandleServerDiff_MethodNotAllowed(t *testing.T) {
 	handler := handleServerDiff()
-	req := httptest.NewRequest(http.MethodDelete, "/api/diff", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodDelete, "/api/diff", nil)
 	w := httptest.NewRecorder()
 	handler(w, req)
 	if w.Code != http.StatusMethodNotAllowed {
@@ -177,10 +178,7 @@ func TestHandleServerDiff_MethodNotAllowed(t *testing.T) {
 
 func TestBuildPayload_TextDiff(t *testing.T) {
 	d := textDiff()
-	p, err := buildPayload(d)
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := buildPayload(d)
 
 	if p.FileA != "a.txt" || p.FileB != "b.txt" {
 		t.Errorf("files: got %q %q", p.FileA, p.FileB)
@@ -204,10 +202,7 @@ func TestBuildPayload_TextDiff(t *testing.T) {
 
 func TestBuildPayload_JSONDiff(t *testing.T) {
 	d := jsonDiff()
-	p, err := buildPayload(d)
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := buildPayload(d)
 
 	if p.Format != "json" {
 		t.Errorf("format=%q, want \"json\"", p.Format)
@@ -225,10 +220,7 @@ func TestBuildPayload_JSONDiff(t *testing.T) {
 
 func TestBuildPayload_TreeNodeKinds(t *testing.T) {
 	d := jsonDiff()
-	p, err := buildPayload(d)
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := buildPayload(d)
 
 	modifiedChild := p.Tree.Children[0]
 	if modifiedChild.Kind != "modified" {
@@ -246,10 +238,7 @@ func TestBuildPayload_TreeNodeKinds(t *testing.T) {
 
 func TestBuildPayload_TerraformDiff(t *testing.T) {
 	d := terraformDiff()
-	p, err := buildPayload(d)
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := buildPayload(d)
 
 	if p.Format != "terraform" {
 		t.Errorf("format=%q, want \"terraform\"", p.Format)
@@ -264,10 +253,7 @@ func TestBuildPayload_TerraformDiff(t *testing.T) {
 
 func TestBuildPayload_HunkLineKinds(t *testing.T) {
 	d := textDiff()
-	p, err := buildPayload(d)
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := buildPayload(d)
 
 	lines := p.Hunks[0].Lines
 	kinds := make([]string, len(lines))

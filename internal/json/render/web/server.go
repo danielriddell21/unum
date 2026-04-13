@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/danielriddell21/unum/internal/json/analyze"
 	"github.com/danielriddell21/unum/internal/json/lens/merkle"
@@ -38,7 +39,6 @@ type Options struct {
 	DarkTheme  string // cyber | matrix | dracula | nord
 	LightTheme string // clean | solarized
 }
-
 
 // Start launches the web server, auto-opens the browser, and blocks until the
 // user presses Ctrl+C.
@@ -93,8 +93,9 @@ func Start(root *node.Node, opts Options) error {
 	mux.HandleFunc("/api/query", handleQuery(root))
 
 	srv := &http.Server{
-		Addr:    addr,
-		Handler: mux,
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	shared.PrintStartupBanner("json explorer", url)
@@ -103,22 +104,24 @@ func Start(root *node.Node, opts Options) error {
 		go shared.OpenBrowser(url)
 	}
 
-	return srv.ListenAndServe()
+	if err := srv.ListenAndServe(); err != nil {
+		return fmt.Errorf("listen: %w", err)
+	}
+	return nil
 }
-
 
 // ─── Payload ──────────────────────────────────────────────────────────────────
 
 // treePayload is the full JSON object served at /api/tree.
 type treePayload struct {
-	Filename  string         `json:"filename"`
-	NodeCount int            `json:"nodeCount"`
-	MaxDepth  int            `json:"maxDepth"`
-	SizeBytes int64          `json:"sizeBytes"`
-	Tree      *webNode       `json:"tree"`
-	YAML      string         `json:"yaml"`
-	Typegen   map[string]any `json:"typegen"`
-	MerkleRoot string        `json:"merkleRoot,omitempty"`
+	Filename   string         `json:"filename"`
+	NodeCount  int            `json:"nodeCount"`
+	MaxDepth   int            `json:"maxDepth"`
+	SizeBytes  int64          `json:"sizeBytes"`
+	Tree       *webNode       `json:"tree"`
+	YAML       string         `json:"yaml"`
+	Typegen    map[string]any `json:"typegen"`
+	MerkleRoot string         `json:"merkleRoot,omitempty"`
 }
 
 // webNode is a serializable tree node for the frontend.
@@ -146,7 +149,7 @@ type webStats struct {
 	P99          float64 `json:"p99"`
 }
 
-func buildPayload(root *node.Node, filename string) (*treePayload, error) {
+func buildPayload(root *node.Node, filename string) (*treePayload, error) { //nolint:unparam // error return kept for future lens failures; removing it would require a signature change later
 	// Run annotation lenses
 	ctx := context.Background()
 
@@ -181,7 +184,7 @@ func buildPayload(root *node.Node, filename string) (*treePayload, error) {
 	return p, nil
 }
 
-func toWebNode(n *node.Node) *webNode {
+func toWebNode(n *node.Node) *webNode { //nolint:gocognit // maps every node kind to its web representation; branching on kind is the algorithm
 	wn := &webNode{
 		Kind:  n.Kind.String(),
 		Key:   n.Key,
@@ -208,14 +211,30 @@ func toWebNode(n *node.Node) *webNode {
 		if nc, ok := n.GetAnnotation(stats.Lens, "numeric_count"); ok {
 			ws := &webStats{}
 			ws.NumericCount = nc.(int)
-			if v, ok := n.GetAnnotation(stats.Lens, "count"); ok { ws.Count = v.(int) }
-			if v, ok := n.GetAnnotation(stats.Lens, "min"); ok { ws.Min = v.(float64) }
-			if v, ok := n.GetAnnotation(stats.Lens, "max"); ok { ws.Max = v.(float64) }
-			if v, ok := n.GetAnnotation(stats.Lens, "mean"); ok { ws.Mean = v.(float64) }
-			if v, ok := n.GetAnnotation(stats.Lens, "stddev"); ok { ws.Stddev = v.(float64) }
-			if v, ok := n.GetAnnotation(stats.Lens, "p50"); ok { ws.P50 = v.(float64) }
-			if v, ok := n.GetAnnotation(stats.Lens, "p95"); ok { ws.P95 = v.(float64) }
-			if v, ok := n.GetAnnotation(stats.Lens, "p99"); ok { ws.P99 = v.(float64) }
+			if v, ok := n.GetAnnotation(stats.Lens, "count"); ok {
+				ws.Count = v.(int)
+			}
+			if v, ok := n.GetAnnotation(stats.Lens, "min"); ok {
+				ws.Min = v.(float64)
+			}
+			if v, ok := n.GetAnnotation(stats.Lens, "max"); ok {
+				ws.Max = v.(float64)
+			}
+			if v, ok := n.GetAnnotation(stats.Lens, "mean"); ok {
+				ws.Mean = v.(float64)
+			}
+			if v, ok := n.GetAnnotation(stats.Lens, "stddev"); ok {
+				ws.Stddev = v.(float64)
+			}
+			if v, ok := n.GetAnnotation(stats.Lens, "p50"); ok {
+				ws.P50 = v.(float64)
+			}
+			if v, ok := n.GetAnnotation(stats.Lens, "p95"); ok {
+				ws.P95 = v.(float64)
+			}
+			if v, ok := n.GetAnnotation(stats.Lens, "p99"); ok {
+				ws.P99 = v.(float64)
+			}
 			wn.Stats = ws
 		}
 	}
@@ -255,7 +274,7 @@ var payloadCache sync.Map // map[string][]byte
 func StartBrowser(opts Options) error {
 	baseDir, err := filepath.Abs(".")
 	if err != nil {
-		return err
+		return fmt.Errorf("resolve dir: %w", err)
 	}
 
 	host := "localhost"
@@ -292,14 +311,17 @@ func StartBrowser(opts Options) error {
 	mux.HandleFunc("/api/query", handleDynamicQuery(baseDir))
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/browse.html")(d))
 
-	srv := &http.Server{Addr: addr, Handler: mux}
+	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
 	shared.PrintStartupBanner("json explorer", url)
 
 	if autoOpen {
 		go shared.OpenBrowser(url)
 	}
-	return srv.ListenAndServe()
+	if err := srv.ListenAndServe(); err != nil {
+		return fmt.Errorf("listen: %w", err)
+	}
+	return nil
 }
 
 // dirEntry is a serialisable filesystem entry for the browse API.
@@ -357,7 +379,7 @@ func handleDynamicTree(baseDir string) http.HandlerFunc {
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(v.([]byte))
+			_, _ = w.Write(v.([]byte)) //nolint:gosec // v is always []byte here; type assertion is safe, no user-controlled input
 			return
 		}
 
@@ -372,7 +394,7 @@ func handleDynamicTree(baseDir string) http.HandlerFunc {
 			return
 		}
 
-		data, err := os.ReadFile(abs)
+		data, err := os.ReadFile(abs) //nolint:gosec // path is resolved from user-provided filename; intentional file read, G304 suppressed globally but kept explicit here
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

@@ -2,6 +2,7 @@ package static_test
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -40,7 +41,7 @@ func buildBinary() (string, error) {
 	}
 	_ = f.Close()
 
-	cmd := exec.Command("go", "build", "-o", f.Name(), "./cmd/unum")
+	cmd := exec.Command("go", "build", "-o", f.Name(), "./cmd/unum") //nolint:noctx // test build helper; no cancellation needed for a one-shot compile
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("%w\n%s", err, out)
 	}
@@ -48,7 +49,7 @@ func buildBinary() (string, error) {
 }
 
 func run(args ...string) (stdout, stderr string, code int) {
-	cmd := exec.Command(unumBin, args...)
+	cmd := exec.Command(unumBin, args...) //nolint:noctx // test runner invoking compiled binary; context not threaded through functional tests
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
@@ -57,7 +58,8 @@ func run(args ...string) (stdout, stderr string, code int) {
 	stdout = outBuf.String()
 	stderr = errBuf.String()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			code = exitErr.ExitCode()
 		} else {
 			code = -1

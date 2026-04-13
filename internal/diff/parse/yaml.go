@@ -3,8 +3,9 @@ package parse
 import (
 	"fmt"
 
-	diffnode "github.com/danielriddell21/unum/internal/diff/node"
 	"gopkg.in/yaml.v3"
+
+	diffnode "github.com/danielriddell21/unum/internal/diff/node"
 )
 
 // YAML computes a semantic diff between two YAML byte slices.
@@ -38,7 +39,7 @@ func YAML(a, b []byte) (*diffnode.Diff, error) {
 func parseYAMLDoc(data []byte) (*yaml.Node, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("yaml unmarshal: %w", err)
 	}
 	// yaml.Unmarshal returns a DocumentNode; unwrap to content
 	if doc.Kind == yaml.DocumentNode && len(doc.Content) > 0 {
@@ -47,7 +48,7 @@ func parseYAMLDoc(data []byte) (*yaml.Node, error) {
 	return &doc, nil
 }
 
-func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]int) *diffnode.DiffNode {
+func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]int) *diffnode.DiffNode { //nolint:cyclop,gocognit,dupl // recursive tree comparison; branching on node kind/sequence bounds is inherent to the diff algorithm
 	// Resolve aliases before comparing
 	a = resolveAlias(a)
 	b = resolveAlias(b)
@@ -104,7 +105,7 @@ func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]i
 			}
 		}
 
-	case yaml.SequenceNode:
+	case yaml.SequenceNode: //nolint:dupl // mirrors json.go KindArray case; parallel parsers share structure but not types
 		dn.Kind = diffnode.Unchanged
 		aLen := len(a.Content)
 		bLen := len(b.Content)
@@ -114,10 +115,11 @@ func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]i
 		}
 		for i := 0; i < maxLen; i++ {
 			childPath := fmt.Sprintf("%s[%d]", path, i)
-			if i < aLen && i < bLen {
+			switch {
+			case i < aLen && i < bLen:
 				dn.Children = append(dn.Children,
 					compareYAMLNodes(a.Content[i], b.Content[i], childPath, "", i, counts))
-			} else if i < bLen {
+			case i < bLen:
 				counts[0]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Added,
@@ -125,7 +127,7 @@ func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]i
 					Index:    i,
 					NewValue: yamlNodeRepr(b.Content[i]),
 				})
-			} else {
+			default:
 				counts[1]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Removed,

@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/danielriddell21/unum/internal/hash/types"
 )
 

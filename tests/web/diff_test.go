@@ -71,7 +71,7 @@ func TestDiffWebAPI_PostTextDiffReturnsPayload(t *testing.T) {
 		"format":   "text",
 	})
 
-	postResp, err := http.Post( //nolint:noctx
+	postResp, err := http.Post( //nolint:noctx // integration test posting to local server; context not needed in tests
 		fmt.Sprintf("http://localhost:%s/api/diff", port),
 		"application/json",
 		bytes.NewReader(reqBody),
@@ -142,7 +142,7 @@ func TestDiffWebAPI_PostJSONDiffReturnsSemanticTree(t *testing.T) {
 		"format":   "json",
 	})
 
-	postResp, err := http.Post( //nolint:noctx
+	postResp, err := http.Post( //nolint:noctx // integration test posting to local server; context not needed in tests
 		fmt.Sprintf("http://localhost:%s/api/diff", port),
 		"application/json",
 		bytes.NewReader(reqBody),
@@ -190,7 +190,7 @@ func TestDiffWebAPI_PostMissingContentReturns400(t *testing.T) {
 	_ = resp.Body.Close()
 
 	badBody := strings.NewReader(`{"nameA":"a.txt","contentA":"hello"}`)
-	postResp, err := http.Post( //nolint:noctx
+	postResp, err := http.Post( //nolint:noctx // integration test posting to local server; context not needed in tests
 		fmt.Sprintf("http://localhost:%s/api/diff", port),
 		"application/json",
 		badBody,
@@ -233,7 +233,7 @@ func TestDiffWebAPI_PostTerraformDiffReturnsSemanticTree(t *testing.T) {
 		"format":   "terraform",
 	})
 
-	postResp, err := http.Post( //nolint:noctx
+	postResp, err := http.Post( //nolint:noctx // integration test posting to local server; context not needed in tests
 		fmt.Sprintf("http://localhost:%s/api/diff", port),
 		"application/json",
 		bytes.NewReader(reqBody),

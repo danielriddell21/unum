@@ -1,9 +1,51 @@
 version: "2"
+
 linters:
   default: standard
+  enable:
+    - dupl
+    - cyclop
+    - errorlint
+    - gocognit
+    - gocritic
+    - gosec
+    - misspell
+    - nilerr
+    - noctx
+    - prealloc
+    - thelper
+    - unconvert
+    - unparam
+    - whitespace
+    - wrapcheck
   settings:
     govet:
       enable-all: true
       disable:
         - fieldalignment
         - shadow
+    cyclop:
+      max-complexity: 15
+    gocognit:
+      min-complexity: 20
+    gosec:
+      excludes:
+        - G304
+        - G107
+        - G204
+  exclusions:
+    rules:
+      - path: "tests/web/"
+        linters:
+          - noctx
+      - path: "_test\\.go"
+        linters:
+          - wrapcheck
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes: github.com/danielriddell21/unum

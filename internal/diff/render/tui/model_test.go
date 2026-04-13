@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/danielriddell21/unum/internal/diff/node"
 )
 

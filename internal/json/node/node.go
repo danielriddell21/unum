@@ -195,7 +195,7 @@ func (n *Node) ToAny() any {
 }
 
 // MarshalJSON produces compact JSON for this node, preserving key order.
-func (n *Node) MarshalJSON() ([]byte, error) {
+func (n *Node) MarshalJSON() ([]byte, error) { //nolint:gocognit // serialises every node kind with different JSON shapes; the branches reflect the type system
 	switch n.Kind {
 	case KindNull, KindBool, KindNumber:
 		return []byte(n.Raw), nil
@@ -231,7 +231,7 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 			}
 			keyBytes, err := json.Marshal(c.Key)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("marshal child: %w", err)
 			}
 			sb.Write(keyBytes)
 			sb.WriteByte(':')

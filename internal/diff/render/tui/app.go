@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/danielriddell21/unum/internal/diff/format"
 	"github.com/danielriddell21/unum/internal/diff/node"
 	"github.com/danielriddell21/unum/internal/diff/parse"
@@ -14,7 +15,7 @@ import (
 )
 
 // Start launches the diff TUI.
-func Start(d *node.Diff, theme string) error {
+func Start(d *node.Diff, theme string) error { //nolint:cyclop,gocognit // file-picker reload loop branches on multiple picker/parse outcomes; each case is necessary
 	applyTheme(theme)
 	diff := d
 	for {
@@ -22,7 +23,7 @@ func Start(d *node.Diff, theme string) error {
 		p := tea.NewProgram(m, tea.WithAltScreen())
 		result, err := p.Run()
 		if err != nil {
-			return err
+			return fmt.Errorf("diff TUI: %w", err)
 		}
 		final, ok := result.(Model)
 		if !ok || !final.ReloadRequest {
@@ -35,7 +36,7 @@ func Start(d *node.Diff, theme string) error {
 		ppA := tea.NewProgram(pmA, tea.WithAltScreen())
 		prA, err := ppA.Run()
 		if err != nil {
-			return err
+			return fmt.Errorf("file picker: %w", err)
 		}
 		pickedA, ok := prA.(pickerModel)
 		if !ok || pickedA.Selected == "" {
@@ -47,7 +48,7 @@ func Start(d *node.Diff, theme string) error {
 		ppB := tea.NewProgram(pmB, tea.WithAltScreen())
 		prB, err := ppB.Run()
 		if err != nil {
-			return err
+			return fmt.Errorf("file picker: %w", err)
 		}
 		pickedB, ok := prB.(pickerModel)
 		if !ok || pickedB.Selected == "" {

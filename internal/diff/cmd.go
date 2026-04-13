@@ -122,11 +122,20 @@ func runDiff(f *flags, fileA, fileB string) error {
 	diff.Format = fmt_
 
 	if f.ui {
-		return tui.Start(diff, f.theme)
+		if err := tui.Start(diff, f.theme); err != nil {
+			return fmt.Errorf("diff TUI: %w", err)
+		}
+		return nil
 	}
 	if f.web {
-		return diffweb.Start(diff, diffweb.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme})
+		if err := diffweb.Start(diff, diffweb.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme}); err != nil {
+			return fmt.Errorf("diff web: %w", err)
+		}
+		return nil
 	}
 
-	return static.Render(os.Stdout, diff, opts)
+	if err := static.Render(os.Stdout, diff, opts); err != nil {
+		return fmt.Errorf("diff render: %w", err)
+	}
+	return nil
 }

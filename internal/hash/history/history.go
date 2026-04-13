@@ -2,6 +2,7 @@ package history
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,7 +18,7 @@ type HistoryEntry = types.HistoryEntry
 func historyPath() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("config dir: %w", err)
 	}
 	return filepath.Join(dir, "unum", "hash-history.json"), nil
 }
@@ -67,11 +68,14 @@ func Append(input string) error {
 
 	data, err := json.MarshalIndent(entries, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal history: %w", err)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return fmt.Errorf("create history dir: %w", err)
 	}
-	return os.WriteFile(path, data, 0o644)
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return fmt.Errorf("write history: %w", err)
+	}
+	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/danielriddell21/unum/internal/json/node"
 	"github.com/danielriddell21/unum/internal/json/parse"
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
@@ -23,14 +24,14 @@ func applyTheme(theme string) {
 func Start(root *node.Node, filename string, theme string) error {
 	applyTheme(theme)
 
-	for {
+	for { //nolint:dupl // mirrors startLoop body; Start applies theme first, startLoop skips it — extracting shared loop would require a theme parameter or closure
 		m := NewModel(root, filename)
 		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 		result, err := p.Run()
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
-			return err
+			return fmt.Errorf("json TUI: %w", err)
 		}
 
 		final, ok := result.(Model)
@@ -44,7 +45,7 @@ func Start(root *node.Node, filename string, theme string) error {
 		pp := tea.NewProgram(pm, tea.WithAltScreen())
 		pr, err := pp.Run()
 		if err != nil {
-			return err
+			return fmt.Errorf("file picker: %w", err)
 		}
 		picked, ok := pr.(pickerModel)
 		if !ok || picked.Selected == "" {
@@ -61,7 +62,7 @@ func Start(root *node.Node, filename string, theme string) error {
 		}
 		root, err = parse.Parse(data)
 		if err != nil {
-			return err
+			return fmt.Errorf("parse: %w", err)
 		}
 		filename = picked.Selected
 	}
@@ -77,7 +78,7 @@ func StartWithPicker(initialDir string, theme string) error {
 
 	result, err := p.Run()
 	if err != nil {
-		return err
+		return fmt.Errorf("file picker: %w", err)
 	}
 
 	picked, ok := result.(pickerModel)
@@ -95,7 +96,7 @@ func StartWithPicker(initialDir string, theme string) error {
 	}
 	root, err := parse.Parse(data)
 	if err != nil {
-		return err
+		return fmt.Errorf("parse: %w", err)
 	}
 
 	// Theme already applied — call Start with empty theme to skip re-applying
@@ -104,14 +105,14 @@ func StartWithPicker(initialDir string, theme string) error {
 
 // startLoop runs the main TUI loop without re-applying the theme.
 func startLoop(root *node.Node, filename string) error {
-	for {
+	for { //nolint:dupl // mirrors Start body; Start applies theme first, startLoop skips it — extracting shared loop would require a theme parameter or closure
 		m := NewModel(root, filename)
 		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 		result, err := p.Run()
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
-			return err
+			return fmt.Errorf("json TUI: %w", err)
 		}
 
 		final, ok := result.(Model)
@@ -124,7 +125,7 @@ func startLoop(root *node.Node, filename string) error {
 		pp := tea.NewProgram(pm, tea.WithAltScreen())
 		pr, err := pp.Run()
 		if err != nil {
-			return err
+			return fmt.Errorf("file picker: %w", err)
 		}
 		picked, ok := pr.(pickerModel)
 		if !ok || picked.Selected == "" {
@@ -141,7 +142,7 @@ func startLoop(root *node.Node, filename string) error {
 		}
 		root, err = parse.Parse(data)
 		if err != nil {
-			return err
+			return fmt.Errorf("parse: %w", err)
 		}
 		filename = picked.Selected
 	}

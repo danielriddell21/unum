@@ -60,7 +60,7 @@ func waitForServer(t *testing.T, url string) *http.Response {
 		err  error
 	)
 	for time.Now().Before(deadline) {
-		resp, err = http.Get(url) //nolint:noctx
+		resp, err = http.Get(url) //nolint:noctx // readiness poll in test setup; context not needed
 		if err == nil {
 			return resp
 		}

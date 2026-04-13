@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/danielriddell21/unum/internal/tui/panels"
 )
 

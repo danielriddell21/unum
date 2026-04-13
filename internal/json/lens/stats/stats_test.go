@@ -91,4 +91,3 @@ func TestStatsNonNumericArray(t *testing.T) {
 		t.Error("expected no min annotation for non-numeric array")
 	}
 }
-

@@ -38,7 +38,7 @@ func JSON(a, b []byte) (*diffnode.Diff, error) {
 
 // compareNodes recursively compares two JSON nodes and returns a DiffNode.
 // counts is [added, removed, modified].
-func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]int) *diffnode.DiffNode {
+func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]int) *diffnode.DiffNode { //nolint:cyclop,gocognit,dupl // recursive tree comparison; branching on node kind/array bounds is inherent to the diff algorithm
 	dn := &diffnode.DiffNode{Path: path, Key: key, Index: index}
 
 	if a.Kind != b.Kind {
@@ -90,7 +90,7 @@ func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]i
 			}
 		}
 
-	case jsonnode.KindArray:
+	case jsonnode.KindArray: //nolint:dupl // mirrors yaml.go SequenceNode case; parallel parsers share structure but not types
 		dn.Kind = diffnode.Unchanged
 		aLen := len(a.Children)
 		bLen := len(b.Children)
@@ -100,10 +100,11 @@ func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]i
 		}
 		for i := 0; i < maxLen; i++ {
 			childPath := fmt.Sprintf("%s[%d]", path, i)
-			if i < aLen && i < bLen {
+			switch {
+			case i < aLen && i < bLen:
 				dn.Children = append(dn.Children,
 					compareNodes(a.Children[i], b.Children[i], childPath, "", i, counts))
-			} else if i < bLen {
+			case i < bLen:
 				counts[0]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Added,
@@ -111,7 +112,7 @@ func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]i
 					Index:    i,
 					NewValue: nodeRepr(b.Children[i]),
 				})
-			} else {
+			default:
 				counts[1]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Removed,

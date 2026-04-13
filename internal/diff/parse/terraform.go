@@ -87,20 +87,20 @@ func Terraform(data []byte) (*diffnode.Diff, error) {
 func diffTFChange(rc tfResourceChange, path string, counts *[3]int) (*diffnode.DiffNode, error) {
 	beforeBytes, err := json.Marshal(rc.Change.Before)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal before: %w", err)
 	}
 	afterBytes, err := json.Marshal(rc.Change.After)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal after: %w", err)
 	}
 
 	beforeNode, err := jsonparse.Parse(beforeBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse before: %w", err)
 	}
 	afterNode, err := jsonparse.Parse(afterBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse after: %w", err)
 	}
 
 	inner := compareNodes(beforeNode, afterNode, path, rc.Address, -1, counts)

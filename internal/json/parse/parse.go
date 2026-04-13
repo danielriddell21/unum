@@ -31,10 +31,10 @@ func Parse(data []byte) (*node.Node, error) {
 	return parseValue(dec, "", -1, nil)
 }
 
-func parseValue(dec *json.Decoder, key string, index int, parent *node.Node) (*node.Node, error) {
+func parseValue(dec *json.Decoder, key string, index int, parent *node.Node) (*node.Node, error) { //nolint:cyclop,gocognit // recursive descent parser; branching on token type is the algorithm
 	tok, err := dec.Token()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("token: %w", err)
 	}
 
 	n := &node.Node{Key: key, Index: index, Parent: parent}
@@ -47,7 +47,7 @@ func parseValue(dec *json.Decoder, key string, index int, parent *node.Node) (*n
 			for dec.More() {
 				keyTok, err := dec.Token()
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("token: %w", err)
 				}
 				childKey, ok := keyTok.(string)
 				if !ok {
@@ -60,7 +60,7 @@ func parseValue(dec *json.Decoder, key string, index int, parent *node.Node) (*n
 				n.Children = append(n.Children, child)
 			}
 			if _, err := dec.Token(); err != nil { // consume '}'
-				return nil, err
+				return nil, fmt.Errorf("token: %w", err)
 			}
 
 		case '[':
@@ -73,7 +73,7 @@ func parseValue(dec *json.Decoder, key string, index int, parent *node.Node) (*n
 				n.Children = append(n.Children, child)
 			}
 			if _, err := dec.Token(); err != nil { // consume ']'
-				return nil, err
+				return nil, fmt.Errorf("token: %w", err)
 			}
 
 		default:

@@ -2,6 +2,7 @@ package panels
 
 import (
 	"github.com/charmbracelet/lipgloss"
+
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
@@ -28,9 +29,9 @@ func ApplyPalette(p tuipanels.Palette) {
 	styleStats = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Stats))
 	styleError = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Error))
 	styleSearchPrompt = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Search)).Bold(true)
-	stylePath         = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Path)).Bold(true)
-	styleSBType       = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary))
-	styleSBSep        = lipgloss.NewStyle().Foreground(lipgloss.Color(p.BorderDim)).Render(" · ")
+	stylePath = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Path)).Bold(true)
+	styleSBType = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary))
+	styleSBSep = lipgloss.NewStyle().Foreground(lipgloss.Color(p.BorderDim)).Render(" · ")
 }
 
 // Package-level style variables — initialized with the cyber palette defaults.

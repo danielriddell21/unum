@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 	"github.com/danielriddell21/unum/internal/json/node"
+	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 // StatusBar renders the bottom status bar for the JSON TUI.

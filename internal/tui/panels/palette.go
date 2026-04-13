@@ -148,4 +148,3 @@ func ResolvePalette(name string) Palette {
 		return PaletteCyber
 	}
 }
-

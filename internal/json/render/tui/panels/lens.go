@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
+
 	"github.com/danielriddell21/unum/internal/json/lens/merkle"
 	"github.com/danielriddell21/unum/internal/json/lens/query"
 	"github.com/danielriddell21/unum/internal/json/lens/stats"
@@ -79,7 +80,7 @@ func NewLensPanel(root *node.Node, w, h int) LensPanel {
 	return p
 }
 
-func (p *LensPanel) SetFocused(f bool)          { p.focused = f }
+func (p *LensPanel) SetFocused(f bool) { p.focused = f }
 func (p *LensPanel) SetCursorNode(n *node.Node) {
 	prev := p.cursorNode
 	p.cursorNode = n
@@ -108,7 +109,7 @@ func (p *LensPanel) Resize(w, h int) {
 
 // HandleKey processes keypresses when the lens panel is focused.
 // Returns true if a key was consumed.
-func (p *LensPanel) HandleKey(key string) bool {
+func (p *LensPanel) HandleKey(key string) bool { //nolint:cyclop // key dispatch for every lens action; each case handles a distinct user intent
 	// Lens switching via digits
 	switch key {
 	case "1":

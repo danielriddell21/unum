@@ -15,7 +15,7 @@ const (
 type Format int
 
 const (
-	FormatText      Format = iota
+	FormatText Format = iota
 	FormatJSON
 	FormatYAML
 	FormatTerraform

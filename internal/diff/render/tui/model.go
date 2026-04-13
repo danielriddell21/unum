@@ -53,7 +53,7 @@ func NewModel(d *node.Diff) Model {
 	si.CharLimit = 100
 
 	return Model{
-		diff:        d,
+		diff: d,
 
 		mode:        modeNormal,
 		searchInput: si,
@@ -118,7 +118,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) { //nolint:cyclop // key dispatch switch covers every navigation + action key; extracting helpers would obscure control flow
 	k := msg.String()
 
 	if k == "ctrl+c" {
@@ -327,5 +327,3 @@ func wrapPanel(content string, active bool, width, height int) string {
 	}
 	return style.Render(content)
 }
-
-

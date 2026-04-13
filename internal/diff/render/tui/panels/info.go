@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
+
 	"github.com/danielriddell21/unum/internal/diff/node"
 )
 

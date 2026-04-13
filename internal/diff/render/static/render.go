@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/danielriddell21/unum/internal/diff/node"
 )
 
@@ -26,7 +27,7 @@ type Theme struct {
 }
 
 // Cyber is the default dark/cyan theme.
-var Cyber = Theme{
+var Cyber = Theme{ //nolint:dupl // theme vars share identical struct shape; refactoring into a factory would obscure the per-theme colour palette
 	Added:       lipgloss.NewStyle().Foreground(lipgloss.Color("#98C379")),
 	Removed:     lipgloss.NewStyle().Foreground(lipgloss.Color("#E06C75")),
 	Modified:    lipgloss.NewStyle().Foreground(lipgloss.Color("#E5C07B")),
@@ -40,7 +41,7 @@ var Cyber = Theme{
 }
 
 // Matrix is the green-on-black theme.
-var Matrix = Theme{
+var Matrix = Theme{ //nolint:dupl // theme vars share identical struct shape; refactoring into a factory would obscure the per-theme colour palette
 	Added:       lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF41")),
 	Removed:     lipgloss.NewStyle().Foreground(lipgloss.Color("#FF3300")),
 	Modified:    lipgloss.NewStyle().Foreground(lipgloss.Color("#88FF44")),
@@ -54,7 +55,7 @@ var Matrix = Theme{
 }
 
 // Dracula theme.
-var Dracula = Theme{
+var Dracula = Theme{ //nolint:dupl // theme vars share identical struct shape; refactoring into a factory would obscure the per-theme colour palette
 	Added:       lipgloss.NewStyle().Foreground(lipgloss.Color("#50FA7B")),
 	Removed:     lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5555")),
 	Modified:    lipgloss.NewStyle().Foreground(lipgloss.Color("#F1FA8C")),
@@ -68,7 +69,7 @@ var Dracula = Theme{
 }
 
 // Nord theme.
-var Nord = Theme{
+var Nord = Theme{ //nolint:dupl // theme vars share identical struct shape; refactoring into a factory would obscure the per-theme colour palette
 	Added:       lipgloss.NewStyle().Foreground(lipgloss.Color("#A3BE8C")),
 	Removed:     lipgloss.NewStyle().Foreground(lipgloss.Color("#BF616A")),
 	Modified:    lipgloss.NewStyle().Foreground(lipgloss.Color("#EBCB8B")),

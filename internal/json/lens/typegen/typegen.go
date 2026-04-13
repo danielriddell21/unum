@@ -195,7 +195,7 @@ func generateJSONSchema(ti *typeinfo.TypeInfo, opts Options) (string, error) {
 
 	b, err := json.MarshalIndent(schema, "", "  ")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("marshal: %w", err)
 	}
 	return string(b) + "\n", nil
 }

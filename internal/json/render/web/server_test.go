@@ -130,7 +130,7 @@ func TestServeIndex_InjectsConfig(t *testing.T) {
 	srv := httptest.NewServer(shared.ServeTemplate(assets, "assets/index.html")(d))
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL)
+	resp, err := http.Get(srv.URL) //nolint:noctx // test helper hitting local httptest server; context not needed
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func TestServeIndex_DefaultThemes(t *testing.T) {
 	srv := httptest.NewServer(shared.ServeTemplate(assets, "assets/index.html")(d))
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL)
+	resp, err := http.Get(srv.URL) //nolint:noctx // test helper hitting local httptest server; context not needed
 	if err != nil {
 		t.Fatal(err)
 	}

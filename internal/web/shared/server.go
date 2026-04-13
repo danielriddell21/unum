@@ -42,9 +42,9 @@ func ServeTemplate(fs embed.FS, path string) func(d IndexData) http.HandlerFunc 
 
 // FreePort returns a random free TCP port on localhost.
 func FreePort() (int, error) {
-	l, err := net.Listen("tcp", "localhost:0")
+	l, err := net.Listen("tcp", "localhost:0") //nolint:noctx // net.Listen has no context-aware variant; localhost-only binding, not user-controlled
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("listen: %w", err)
 	}
 	defer func() { _ = l.Close() }()
 	return l.Addr().(*net.TCPAddr).Port, nil
@@ -56,11 +56,11 @@ func OpenBrowser(url string) {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", url)
+		cmd = exec.Command("cmd", "/c", "start", url) //nolint:noctx // browser launcher; fire-and-forget subprocess, no timeout or cancellation needed
 	case "darwin":
-		cmd = exec.Command("open", url)
+		cmd = exec.Command("open", url) //nolint:noctx // browser launcher; fire-and-forget subprocess, no timeout or cancellation needed
 	default:
-		cmd = exec.Command("xdg-open", url)
+		cmd = exec.Command("xdg-open", url) //nolint:noctx // browser launcher; fire-and-forget subprocess, no timeout or cancellation needed
 	}
 	_ = cmd.Start()
 }

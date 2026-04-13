@@ -136,7 +136,7 @@ func TestHashWebAPI_DeriveNoInputReturns400(t *testing.T) {
 	ready := waitForServer(t, fmt.Sprintf("http://localhost:%s/api/derive?input=ping", port))
 	_ = ready.Body.Close()
 
-	resp, err := http.Get(fmt.Sprintf("http://localhost:%s/api/derive", port)) //nolint:noctx
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%s/api/derive", port)) //nolint:noctx // integration test hitting local server; context not needed in tests
 	if err != nil {
 		t.Fatalf("GET /api/derive: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestHashWebAPI_DeriveIsDeterministic(t *testing.T) {
 	_ = waitForServer(t, url)
 
 	fetch := func() []byte {
-		r, err := http.Get(url) //nolint:noctx
+		r, err := http.Get(url) //nolint:noctx // integration test hitting local server; context not needed in tests
 		if err != nil {
 			t.Fatalf("GET: %v", err)
 		}

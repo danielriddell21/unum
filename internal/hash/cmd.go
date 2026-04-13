@@ -89,13 +89,19 @@ func runHash(f *flags, args []string) error {
 		hashTUI.SetFuncs(derive.Derive, history.Append, history.Load)
 		p := tea.NewProgram(hashTUI.NewModel(), tea.WithAltScreen())
 		_, err := p.Run()
-		return err
+		if err != nil {
+			return fmt.Errorf("hash TUI: %w", err)
+		}
+		return nil
 	}
 
 	if f.web {
 		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
 		hashWeb.SetFuncs(derive.Derive)
-		return hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme})
+		if err := hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme}); err != nil {
+			return fmt.Errorf("hash web: %w", err)
+		}
+		return nil
 	}
 
 	if len(args) == 0 {

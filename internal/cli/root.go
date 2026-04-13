@@ -2,12 +2,14 @@
 package cli
 
 import (
+	"fmt"
 	"os"
+
+	"github.com/spf13/cobra"
 
 	difftool "github.com/danielriddell21/unum/internal/diff"
 	hashtool "github.com/danielriddell21/unum/internal/hash"
 	jsontool "github.com/danielriddell21/unum/internal/json"
-	"github.com/spf13/cobra"
 )
 
 // Execute builds and runs the root command. Returns non-nil on error.
@@ -42,5 +44,8 @@ across terminal, TUI, and web interfaces.`,
 	root.AddCommand(hashtool.Command(&noColor, &quiet))
 	root.AddCommand(completionCmd())
 
-	return root.Execute()
+	if err := root.Execute(); err != nil {
+		return fmt.Errorf("execute: %w", err)
+	}
+	return nil
 }

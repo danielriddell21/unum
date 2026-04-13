@@ -8,15 +8,13 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/history"
 )
 
-func withTempHistory(t *testing.T) func() {
+func withTempHistory(t *testing.T) {
 	t.Helper()
 	tmp := t.TempDir()
 	orig, _ := os.UserConfigDir()
-	// Override historyPath by pointing to a temp dir via env.
 	t.Setenv("APPDATA", tmp)
 	t.Setenv("XDG_CONFIG_HOME", tmp)
 	_ = orig
-	return func() {}
 }
 
 func TestHistory_AppendAndLoad(t *testing.T) {

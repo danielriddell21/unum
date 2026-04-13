@@ -8,8 +8,10 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/derive"
 )
 
-var uuidRe = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
-var colorRe = regexp.MustCompile(`^#[0-9a-f]{6}$`)
+var (
+	uuidRe  = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
+	colorRe = regexp.MustCompile(`^#[0-9a-f]{6}$`)
+)
 
 func TestDerive_Deterministic(t *testing.T) {
 	r1 := derive.Derive("my-api-service")

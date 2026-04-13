@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/danielriddell21/unum/internal/diff/node"
 )
 
@@ -44,6 +45,7 @@ func (p *UnifiedPanel) SetTextOnly(v bool) {
 	p.textOnly = v
 	p.build()
 }
+
 func (p *UnifiedPanel) Resize(w, h int) {
 	p.width = w
 	p.height = h
@@ -192,14 +194,14 @@ func (p *UnifiedPanel) renderLine(l node.Line, searchQ string) (raw, display str
 
 // SplitPanel renders old and new file side-by-side with synchronised scrolling.
 type SplitPanel struct {
-	diff    *node.Diff
-	left    viewport.Model // old file
-	right   viewport.Model // new file
-	focused int            // 0=left, 1=right
-	width   int
-	height  int
-	search  string
-	matches []int
+	diff     *node.Diff
+	left     viewport.Model // old file
+	right    viewport.Model // new file
+	focused  int            // 0=left, 1=right
+	width    int
+	height   int
+	search   string
+	matches  []int
 	matchIdx int
 }
 
@@ -253,14 +255,17 @@ func (p *SplitPanel) ScrollDown(n int) {
 	p.left.ScrollDown(n)
 	p.right.ScrollDown(n)
 }
+
 func (p *SplitPanel) ScrollUp(n int) {
 	p.left.ScrollUp(n)
 	p.right.ScrollUp(n)
 }
+
 func (p *SplitPanel) HalfPageDown() {
 	p.left.HalfPageDown()
 	p.right.HalfPageDown()
 }
+
 func (p *SplitPanel) HalfPageUp() {
 	p.left.HalfPageUp()
 	p.right.HalfPageUp()
@@ -299,7 +304,7 @@ func (p *SplitPanel) View() string {
 	return sb.String()
 }
 
-func (p *SplitPanel) build() {
+func (p *SplitPanel) build() { //nolint:cyclop,gocognit // walks diff tree building side-by-side lines; branching on kind/added/removed is the algorithm
 	if p.diff == nil {
 		return
 	}
