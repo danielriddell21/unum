@@ -14,6 +14,7 @@ import (
 	"github.com/danielriddell21/unum/internal/json/lens/merkle"
 	"github.com/danielriddell21/unum/internal/json/lens/stats"
 	"github.com/danielriddell21/unum/internal/json/node"
+	"github.com/danielriddell21/unum/internal/theme"
 )
 
 // Theme holds the color palette for static rendering.
@@ -33,73 +34,30 @@ type Theme struct {
 	BannerOK    lipgloss.Style
 }
 
-// Cyber is the default cyber/neural-interface theme.
-var Cyber = Theme{
-	ObjectKey:   lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF")),
-	ArrayIndex:  lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B6B")),
-	StringVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#98C379")),
-	NumberVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#E5C07B")),
-	BoolVal:     lipgloss.NewStyle().Foreground(lipgloss.Color("#56B6C2")),
-	NullVal:     lipgloss.NewStyle().Foreground(lipgloss.Color("#5C6370")),
-	Punctuation: lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")),
-	LineNumber:  lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")),
-	HashTag:     lipgloss.NewStyle().Foreground(lipgloss.Color("#C678DD")),
-	StatTag:     lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")),
-	ErrorStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color("#E06C75")),
-	Banner:      lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF41")),
-	BannerOK:    lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF")),
+func themeFromPalette(p theme.Palette) Theme {
+	return Theme{
+		ObjectKey:   lipgloss.NewStyle().Foreground(lipgloss.Color(p.ObjectKey)),
+		ArrayIndex:  lipgloss.NewStyle().Foreground(lipgloss.Color(p.ArrayIndex)),
+		StringVal:   lipgloss.NewStyle().Foreground(lipgloss.Color(p.StringVal)),
+		NumberVal:   lipgloss.NewStyle().Foreground(lipgloss.Color(p.NumberVal)),
+		BoolVal:     lipgloss.NewStyle().Foreground(lipgloss.Color(p.BoolTrue)),
+		NullVal:     lipgloss.NewStyle().Foreground(lipgloss.Color(p.NullVal)),
+		Punctuation: lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted)),
+		LineNumber:  lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted)),
+		HashTag:     lipgloss.NewStyle().Foreground(lipgloss.Color(p.Hash)),
+		StatTag:     lipgloss.NewStyle().Foreground(lipgloss.Color(p.Stats)),
+		ErrorStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color(p.Error)),
+		Banner:      lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary)),
+		BannerOK:    lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary)).Bold(true),
+	}
 }
 
-// Dracula theme.
-var Dracula = Theme{ //nolint:dupl // theme vars share identical struct shape; refactoring into a factory would obscure the per-theme colour palette
-	ObjectKey:   lipgloss.NewStyle().Foreground(lipgloss.Color("#BD93F9")),
-	ArrayIndex:  lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5555")),
-	StringVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#50FA7B")),
-	NumberVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#F1FA8C")),
-	BoolVal:     lipgloss.NewStyle().Foreground(lipgloss.Color("#8BE9FD")),
-	NullVal:     lipgloss.NewStyle().Foreground(lipgloss.Color("#6272A4")),
-	Punctuation: lipgloss.NewStyle().Foreground(lipgloss.Color("#44475A")),
-	LineNumber:  lipgloss.NewStyle().Foreground(lipgloss.Color("#6272A4")),
-	HashTag:     lipgloss.NewStyle().Foreground(lipgloss.Color("#FF79C6")),
-	StatTag:     lipgloss.NewStyle().Foreground(lipgloss.Color("#F1FA8C")),
-	ErrorStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5555")),
-	Banner:      lipgloss.NewStyle().Foreground(lipgloss.Color("#50FA7B")),
-	BannerOK:    lipgloss.NewStyle().Foreground(lipgloss.Color("#BD93F9")).Bold(true),
-}
-
-// Nord theme.
-var Nord = Theme{ //nolint:dupl // theme vars share identical struct shape; refactoring into a factory would obscure the per-theme colour palette
-	ObjectKey:   lipgloss.NewStyle().Foreground(lipgloss.Color("#88C0D0")),
-	ArrayIndex:  lipgloss.NewStyle().Foreground(lipgloss.Color("#BF616A")),
-	StringVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#A3BE8C")),
-	NumberVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#EBCB8B")),
-	BoolVal:     lipgloss.NewStyle().Foreground(lipgloss.Color("#81A1C1")),
-	NullVal:     lipgloss.NewStyle().Foreground(lipgloss.Color("#4C566A")),
-	Punctuation: lipgloss.NewStyle().Foreground(lipgloss.Color("#434C5E")),
-	LineNumber:  lipgloss.NewStyle().Foreground(lipgloss.Color("#4C566A")),
-	HashTag:     lipgloss.NewStyle().Foreground(lipgloss.Color("#B48EAD")),
-	StatTag:     lipgloss.NewStyle().Foreground(lipgloss.Color("#EBCB8B")),
-	ErrorStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color("#BF616A")),
-	Banner:      lipgloss.NewStyle().Foreground(lipgloss.Color("#A3BE8C")),
-	BannerOK:    lipgloss.NewStyle().Foreground(lipgloss.Color("#88C0D0")).Bold(true),
-}
-
-// Matrix theme: green on black.
-var Matrix = Theme{
-	ObjectKey:   lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF41")),
-	ArrayIndex:  lipgloss.NewStyle().Foreground(lipgloss.Color("#00CC33")),
-	StringVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#00BB2D")),
-	NumberVal:   lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF41")),
-	BoolVal:     lipgloss.NewStyle().Foreground(lipgloss.Color("#00AA26")),
-	NullVal:     lipgloss.NewStyle().Foreground(lipgloss.Color("#005510")),
-	Punctuation: lipgloss.NewStyle().Foreground(lipgloss.Color("#003308")),
-	LineNumber:  lipgloss.NewStyle().Foreground(lipgloss.Color("#003308")),
-	HashTag:     lipgloss.NewStyle().Foreground(lipgloss.Color("#00AA26")),
-	StatTag:     lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF41")).Bold(true),
-	ErrorStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")),
-	Banner:      lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF41")),
-	BannerOK:    lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF41")).Bold(true),
-}
+var (
+	Cyber   = themeFromPalette(theme.PaletteCyber)
+	Matrix  = themeFromPalette(theme.PaletteMatrix)
+	Dracula = themeFromPalette(theme.PaletteDracula)
+	Nord    = themeFromPalette(theme.PaletteNord)
+)
 
 // Options controls rendering behaviour.
 type Options struct {
@@ -115,16 +73,7 @@ type Options struct {
 
 // ResolveTheme returns the named theme, defaulting to Cyber.
 func ResolveTheme(name string) Theme {
-	switch name {
-	case "matrix":
-		return Matrix
-	case "dracula":
-		return Dracula
-	case "nord":
-		return Nord
-	default:
-		return Cyber
-	}
+	return themeFromPalette(theme.ResolvePalette(name))
 }
 
 // DefaultOptions returns sensible defaults.

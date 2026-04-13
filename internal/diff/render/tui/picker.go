@@ -5,6 +5,8 @@ import (
 
 	"github.com/charmbracelet/bubbles/filepicker"
 	tea "github.com/charmbracelet/bubbletea"
+
+	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 // pickerModel is a Bubble Tea model that wraps a filepicker.
@@ -50,7 +52,7 @@ func (m pickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m pickerModel) View() string {
-	header := styleTitle.Render(" [ UNUM ] "+m.title+" ") + "\n\n"
-	hint := styleHint.Render(fmt.Sprintf("  dir: %s\n\n  ↑↓ navigate · enter select · q quit", m.fp.CurrentDirectory))
+	header := tuipanels.StyleTitle.Render(" [ UNUM ] "+m.title+" ") + "\n\n"
+	hint := tuipanels.StyleHint.Render(fmt.Sprintf("  dir: %s\n\n  ↑↓ navigate · enter select · q quit", m.fp.CurrentDirectory))
 	return header + m.fp.View() + "\n" + hint
 }

@@ -9,7 +9,7 @@ import (
 )
 
 // StatusBar renders the bottom status bar for the JSON TUI.
-func StatusBar(n *node.Node, width int, searchMode bool, searchQuery string, yankFeedback string) string {
+func StatusBar(n *node.Node, width int, searchMode bool, searchQuery string, yankFeedback string, version string) string {
 	if searchMode {
 		hint := styleMuted.Render("  type to filter · enter:confirm · esc:clear")
 		return tuipanels.SearchBar("SCANNING", searchQuery, hint, width, styleSearchPrompt)
@@ -35,7 +35,7 @@ func StatusBar(n *node.Node, width int, searchMode bool, searchQuery string, yan
 		yank = styleSBType.Render(" ✓ " + yankFeedback + " ")
 	}
 
-	hints := styleMuted.Render("tab:panel  1-6:lens  /:search  y:yank  ?:help  q:quit")
+	hints := styleMuted.Render("tab:panel  1-6:lens  /:search  y:yank  ?:help  q:quit") + "  " + styleMuted.Render(version)
 
 	parts := []string{path, kind}
 	if extra != "" {

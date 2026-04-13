@@ -28,11 +28,13 @@ type flags struct {
 	port       int
 	quiet      bool
 	noColor    bool
+	version    string
 }
 
 // Command returns the cobra command for `unum diff`.
-func Command(globalNoColor *bool, globalQuiet *bool) *cobra.Command {
+func Command(globalNoColor *bool, globalQuiet *bool, version string) *cobra.Command {
 	f := &flags{}
+	f.version = version
 	cfg := config.Load()
 	f.theme = cfg.DarkTheme
 	f.lightTheme = cfg.LightTheme
@@ -61,7 +63,7 @@ Output modes:
 				if !f.web {
 					return fmt.Errorf("requires two file arguments (or --web for browser input mode)")
 				}
-				return diffweb.StartServer(diffweb.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme})
+				return diffweb.StartServer(diffweb.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version})
 			}
 			return runDiff(f, args[0], args[1])
 		},
@@ -122,13 +124,13 @@ func runDiff(f *flags, fileA, fileB string) error {
 	diff.Format = fmt_
 
 	if f.ui {
-		if err := tui.Start(diff, f.theme); err != nil {
+		if err := tui.Start(diff, f.theme, f.version); err != nil {
 			return fmt.Errorf("diff TUI: %w", err)
 		}
 		return nil
 	}
 	if f.web {
-		if err := diffweb.Start(diff, diffweb.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme}); err != nil {
+		if err := diffweb.Start(diff, diffweb.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version}); err != nil {
 			return fmt.Errorf("diff web: %w", err)
 		}
 		return nil

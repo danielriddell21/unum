@@ -38,6 +38,7 @@ type Options struct {
 	Quiet      bool
 	DarkTheme  string // cyber | matrix | dracula | nord
 	LightTheme string // clean | solarized
+	Version    string
 }
 
 // Start launches the web server, auto-opens the browser, and blocks until the
@@ -78,7 +79,7 @@ func Start(root *node.Node, opts Options) error {
 	mux := http.NewServeMux()
 
 	// Static assets
-	d := shared.IndexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
+	d := shared.NewIndexData(opts.DarkTheme, opts.LightTheme, opts.Version)
 	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
 	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
 	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
@@ -87,9 +88,20 @@ func Start(root *node.Node, opts Options) error {
 
 	// API
 	mux.HandleFunc("/api/tree", func(w http.ResponseWriter, r *http.Request) {
+		if key := r.URL.Query().Get("key"); key != "" {
+			v, ok := payloadCache.Load(key)
+			if !ok {
+				http.Error(w, "key not found", http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(v.([]byte)) //nolint:gosec // v is always []byte; type assertion is safe
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(payloadBytes)
 	})
+	mux.HandleFunc("/api/upload", handleUpload())
 	mux.HandleFunc("/api/query", handleQuery(root))
 
 	srv := &http.Server{
@@ -299,7 +311,7 @@ func StartBrowser(opts Options) error {
 	url := "http://" + addr
 
 	mux := http.NewServeMux()
-	d := shared.IndexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
+	d := shared.NewIndexData(opts.DarkTheme, opts.LightTheme, opts.Version)
 	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
 	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
 	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))

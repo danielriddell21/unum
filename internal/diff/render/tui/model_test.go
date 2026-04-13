@@ -42,7 +42,7 @@ func windowMsg(w, h int) tea.WindowSizeMsg {
 }
 
 func TestDiffModel_InitNoPanic(t *testing.T) {
-	m := NewModel(textDiff())
+	m := NewModel(textDiff(), "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	if next == nil {
 		t.Fatal("Update returned nil model")
@@ -50,7 +50,7 @@ func TestDiffModel_InitNoPanic(t *testing.T) {
 }
 
 func TestDiffModel_Initialized(t *testing.T) {
-	m := NewModel(textDiff())
+	m := NewModel(textDiff(), "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 	if !nm.initialized {
@@ -59,7 +59,7 @@ func TestDiffModel_Initialized(t *testing.T) {
 }
 
 func TestDiffModel_SecondWindowSizeResizes(t *testing.T) {
-	m := NewModel(textDiff())
+	m := NewModel(textDiff(), "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 	next2, _ := nm.Update(windowMsg(160, 50))
@@ -70,7 +70,7 @@ func TestDiffModel_SecondWindowSizeResizes(t *testing.T) {
 }
 
 func TestDiffModel_VKeyTogglesViewForTextDiff(t *testing.T) {
-	m := NewModel(textDiff())
+	m := NewModel(textDiff(), "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -92,7 +92,7 @@ func TestDiffModel_VKeyTogglesViewForTextDiff(t *testing.T) {
 }
 
 func TestDiffModel_VKeyNoopForSemanticOnlyDiff(t *testing.T) {
-	m := NewModel(treeDiff())
+	m := NewModel(treeDiff(), "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -121,7 +121,7 @@ func TestDiffModel_VKeyCyclesThreeModes(t *testing.T) {
 			Lines: []node.Line{{Kind: node.Added, NewNum: 1, Content: `"key": "v"`}},
 		}},
 	}
-	m := NewModel(d)
+	m := NewModel(d, "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -146,7 +146,7 @@ func TestDiffModel_VKeyCyclesThreeModes(t *testing.T) {
 }
 
 func TestDiffModel_QuestionMarkEntersHelpMode(t *testing.T) {
-	m := NewModel(textDiff())
+	m := NewModel(textDiff(), "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -162,7 +162,7 @@ func TestDiffModel_QuestionMarkEntersHelpMode(t *testing.T) {
 }
 
 func TestDiffModel_EscExitsHelpMode(t *testing.T) {
-	m := NewModel(textDiff())
+	m := NewModel(textDiff(), "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 	nm.mode = modeHelp
@@ -175,7 +175,7 @@ func TestDiffModel_EscExitsHelpMode(t *testing.T) {
 }
 
 func TestDiffModel_OKeySetsReloadRequest(t *testing.T) {
-	m := NewModel(textDiff())
+	m := NewModel(textDiff(), "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -187,7 +187,7 @@ func TestDiffModel_OKeySetsReloadRequest(t *testing.T) {
 }
 
 func TestDiffModel_ViewNoPanic(t *testing.T) {
-	m := NewModel(textDiff())
+	m := NewModel(textDiff(), "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	defer func() {
 		if r := recover(); r != nil {

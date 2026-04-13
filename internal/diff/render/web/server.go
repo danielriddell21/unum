@@ -27,6 +27,7 @@ type Options struct {
 	Quiet      bool
 	DarkTheme  string // cyber | matrix | dracula | nord
 	LightTheme string // clean | solarized
+	Version    string
 }
 
 // Start launches the diff web server, auto-opens the browser, and blocks until
@@ -60,13 +61,17 @@ func Start(d *node.Diff, opts Options) error {
 		return fmt.Errorf("web: marshal payload: %w", err)
 	}
 
-	idx := shared.IndexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
+	idx := shared.NewIndexData(opts.DarkTheme, opts.LightTheme, opts.Version)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
 	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
 	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
 	mux.HandleFunc("/api/diff", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			handleServerDiff()(w, r)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(payloadBytes)
 	})
@@ -234,7 +239,7 @@ func StartServer(opts Options) error {
 	addr := host + ":" + strconv.Itoa(port)
 	url := "http://" + addr
 
-	d := shared.IndexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
+	d := shared.NewIndexData(opts.DarkTheme, opts.LightTheme, opts.Version)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
 	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))

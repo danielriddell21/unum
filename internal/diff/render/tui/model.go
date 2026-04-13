@@ -44,19 +44,20 @@ type Model struct {
 	height        int
 	initialized   bool
 	ReloadRequest bool
+	version       string
 }
 
 // NewModel creates the diff TUI model.
-func NewModel(d *node.Diff) Model {
+func NewModel(d *node.Diff, version string) Model {
 	si := textinput.New()
 	si.Placeholder = "search..."
 	si.CharLimit = 100
 
 	return Model{
-		diff: d,
-
+		diff:        d,
 		mode:        modeNormal,
 		searchInput: si,
+		version:     version,
 	}
 }
 
@@ -247,12 +248,12 @@ func (m Model) View() string {
 		viewLabel = "split"
 	}
 
-	diffTitle := panelTitle("DIFF", true)
-	diffPane := wrapPanel(diffTitle+"\n"+diffContent, true, diffW, m.height-1)
+	diffTitle := tuipanels.PanelTitle("DIFF", true)
+	diffPane := tuipanels.WrapPanel(diffTitle+"\n"+diffContent, true, diffW, m.height-1)
 
 	// Info panel
-	infoTitle := panelTitle("INFO", false)
-	infoPane := wrapPanel(infoTitle+"\n"+m.info.View(), false, infoW, m.height-1)
+	infoTitle := tuipanels.PanelTitle("INFO", false)
+	infoPane := tuipanels.WrapPanel(infoTitle+"\n"+m.info.View(), false, infoW, m.height-1)
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, diffPane, infoPane)
 
@@ -266,9 +267,9 @@ func (m Model) View() string {
 		mc = m.split.MatchCount()
 	}
 
-	sb := panels.StatusBar(m.diff, viewLabel, m.width, m.mode == modeSearch, searchQ, mc)
+	sb := panels.StatusBar(m.diff, viewLabel, m.width, m.mode == modeSearch, searchQ, mc, m.version)
 	statusStyled := lipgloss.NewStyle().
-		Background(lipgloss.Color(colorBG)).
+		Background(lipgloss.Color(tuipanels.ColorBG)).
 		Width(m.width).
 		Render(sb)
 
@@ -280,7 +281,7 @@ func (m Model) View() string {
 }
 
 func (m Model) helpOverlay(base string) string {
-	return tuipanels.HelpOverlay(base, helpText(), colorActiveBorder, 52)
+	return tuipanels.HelpOverlay(base, helpText(), tuipanels.ColorActiveBorder, 52)
 }
 
 func helpText() string {
@@ -300,30 +301,9 @@ func helpText() string {
   o              Open new files
   ?              Toggle this help
   q / esc        Quit`,
-		styleTitle.Render("UNUM DIFF — keyboard reference"),
-		styleTitle.Render("NAVIGATION"),
-		styleTitle.Render("VIEWS"),
-		styleTitle.Render("ACTIONS"),
+		tuipanels.StyleTitle.Render("UNUM DIFF — keyboard reference"),
+		tuipanels.StyleTitle.Render("NAVIGATION"),
+		tuipanels.StyleTitle.Render("VIEWS"),
+		tuipanels.StyleTitle.Render("ACTIONS"),
 	)
-}
-
-func panelTitle(title string, active bool) string {
-	if active {
-		return styleTitle.Render(" " + title + " ")
-	}
-	return styleTitleDim.Render(" " + title + " ")
-}
-
-func wrapPanel(content string, active bool, width, height int) string {
-	if width < 4 {
-		width = 4
-	}
-	if height < 4 {
-		height = 4
-	}
-	style := borderDim.Width(width - 2).Height(height - 2)
-	if active {
-		style = borderActive.Width(width - 2).Height(height - 2)
-	}
-	return style.Render(content)
 }

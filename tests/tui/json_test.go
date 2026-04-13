@@ -34,7 +34,7 @@ func mustParseJSONFile(t *testing.T, path string) *node.Node {
 // keys from sample.json and that the program quits cleanly on 'q'.
 func TestTUIJSON_RendersContent(t *testing.T) {
 	root := mustParseJSONFile(t, sampleFile)
-	m := jsontui.NewModel(root, sampleFile)
+	m := jsontui.NewModel(root, sampleFile, "dev")
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
@@ -49,7 +49,7 @@ func TestTUIJSON_RendersContent(t *testing.T) {
 // 'q' twice: first to close the overlay, second to quit the program.
 func TestTUIJSON_HelpOverlay(t *testing.T) {
 	root := mustParseJSONFile(t, sampleFile)
-	m := jsontui.NewModel(root, sampleFile)
+	m := jsontui.NewModel(root, sampleFile, "dev")
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
@@ -72,7 +72,7 @@ func TestTUIJSON_HelpOverlay(t *testing.T) {
 // no panic during navigation.
 func TestTUIJSON_ArrowNavigation(t *testing.T) {
 	root := mustParseJSONFile(t, sampleFile)
-	m := jsontui.NewModel(root, sampleFile)
+	m := jsontui.NewModel(root, sampleFile, "dev")
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
@@ -91,7 +91,7 @@ func TestTUIJSON_ArrowNavigation(t *testing.T) {
 // TestTUIJSON_TabCyclesPanels sends Tab three times and quits cleanly.
 func TestTUIJSON_TabCyclesPanels(t *testing.T) {
 	root := mustParseJSONFile(t, sampleFile)
-	m := jsontui.NewModel(root, sampleFile)
+	m := jsontui.NewModel(root, sampleFile, "dev")
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {

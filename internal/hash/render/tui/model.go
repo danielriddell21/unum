@@ -49,10 +49,11 @@ type Model struct {
 	showHelp     bool
 	width        int
 	height       int
+	version      string
 }
 
 // NewModel creates the root model, loading existing history.
-func NewModel() Model {
+func NewModel(version string) Model {
 	ti := textinput.New()
 	ti.Placeholder = "enter text to hash..."
 	ti.CharLimit = 200
@@ -68,6 +69,7 @@ func NewModel() Model {
 		hashPanel:    hashpanels.NewHashPanel(0, 0),
 		historyPanel: hp,
 		focused:      focusInput,
+		version:      version,
 	}
 }
 
@@ -214,20 +216,20 @@ func (m Model) View() string {
 	leftW := int(float64(m.width) * 0.60)
 	rightW := m.width - leftW
 
-	hashTitle := panelTitle("HASH", m.focused == focusInput)
+	hashTitle := tuipanels.PanelTitle("HASH", m.focused == focusInput)
 	hashContent := hashTitle + "\n" + m.hashPanel.View(m.input.View(), m.result)
-	left := wrapPanel(hashContent, m.focused == focusInput, leftW, m.height-1)
+	left := tuipanels.WrapPanel(hashContent, m.focused == focusInput, leftW, m.height-1)
 
-	histTitle := panelTitle("HISTORY", m.focused == focusHistory)
+	histTitle := tuipanels.PanelTitle("HISTORY", m.focused == focusHistory)
 	histContent := histTitle + "\n" + m.historyPanel.View()
-	right := wrapPanel(histContent, m.focused == focusHistory, rightW, m.height-1)
+	right := tuipanels.WrapPanel(histContent, m.focused == focusHistory, rightW, m.height-1)
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 
 	statusStyled := lipgloss.NewStyle().
-		Background(lipgloss.Color(colorBG)).
+		Background(lipgloss.Color(tuipanels.ColorBG)).
 		Width(m.width).
-		Render(statusBar(m.result, m.focused, m.width))
+		Render(statusBar(m.result, m.focused, m.width, m.version))
 
 	if m.showHelp {
 		return m.helpOverlay(body + "\n" + statusStyled)
@@ -235,29 +237,8 @@ func (m Model) View() string {
 	return body + "\n" + statusStyled
 }
 
-func panelTitle(title string, active bool) string {
-	if active {
-		return styleTitle.Render(" " + title + " ")
-	}
-	return styleTitleDim.Render(" " + title + " ")
-}
-
-func wrapPanel(content string, active bool, width, height int) string {
-	if width < 4 {
-		width = 4
-	}
-	if height < 4 {
-		height = 4
-	}
-	style := borderDim.Width(width - 2).Height(height - 2)
-	if active {
-		style = borderActive.Width(width - 2).Height(height - 2)
-	}
-	return style.Render(content)
-}
-
 func (m Model) helpOverlay(base string) string {
-	return tuipanels.HelpOverlay(base, hashHelpText(), colorActive, 44)
+	return tuipanels.HelpOverlay(base, hashHelpText(), tuipanels.ColorActiveBorder, 44)
 }
 
 func hashHelpText() string {
@@ -274,9 +255,9 @@ func hashHelpText() string {
 %s
   ?           Toggle this help
   esc / q     Quit`,
-		styleTitle.Render("UNUM HASH — keyboard reference"),
-		styleTitle.Render("INPUT"),
-		styleTitle.Render("HISTORY"),
-		styleTitle.Render("ACTIONS"),
+		tuipanels.StyleTitle.Render("UNUM HASH — keyboard reference"),
+		tuipanels.StyleTitle.Render("INPUT"),
+		tuipanels.StyleTitle.Render("HISTORY"),
+		tuipanels.StyleTitle.Render("ACTIONS"),
 	)
 }

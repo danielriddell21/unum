@@ -6,7 +6,7 @@
   <title>unum — Hash Deriver</title>
   <link rel="stylesheet" href="/shared.css" />
   <link rel="stylesheet" href="/style.css" />
-  <script>window.UNUM_CONFIG={darkTheme:"{{.DarkTheme}}",lightTheme:"{{.LightTheme}}"};</script>
+  <script>window.UNUM_CONFIG={darkTheme:"{{.DarkTheme}}",lightTheme:"{{.LightTheme}}",version:"{{.Version}}",themes:{{.ThemeData}}};</script>
   <script src="/shared.js"></script>
 </head>
 <body>
@@ -36,6 +36,11 @@
       <div class="sidebar-title">history</div>
       <ul id="historyList" class="history-list"></ul>
     </aside>
+  </div>
+
+  <div id="status-bar">
+    <span id="status-input"></span>
+    <span id="status-hints">enter:derive · tab:switch · history in sidebar</span>
   </div>
 
   <script src="/app.js"></script>

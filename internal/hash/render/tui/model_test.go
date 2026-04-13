@@ -45,7 +45,7 @@ func windowMsg(w, h int) tea.WindowSizeMsg {
 }
 
 func TestHashTUI_InitNoPanic(t *testing.T) {
-	m := NewModel()
+	m := NewModel("dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	if next == nil {
 		t.Fatal("Update returned nil model")
@@ -53,7 +53,7 @@ func TestHashTUI_InitNoPanic(t *testing.T) {
 }
 
 func TestHashTUI_SecondWindowSizeResizes(t *testing.T) {
-	m := NewModel()
+	m := NewModel("dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 	next2, _ := nm.Update(windowMsg(160, 50))
@@ -64,7 +64,7 @@ func TestHashTUI_SecondWindowSizeResizes(t *testing.T) {
 }
 
 func TestHashTUI_ViewNoPanic(t *testing.T) {
-	m := NewModel()
+	m := NewModel("dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	defer func() {
 		if r := recover(); r != nil {
@@ -75,7 +75,7 @@ func TestHashTUI_ViewNoPanic(t *testing.T) {
 }
 
 func TestHashTUI_EnterKeyDerives(t *testing.T) {
-	m := NewModel()
+	m := NewModel("dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -98,7 +98,7 @@ func TestHashTUI_EnterKeyDerives(t *testing.T) {
 }
 
 func TestHashTUI_EmptyEnterNoResult(t *testing.T) {
-	m := NewModel()
+	m := NewModel("dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -111,7 +111,7 @@ func TestHashTUI_EmptyEnterNoResult(t *testing.T) {
 }
 
 func TestHashTUI_TabSwitchesFocus(t *testing.T) {
-	m := NewModel()
+	m := NewModel("dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -135,7 +135,7 @@ func TestHashTUI_TabSwitchesFocus(t *testing.T) {
 }
 
 func TestHashTUI_QTypesInInputMode(t *testing.T) {
-	m := NewModel()
+	m := NewModel("dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -149,7 +149,7 @@ func TestHashTUI_QTypesInInputMode(t *testing.T) {
 }
 
 func TestHashTUI_HelpToggle(t *testing.T) {
-	m := NewModel()
+	m := NewModel("dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -171,7 +171,7 @@ func TestHashTUI_HelpToggle(t *testing.T) {
 }
 
 func TestHashTUI_HistoryNavigation(t *testing.T) {
-	m := NewModel()
+	m := NewModel("dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 

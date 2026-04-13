@@ -6,7 +6,7 @@
   <title>unum — JSON Explorer</title>
   <link rel="stylesheet" href="/shared.css" />
   <link rel="stylesheet" href="/style.css" />
-  <script>window.UNUM_CONFIG={darkTheme:"{{.DarkTheme}}",lightTheme:"{{.LightTheme}}"};</script>
+  <script>window.UNUM_CONFIG={darkTheme:"{{.DarkTheme}}",lightTheme:"{{.LightTheme}}",version:"{{.Version}}",themes:{{.ThemeData}}};</script>
   <script src="/shared.js"></script>
   <style>
     #upload-wrap {
@@ -45,6 +45,24 @@
       font-size: 12px;
     }
 
+    #paste-btn {
+      display: block;
+      margin: 16px auto 0;
+      background: transparent;
+      border: 1px solid var(--border-active);
+      border-radius: 4px;
+      color: var(--border-active);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 18px;
+      transition: background 0.15s;
+    }
+
+    #paste-btn:hover {
+      background: rgba(0, 212, 255, 0.1);
+    }
+
     #upload-error {
       color: #E06C75;
       font-size: 12px;
@@ -69,6 +87,7 @@
         <div class="drop-hint">or click to browse</div>
         <input id="file-input" type="file" accept=".json,application/json" style="display:none" />
       </div>
+      <button id="paste-btn">paste from clipboard</button>
       <div id="upload-error"></div>
     </div>
   </div>
@@ -84,6 +103,7 @@
 
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
+    const pasteBtn = document.getElementById('paste-btn');
     const errEl = document.getElementById('upload-error');
 
     dropZone.addEventListener('click', () => fileInput.click());
@@ -104,22 +124,42 @@
       if (file) handleFile(file);
     });
 
+    pasteBtn.addEventListener('click', handlePaste);
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') handlePaste();
+    });
+
+    async function handlePaste() {
+      errEl.textContent = '';
+      try {
+        const text = await navigator.clipboard.readText();
+        if (!text.trim()) { errEl.textContent = '✗ clipboard is empty'; return; }
+        await uploadContent(text, '(clipboard)');
+      } catch (e) {
+        errEl.textContent = '✗ ' + (e.name === 'NotAllowedError' ? 'clipboard access denied' : e.message);
+      }
+    }
+
+    async function uploadContent(content, filename) {
+      const resp = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: filename, content: content }),
+      });
+      if (!resp.ok) {
+        const msg = await resp.text();
+        throw new Error(msg.trim() || resp.statusText);
+      }
+      const { key } = await resp.json();
+      window.location.href = '/explore?key=' + encodeURIComponent(key);
+    }
+
     function handleFile(file) {
       errEl.textContent = '';
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
-          const resp = await fetch('/api/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: file.name, content: e.target.result }),
-          });
-          if (!resp.ok) {
-            const msg = await resp.text();
-            throw new Error(msg.trim() || resp.statusText);
-          }
-          const { key } = await resp.json();
-          window.location.href = '/explore?key=' + encodeURIComponent(key);
+          await uploadContent(e.target.result, file.name);
         } catch (err) {
           errEl.textContent = '✗ ' + err.message;
         }

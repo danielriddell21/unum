@@ -9,7 +9,7 @@ import (
 )
 
 // StatusBar renders the bottom status bar for the diff TUI.
-func StatusBar(d *node.Diff, view string, width int, searchMode bool, searchQuery string, matchCount int) string {
+func StatusBar(d *node.Diff, view string, width int, searchMode bool, searchQuery string, matchCount int, version string) string {
 	if searchMode {
 		var matchHint string
 		if searchQuery != "" {
@@ -28,6 +28,6 @@ func StatusBar(d *node.Diff, view string, width int, searchMode bool, searchQuer
 	viewLabel := sbMuted.Render("[" + view + "]")
 
 	left := " " + added + "  " + removed + "  " + viewLabel
-	right := sbMuted.Render("v:toggle  j/k:scroll  /:search  n/N:match  ?:help  q:quit") + " "
+	right := sbMuted.Render("v:toggle  j/k:scroll  /:search  n/N:match  ?:help  q:quit") + "  " + sbMuted.Render(version) + " "
 	return tuipanels.Bar(left, right, width)
 }

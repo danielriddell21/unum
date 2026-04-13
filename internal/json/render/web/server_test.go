@@ -126,7 +126,7 @@ func TestBuildPayload_Deterministic(t *testing.T) {
 }
 
 func TestServeIndex_InjectsConfig(t *testing.T) {
-	d := shared.IndexData{DarkTheme: "nord", LightTheme: "solarized"}
+	d := shared.NewIndexData("nord", "solarized", "")
 	srv := httptest.NewServer(shared.ServeTemplate(assets, "assets/index.html")(d))
 	defer srv.Close()
 
@@ -137,14 +137,14 @@ func TestServeIndex_InjectsConfig(t *testing.T) {
 	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 
-	want := `window.UNUM_CONFIG={darkTheme:"nord",lightTheme:"solarized"}`
+	want := `darkTheme:"nord",lightTheme:"solarized"`
 	if !strings.Contains(string(body), want) {
 		t.Errorf("response body does not contain %q\ngot: %s", want, body)
 	}
 }
 
 func TestServeIndex_DefaultThemes(t *testing.T) {
-	d := shared.IndexData{DarkTheme: "cyber", LightTheme: "clean"}
+	d := shared.NewIndexData("cyber", "clean", "")
 	srv := httptest.NewServer(shared.ServeTemplate(assets, "assets/index.html")(d))
 	defer srv.Close()
 
@@ -155,7 +155,7 @@ func TestServeIndex_DefaultThemes(t *testing.T) {
 	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 
-	want := `window.UNUM_CONFIG={darkTheme:"cyber",lightTheme:"clean"}`
+	want := `darkTheme:"cyber",lightTheme:"clean"`
 	if !strings.Contains(string(body), want) {
 		t.Errorf("response body does not contain %q\ngot: %s", want, body)
 	}

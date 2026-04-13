@@ -21,11 +21,11 @@ func applyTheme(theme string) {
 // It takes over the terminal (AltScreen) and restores it cleanly on exit.
 // If the user presses 'o' to open a new file, the picker is shown and the
 // explorer restarts with the selected file.
-func Start(root *node.Node, filename string, theme string) error {
+func Start(root *node.Node, filename string, theme string, version string) error {
 	applyTheme(theme)
 
 	for { //nolint:dupl // mirrors startLoop body; Start applies theme first, startLoop skips it — extracting shared loop would require a theme parameter or closure
-		m := NewModel(root, filename)
+		m := NewModel(root, filename, version)
 		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 		result, err := p.Run()
@@ -70,7 +70,7 @@ func Start(root *node.Node, filename string, theme string) error {
 
 // StartWithPicker launches a file picker TUI. Once a .json file is selected
 // it parses it and transitions directly into the main JSON explorer.
-func StartWithPicker(initialDir string, theme string) error {
+func StartWithPicker(initialDir string, theme string, version string) error {
 	applyTheme(theme)
 
 	pm := newPickerModel(initialDir)
@@ -100,13 +100,13 @@ func StartWithPicker(initialDir string, theme string) error {
 	}
 
 	// Theme already applied — call Start with empty theme to skip re-applying
-	return startLoop(root, picked.Selected)
+	return startLoop(root, picked.Selected, version)
 }
 
 // startLoop runs the main TUI loop without re-applying the theme.
-func startLoop(root *node.Node, filename string) error {
+func startLoop(root *node.Node, filename string, version string) error {
 	for { //nolint:dupl // mirrors Start body; Start applies theme first, startLoop skips it — extracting shared loop would require a theme parameter or closure
-		m := NewModel(root, filename)
+		m := NewModel(root, filename, version)
 		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 		result, err := p.Run()

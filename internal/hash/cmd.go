@@ -27,6 +27,8 @@ type flags struct {
 	quiet      bool
 	noColor    bool
 
+	version string
+
 	// Single-field output flags
 	portOnly   bool
 	uuidOnly   bool
@@ -37,8 +39,9 @@ type flags struct {
 }
 
 // Command returns the cobra command for `unum hash`.
-func Command(globalNoColor *bool, globalQuiet *bool) *cobra.Command {
+func Command(globalNoColor *bool, globalQuiet *bool, version string) *cobra.Command {
 	f := &flags{}
+	f.version = version
 	cfg := config.Load()
 	f.theme = cfg.DarkTheme
 	f.lightTheme = cfg.LightTheme
@@ -87,7 +90,7 @@ func runHash(f *flags, args []string) error {
 		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
 		hashTUI.ApplyPalette(panels.ResolvePalette(f.theme))
 		hashTUI.SetFuncs(derive.Derive, history.Append, history.Load)
-		p := tea.NewProgram(hashTUI.NewModel(), tea.WithAltScreen())
+		p := tea.NewProgram(hashTUI.NewModel(f.version), tea.WithAltScreen())
 		_, err := p.Run()
 		if err != nil {
 			return fmt.Errorf("hash TUI: %w", err)
@@ -98,7 +101,7 @@ func runHash(f *flags, args []string) error {
 	if f.web {
 		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
 		hashWeb.SetFuncs(derive.Derive)
-		if err := hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme}); err != nil {
+		if err := hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version}); err != nil {
 			return fmt.Errorf("hash web: %w", err)
 		}
 		return nil

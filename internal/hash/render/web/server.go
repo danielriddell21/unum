@@ -24,6 +24,7 @@ type Options struct {
 	Quiet      bool
 	DarkTheme  string // cyber | matrix | dracula | nord
 	LightTheme string // clean | solarized
+	Version    string
 }
 
 // deriveFn is injected to avoid import cycles.
@@ -59,7 +60,7 @@ func Start(opts Options) error {
 	addr := host + ":" + strconv.Itoa(port)
 	url := "http://" + addr
 
-	d := shared.IndexData{DarkTheme: opts.DarkTheme, LightTheme: opts.LightTheme}
+	d := shared.NewIndexData(opts.DarkTheme, opts.LightTheme, opts.Version)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
 	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))

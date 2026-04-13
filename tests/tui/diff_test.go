@@ -66,7 +66,7 @@ func mustParseJSONDiffFiles(t *testing.T, pathA, pathB string) *diffnode.Diff {
 // panel title.
 func TestTUIDiff_RendersHunkMarkers(t *testing.T) {
 	d := mustParseDiffFiles(t, diffA, diffB)
-	m := difftui.NewModel(d)
+	m := difftui.NewModel(d, "dev")
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
@@ -81,7 +81,7 @@ func TestTUIDiff_RendersHunkMarkers(t *testing.T) {
 // Note: 'q' in help mode exits the overlay only; a second 'q' quits.
 func TestTUIDiff_HelpOverlay(t *testing.T) {
 	d := mustParseDiffFiles(t, diffA, diffB)
-	m := difftui.NewModel(d)
+	m := difftui.NewModel(d, "dev")
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
@@ -104,7 +104,7 @@ func TestTUIDiff_HelpOverlay(t *testing.T) {
 // panic during view cycling (unified → split → unified).
 func TestTUIDiff_ViewToggle(t *testing.T) {
 	d := mustParseDiffFiles(t, diffA, diffB)
-	m := difftui.NewModel(d)
+	m := difftui.NewModel(d, "dev")
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
@@ -123,7 +123,7 @@ func TestTUIDiff_ViewToggle(t *testing.T) {
 // files shows the DIFF panel.
 func TestTUIDiff_SemanticViewRendersJSON(t *testing.T) {
 	d := mustParseJSONDiffFiles(t, diffAJSON, diffBJSON)
-	m := difftui.NewModel(d)
+	m := difftui.NewModel(d, "dev")
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
@@ -154,7 +154,7 @@ func mustParseTerraformDiff(t *testing.T, path string) *diffnode.Diff {
 // Terraform plan file shows the DIFF panel.
 func TestTUIDiff_SemanticViewRendersTerraform(t *testing.T) {
 	d := mustParseTerraformDiff(t, diffATF)
-	m := difftui.NewModel(d)
+	m := difftui.NewModel(d, "dev")
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {

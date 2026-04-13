@@ -39,9 +39,9 @@ across terminal, TUI, and web interfaces.`,
 	root.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "suppress informational output")
 
 	// Register subcommands
-	root.AddCommand(jsontool.Command(&noColor, &quiet))
-	root.AddCommand(difftool.Command(&noColor, &quiet))
-	root.AddCommand(hashtool.Command(&noColor, &quiet))
+	root.AddCommand(jsontool.Command(&noColor, &quiet, version))
+	root.AddCommand(difftool.Command(&noColor, &quiet, version))
+	root.AddCommand(hashtool.Command(&noColor, &quiet, version))
 	root.AddCommand(completionCmd())
 
 	if err := root.Execute(); err != nil {

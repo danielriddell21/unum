@@ -56,12 +56,13 @@ type Model struct {
 	ReloadRequest bool
 
 	// Layout
-	width  int
-	height int
+	width   int
+	height  int
+	version string
 }
 
 // NewModel creates the root model with the parsed tree.
-func NewModel(root *node.Node, filename string) Model {
+func NewModel(root *node.Node, filename string, version string) Model {
 	si := textinput.New()
 	si.Placeholder = "filter..."
 	si.CharLimit = 100
@@ -70,6 +71,7 @@ func NewModel(root *node.Node, filename string) Model {
 		root:     root,
 		filename: filename,
 		focused:  focusTree,
+		version:  version,
 	}
 
 	m.searchInput = si
@@ -276,21 +278,21 @@ func (m Model) View() string {
 	}
 
 	// Build left column (tree)
-	leftTitle := panelTitle("JSON TREE", m.focused == focusTree)
+	leftTitle := tuipanels.PanelTitle("JSON TREE", m.focused == focusTree)
 	treeContent := m.tree.View()
-	leftPane := wrapPanel(leftTitle+"\n"+treeContent, m.focused == focusTree,
+	leftPane := tuipanels.WrapPanel(leftTitle+"\n"+treeContent, m.focused == focusTree,
 		int(float64(m.width)*0.38)-0, m.height-1)
 
 	// Build right column
 	// Top: preview
-	previewTitle := panelTitle("PREVIEW", m.focused == focusPreview)
+	previewTitle := tuipanels.PanelTitle("PREVIEW", m.focused == focusPreview)
 	previewContent := m.preview.View()
-	previewPane := wrapPanel(previewTitle+"\n"+previewContent, m.focused == focusPreview,
+	previewPane := tuipanels.WrapPanel(previewTitle+"\n"+previewContent, m.focused == focusPreview,
 		m.width-int(float64(m.width)*0.38)-0, int(float64(m.height-1)*0.38))
 
 	// Bottom: lens
 	lensContent := m.lens.View()
-	lensPane := wrapPanel(lensContent, m.focused == focusLens,
+	lensPane := tuipanels.WrapPanel(lensContent, m.focused == focusLens,
 		m.width-int(float64(m.width)*0.38)-0, m.height-1-int(float64(m.height-1)*0.38))
 
 	rightCol := lipgloss.JoinVertical(lipgloss.Left, previewPane, lensPane)
@@ -299,9 +301,9 @@ func (m Model) View() string {
 	// Status bar
 	cursorNode := m.tree.CursorNode()
 	statusBar := jsonpanels.StatusBar(cursorNode, m.width, m.currentMode == modeSearch,
-		m.searchInput.Value(), m.yankFeedback)
+		m.searchInput.Value(), m.yankFeedback, m.version)
 	statusStyled := lipgloss.NewStyle().
-		Background(lipgloss.Color(colorBG)).
+		Background(lipgloss.Color(tuipanels.ColorBG)).
 		Width(m.width).
 		Render(statusBar)
 
@@ -313,30 +315,8 @@ func (m Model) View() string {
 	return body + "\n" + statusStyled
 }
 
-func panelTitle(title string, active bool) string {
-	if active {
-		return styleTitle.Render(" " + title + " ")
-	}
-	return styleTitleDim.Render(" " + title + " ")
-}
-
-func wrapPanel(content string, active bool, width, height int) string {
-	if width < 4 {
-		width = 4
-	}
-	if height < 4 {
-		height = 4
-	}
-
-	style := borderDim.Width(width - 2).Height(height - 2)
-	if active {
-		style = borderActive.Width(width - 2).Height(height - 2)
-	}
-	return style.Render(content)
-}
-
 func (m Model) helpOverlay(base string) string {
-	return tuipanels.HelpOverlay(base, helpText(), colorActiveBorder, 50)
+	return tuipanels.HelpOverlay(base, helpText(), tuipanels.ColorActiveBorder, 50)
 }
 
 func helpText() string {
@@ -360,9 +340,9 @@ func helpText() string {
   o           Open a different file
   ?           Toggle this help
   q / esc     Quit`,
-		styleTitle.Render("UNUM — keyboard reference"),
-		styleTitle.Render("NAVIGATION"),
-		styleTitle.Render("LENSES"),
-		styleTitle.Render("ACTIONS"),
+		tuipanels.StyleTitle.Render("UNUM — keyboard reference"),
+		tuipanels.StyleTitle.Render("NAVIGATION"),
+		tuipanels.StyleTitle.Render("LENSES"),
+		tuipanels.StyleTitle.Render("ACTIONS"),
 	)
 }

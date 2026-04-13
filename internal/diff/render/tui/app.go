@@ -10,16 +10,15 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/format"
 	"github.com/danielriddell21/unum/internal/diff/node"
 	"github.com/danielriddell21/unum/internal/diff/parse"
-	diffpanels "github.com/danielriddell21/unum/internal/diff/render/tui/panels"
 	"github.com/danielriddell21/unum/internal/tui/panels"
 )
 
 // Start launches the diff TUI.
-func Start(d *node.Diff, theme string) error { //nolint:cyclop,gocognit // file-picker reload loop branches on multiple picker/parse outcomes; each case is necessary
+func Start(d *node.Diff, theme string, version string) error { //nolint:cyclop,gocognit // file-picker reload loop branches on multiple picker/parse outcomes; each case is necessary
 	applyTheme(theme)
 	diff := d
 	for {
-		m := NewModel(diff)
+		m := NewModel(diff, version)
 		p := tea.NewProgram(m, tea.WithAltScreen())
 		result, err := p.Run()
 		if err != nil {
@@ -88,7 +87,5 @@ func Start(d *node.Diff, theme string) error { //nolint:cyclop,gocognit // file-
 }
 
 func applyTheme(theme string) {
-	p := panels.ResolvePalette(theme)
-	ApplyPalette(p)
-	diffpanels.ApplyPalette(p)
+	ApplyPalette(panels.ResolvePalette(theme))
 }

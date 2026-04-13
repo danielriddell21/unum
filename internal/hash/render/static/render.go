@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/danielriddell21/unum/internal/hash/types"
+	"github.com/danielriddell21/unum/internal/theme"
 )
 
 // Theme holds lipgloss styles for terminal output.
@@ -18,45 +19,25 @@ type Theme struct {
 	Dim    lipgloss.Style
 }
 
-var Cyber = Theme{
-	Banner: lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF")).Bold(true),
-	Label:  lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF")),
-	Value:  lipgloss.NewStyle().Foreground(lipgloss.Color("#E5E5E5")),
-	Dim:    lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A")),
-}
-
-var Matrix = Theme{
-	Banner: lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF41")).Bold(true),
-	Label:  lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF41")),
-	Value:  lipgloss.NewStyle().Foreground(lipgloss.Color("#CCFFCC")),
-	Dim:    lipgloss.NewStyle().Foreground(lipgloss.Color("#1A3A1A")),
-}
-
-var Dracula = Theme{
-	Banner: lipgloss.NewStyle().Foreground(lipgloss.Color("#BD93F9")).Bold(true),
-	Label:  lipgloss.NewStyle().Foreground(lipgloss.Color("#BD93F9")),
-	Value:  lipgloss.NewStyle().Foreground(lipgloss.Color("#F8F8F2")),
-	Dim:    lipgloss.NewStyle().Foreground(lipgloss.Color("#44475A")),
-}
-
-var Nord = Theme{
-	Banner: lipgloss.NewStyle().Foreground(lipgloss.Color("#88C0D0")).Bold(true),
-	Label:  lipgloss.NewStyle().Foreground(lipgloss.Color("#88C0D0")),
-	Value:  lipgloss.NewStyle().Foreground(lipgloss.Color("#ECEFF4")),
-	Dim:    lipgloss.NewStyle().Foreground(lipgloss.Color("#4C566A")),
-}
-
-func ResolveTheme(name string) Theme {
-	switch name {
-	case "matrix":
-		return Matrix
-	case "dracula":
-		return Dracula
-	case "nord":
-		return Nord
-	default:
-		return Cyber
+func themeFromPalette(p theme.Palette) Theme {
+	return Theme{
+		Banner: lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary)).Bold(true),
+		Label:  lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary)),
+		Value:  lipgloss.NewStyle().Foreground(lipgloss.Color(p.Text)),
+		Dim:    lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted)),
 	}
+}
+
+var (
+	Cyber   = themeFromPalette(theme.PaletteCyber)
+	Matrix  = themeFromPalette(theme.PaletteMatrix)
+	Dracula = themeFromPalette(theme.PaletteDracula)
+	Nord    = themeFromPalette(theme.PaletteNord)
+)
+
+// ResolveTheme returns the named theme, defaulting to Cyber.
+func ResolveTheme(name string) Theme {
+	return themeFromPalette(theme.ResolvePalette(name))
 }
 
 // Options configures static rendering.

@@ -6,7 +6,7 @@
   <title>unum — Diff Viewer</title>
   <link rel="stylesheet" href="/shared.css" />
   <link rel="stylesheet" href="/style.css" />
-  <script>window.UNUM_CONFIG={darkTheme:"{{.DarkTheme}}",lightTheme:"{{.LightTheme}}"};</script>
+  <script>window.UNUM_CONFIG={darkTheme:"{{.DarkTheme}}",lightTheme:"{{.LightTheme}}",version:"{{.Version}}",themes:{{.ThemeData}}};</script>
   <script src="/shared.js"></script>
 </head>
 <body>
@@ -38,7 +38,7 @@
   <!-- Status bar -->
   <div id="status-bar">
     <span id="status-format"></span>
-    <span id="status-hints">v:toggle split · /:search · j/k or scroll · q:close</span>
+    <span id="status-hints">v:toggle split · /:search · j/k or scroll · q:new</span>
   </div>
 
   <script src="/app.js"></script>

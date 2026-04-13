@@ -2,6 +2,7 @@ package shared
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net"
@@ -12,12 +13,43 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/danielriddell21/unum/internal/theme"
 )
 
 // IndexData holds the theme config injected into HTML templates.
 type IndexData struct {
 	DarkTheme  string
 	LightTheme string
+	Version    string
+	ThemeData  template.JS // JSON: {dark:{cyber:{...},...}, light:{clean:{...},...}}
+}
+
+// NewIndexData builds IndexData with all palette CSS vars pre-serialised.
+func NewIndexData(dark, light, version string) IndexData {
+	type themeSet struct {
+		Dark  map[string]map[string]string `json:"dark"`
+		Light map[string]map[string]string `json:"light"`
+	}
+	ts := themeSet{
+		Dark: map[string]map[string]string{
+			"cyber":   theme.ResolvePalette("cyber").ToCSSVars(),
+			"matrix":  theme.ResolvePalette("matrix").ToCSSVars(),
+			"dracula": theme.ResolvePalette("dracula").ToCSSVars(),
+			"nord":    theme.ResolvePalette("nord").ToCSSVars(),
+		},
+		Light: map[string]map[string]string{
+			"clean":     theme.ResolveLightPalette("clean").ToCSSVars(),
+			"solarized": theme.ResolveLightPalette("solarized").ToCSSVars(),
+		},
+	}
+	b, _ := json.Marshal(ts)
+	return IndexData{
+		DarkTheme:  dark,
+		LightTheme: light,
+		Version:    version,
+		ThemeData:  template.JS(b), //nolint:gosec // controlled palette data, not user input
+	}
 }
 
 // ServeTemplate parses the named template from fs and serves it with data d.

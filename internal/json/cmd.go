@@ -53,11 +53,13 @@ type flags struct {
 	// Global
 	quiet   bool
 	noColor bool
+	version string
 }
 
 // Command returns the cobra command for `unum json`.
-func Command(globalNoColor *bool, globalQuiet *bool) *cobra.Command {
+func Command(globalNoColor *bool, globalQuiet *bool, version string) *cobra.Command {
 	f := &flags{}
+	f.version = version
 	cfg := config.Load()
 	f.theme = cfg.DarkTheme
 	f.lightTheme = cfg.LightTheme
@@ -220,7 +222,7 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 	// ── TUI / Web modes ───────────────────────────────────────────────────────
 
 	if f.ui {
-		if err := tui.Start(root, filename, f.theme); err != nil {
+		if err := tui.Start(root, filename, f.theme, f.version); err != nil {
 			return fmt.Errorf("json TUI: %w", err)
 		}
 		return nil
@@ -233,6 +235,7 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 			Quiet:      f.quiet,
 			DarkTheme:  f.theme,
 			LightTheme: f.lightTheme,
+			Version:    f.version,
 		}); err != nil {
 			return fmt.Errorf("json web: %w", err)
 		}
@@ -255,13 +258,13 @@ func runJSONNoFile(f *flags) error {
 		cwd = "."
 	}
 	if f.ui {
-		if err := tui.StartWithPicker(cwd, f.theme); err != nil {
+		if err := tui.StartWithPicker(cwd, f.theme, f.version); err != nil {
 			return fmt.Errorf("json TUI: %w", err)
 		}
 		return nil
 	}
 	if f.web {
-		if err := web.StartBrowser(web.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme}); err != nil {
+		if err := web.StartBrowser(web.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version}); err != nil {
 			return fmt.Errorf("json web: %w", err)
 		}
 		return nil
