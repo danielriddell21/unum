@@ -12,8 +12,8 @@ import (
 	"testing"
 )
 
-// TestJSONWebContainerMode checks the json --web server starts and returns 200
-// on /api/browse.
+// TestJSONWebContainerMode checks the json --web server starts and returns 204
+// on /api/tree
 func TestJSONWebContainerMode(t *testing.T) {
 	const port = "19883"
 	cmd := exec.Command(unumBin, "json", "--web")
@@ -23,52 +23,16 @@ func TestJSONWebContainerMode(t *testing.T) {
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	resp := waitForServer(t, fmt.Sprintf("http://localhost:%s/api/browse", port))
+	resp := waitForServer(t, fmt.Sprintf("http://localhost:%s/api/tree", port))
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("GET /api/browse: status %d, want 200", resp.StatusCode)
+	if resp.StatusCode != http.StatusNoContent {
+		t.Errorf("GET /api/tree: status %d, want 204", resp.StatusCode)
 	}
 }
 
-// TestJSONWebAPI_BrowseBodyIsJSONArray checks GET /api/browse returns a JSON
-// array of directory entries.
-func TestJSONWebAPI_BrowseBodyIsJSONArray(t *testing.T) {
-	const port = "19871"
-	cmd := exec.Command(unumBin, "json", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
-	}
-	defer func() { _ = cmd.Process.Kill() }()
-
-	resp := waitForServer(t, fmt.Sprintf("http://localhost:%s/api/browse", port))
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("GET /api/browse: status %d, want 200", resp.StatusCode)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("read body: %v", err)
-	}
-
-	var entries []map[string]any
-	if err := json.Unmarshal(body, &entries); err != nil {
-		t.Fatalf("body is not a JSON array: %v\nbody: %s", err, body)
-	}
-	for _, e := range entries {
-		if _, ok := e["name"]; !ok {
-			t.Errorf("entry missing 'name': %v", e)
-		}
-		if _, ok := e["isDir"]; !ok {
-			t.Errorf("entry missing 'isDir': %v", e)
-		}
-	}
-}
-
-// TestJSONWebAPI_TreeBodyHasExpectedFields loads a specific file via
-// /api/tree?file=... and asserts the payload contains expected fields.
+// TestJSONWebAPI_TreeBodyHasExpectedFields uploads a file via /api/upload and
+// asserts the payload returned by /api/tree?key=... contains expected fields.
 func TestJSONWebAPI_TreeBodyHasExpectedFields(t *testing.T) {
 	const port = "19870"
 	cmd := exec.Command(unumBin, "json", "--web")
@@ -78,16 +42,41 @@ func TestJSONWebAPI_TreeBodyHasExpectedFields(t *testing.T) {
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	_ = waitForServer(t, fmt.Sprintf("http://localhost:%s/api/browse", port))
+	_ = waitForServer(t, fmt.Sprintf("http://localhost:%s/api/tree", port))
 
-	absPath, err := os.Getwd()
+	content, err := os.ReadFile("testdata/sample.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	fileURL := fmt.Sprintf("http://localhost:%s/api/tree?file=%s/testdata/sample.json", port, absPath)
-	resp, err := http.Get(fileURL) //nolint:noctx // integration test hitting local server; context not needed in tests
+	uploadPayload, _ := json.Marshal(map[string]string{
+		"filename": "sample.json",
+		"content":  string(content),
+	})
+	upResp, err := http.Post( //nolint:noctx // integration test hitting local server; context not needed in tests
+		fmt.Sprintf("http://localhost:%s/api/upload", port),
+		"application/json",
+		bytes.NewReader(uploadPayload),
+	)
 	if err != nil {
-		t.Fatalf("GET /api/tree: %v", err)
+		t.Fatalf("POST /api/upload: %v", err)
+	}
+	upBody, _ := io.ReadAll(upResp.Body)
+	_ = upResp.Body.Close()
+	if upResp.StatusCode != http.StatusOK {
+		t.Fatalf("POST /api/upload: status %d\nbody: %s", upResp.StatusCode, upBody)
+	}
+	var upResult map[string]string
+	if err := json.Unmarshal(upBody, &upResult); err != nil {
+		t.Fatalf("upload response not JSON: %v\nbody: %s", err, upBody)
+	}
+	key := upResult["key"]
+	if key == "" {
+		t.Fatalf("upload returned no key: %s", upBody)
+	}
+
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%s/api/tree?key=%s", port, key)) //nolint:noctx // integration test hitting local server; context not needed in tests
+	if err != nil {
+		t.Fatalf("GET /api/tree?key=: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -130,7 +119,7 @@ func TestJSONWebAPI_Upload(t *testing.T) {
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	_ = waitForServer(t, fmt.Sprintf("http://localhost:%s/api/browse", port))
+	_ = waitForServer(t, fmt.Sprintf("http://localhost:%s/api/tree", port))
 
 	uploadBody := `{"filename":"test.json","content":"{\"hello\":\"world\"}"}`
 	resp, err := http.Post( //nolint:noctx // integration test hitting local server; context not needed in tests
@@ -211,7 +200,7 @@ func TestWebFrontend_JSONUIExploreLoads(t *testing.T) {
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	_ = waitForServer(t, fmt.Sprintf("http://localhost:%s/api/browse", port))
+	_ = waitForServer(t, fmt.Sprintf("http://localhost:%s/api/tree", port))
 
 	// Upload sample.json to get a session key.
 	content, err := os.ReadFile("testdata/sample.json")
