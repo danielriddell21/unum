@@ -157,3 +157,19 @@ td.value { color: var(--text); word-break: break-all; }
   font-size: 12px;
 }
 
+/* ── Status bar ────────────────────────────────────────────────────────────── */
+
+#status-bar {
+  padding: 4px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+#status-input { color: var(--border-active); font-weight: bold; }
+#status-hints { margin-left: auto; color: var(--muted); }
+

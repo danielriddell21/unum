@@ -286,6 +286,25 @@
   color: var(--border-active);
 }
 
+.paste-btn {
+  display: block;
+  margin: 8px auto 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 12px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.paste-btn:hover {
+  border-color: var(--border-active);
+  color: var(--border-active);
+}
+
 .upload-controls {
   display: flex;
   align-items: center;

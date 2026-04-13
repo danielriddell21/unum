@@ -42,6 +42,9 @@ function renderResult(data) {
     { label: 'phrase', value: data.Phrase },
   ];
 
+  const statusInput = document.getElementById('status-input');
+  if (statusInput) statusInput.textContent = '[ ' + data.Input + ' ]';
+
   resultBody.innerHTML = rows.map(r => {
     let valCell;
     if (r.isColor) {

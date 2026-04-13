@@ -7,7 +7,7 @@
   let selectedNode = null;
   let collapsed = new Set(); // node paths that are collapsed
   let searchQuery = '';
-  let typegenMode = 'go'; // go | ts | jsonschema
+  let typegenMode = 'go'; // go | ts
 
   // ── Boot ────────────────────────────────────────────────────────────────────
 
@@ -43,18 +43,20 @@
       `<span style="color:var(--border-active)">${treeData.nodeCount}</span> nodes · depth <span style="color:var(--border-active)">${treeData.maxDepth}</span> · <span style="color:var(--border-active)">${humanBytes(treeData.sizeBytes)}</span>`;
     document.getElementById('sep-meta').style.display = '';
 
-    const header = document.getElementById('header');
-
-    if (fileParam) {
-      const link = document.createElement('a');
-      link.href = '/';
-      link.textContent = '[ change file ]';
-      link.style.cssText = 'color:var(--muted);font-size:11px;text-decoration:none;transition:color 0.15s;';
-      link.onmouseover = () => { link.style.color = 'var(--border-active)'; };
-      link.onmouseout  = () => { link.style.color = 'var(--muted)'; };
-      header.appendChild(link);
+    if (!document.getElementById('new-btn')) {
+      const header = document.getElementById('header');
+      const btn = document.createElement('button');
+      btn.id = 'new-btn';
+      btn.textContent = '[ new ]';
+      btn.style.cssText = 'background:none;border:none;color:var(--muted);font-size:11px;' +
+        'cursor:pointer;font-family:inherit;transition:color 0.15s;padding:0;margin-left:auto;margin-right:6px;';
+      btn.onmouseover = () => { btn.style.color = 'var(--border-active)'; };
+      btn.onmouseout  = () => { btn.style.color = 'var(--muted)'; };
+      btn.onclick = () => showUploadPanel();
+      const toggle = document.getElementById('mode-toggle');
+      if (toggle) { toggle.style.marginLeft = '0'; header.insertBefore(btn, toggle); }
+      else header.appendChild(btn);
     }
-
   }
 
   function humanBytes(b) {
@@ -197,11 +199,6 @@
     selectedNode = node;
     updateStatus(node);
 
-    // Auto-switch sidebar to Stats if numeric array
-    if (node.kind === 'array' && node.stats && node.stats.numericCount > 0) {
-      activateSidebarSection('stats');
-      renderStatsSection(node);
-    }
   }
 
   function updateStatus(node) {
@@ -305,10 +302,9 @@
 
     const sections = [
       { id: 'typegen', label: 'TYPE GENERATION', render: renderTypeGenSection },
+      { id: 'schema',  label: 'JSON SCHEMA',      render: renderSchemaSection },
       { id: 'yaml',    label: 'YAML',             render: renderYAMLSection },
-      { id: 'schema',  label: 'JSON SCHEMA',       render: renderSchemaSection },
       { id: 'merkle',  label: 'MERKLE ROOT',       render: renderMerkleSection },
-      { id: 'stats',   label: 'STATISTICS',        render: renderStatsSection },
     ];
 
     for (const s of sections) {
@@ -336,19 +332,12 @@
     }
   }
 
-  function activateSidebarSection(id) {
-    const section = document.getElementById('section-' + id);
-    if (!section) return;
-    const body = section.querySelector('.sidebar-section-body');
-    if (body) body.classList.remove('collapsed');
-  }
-
   function renderTypeGenSection(body, node) {
     // Sub-mode tabs
     body.innerHTML = '';
     const tabs = document.createElement('div');
     tabs.className = 'sub-tabs';
-    for (const [mode, label] of [['go','Go'], ['ts','TypeScript'], ['jsonschema','JSON Schema']]) {
+    for (const [mode, label] of [['go','Go'], ['ts','TypeScript']]) {
       const btn = document.createElement('button');
       btn.className = 'sub-tab' + (mode === typegenMode ? ' active' : '');
       btn.textContent = label;
@@ -362,12 +351,12 @@
     body.appendChild(code);
   }
 
-  function renderYAMLSection(body) {
-    body.textContent = treeData.yaml || '';
-  }
-
   function renderSchemaSection(body) {
     body.textContent = treeData.typegen ? (treeData.typegen['jsonschema'] || '') : '';
+  }
+
+  function renderYAMLSection(body) {
+    body.textContent = treeData.yaml || '';
   }
 
   function renderMerkleSection(body) {
@@ -375,28 +364,6 @@
     body.innerHTML = root
       ? '<span class="syn-hash">root: ' + root + '</span>'
       : '<span style="color:var(--muted)">Merkle hashing not enabled.\nRun with: unum json &lt;file&gt; --web --merkle</span>';
-  }
-
-  function renderStatsSection(body, node) {
-    const target = node && node.kind === 'array' && node.stats ? node : null;
-    if (!target || !target.stats || target.stats.numericCount === 0) {
-      body.textContent = 'Navigate to a numeric array to see statistics.';
-      return;
-    }
-    const s = target.stats;
-    body.innerHTML = [
-      'Array: <span class="syn-hash">' + (target.path || '.') + '</span>',
-      '',
-      'Items:   ' + s.count + '  (numeric: ' + s.numericCount + ')',
-      'Min:     <span class="syn-num">' + fmt(s.min) + '</span>',
-      'Max:     <span class="syn-num">' + fmt(s.max) + '</span>',
-      'Mean:    <span class="syn-num">' + fmt(s.mean) + '</span>',
-      'Std Dev: <span class="syn-num">' + fmt(s.stddev) + '</span>',
-      '',
-      'p50:     ' + fmt(s.p50),
-      'p95:     ' + fmt(s.p95),
-      'p99:     ' + fmt(s.p99),
-    ].join('\n');
   }
 
   // ── jq query ─────────────────────────────────────────────────────────────────
@@ -465,6 +432,9 @@
         e.preventDefault();
         document.getElementById('search-input').focus();
       }
+      if (e.key === 'q') {
+        showUploadPanel();
+      }
     });
   }
 
@@ -475,6 +445,95 @@
     t.textContent = msg;
     t.style.display = 'block';
     setTimeout(() => { t.style.display = 'none'; }, 2000);
+  }
+
+  // ── Upload panel ─────────────────────────────────────────────────────────────
+
+  function showUploadPanel() {
+    document.getElementById('hdr-filename').textContent = '';
+    document.getElementById('sep-file').style.display = 'none';
+    document.getElementById('hdr-meta').innerHTML = '';
+    document.getElementById('sep-meta').style.display = 'none';
+    document.getElementById('sidebar').style.display = 'none';
+    document.getElementById('search-bar').style.display = 'none';
+    document.getElementById('status-hints').textContent = 'drop or paste a .json file';
+    document.getElementById('status-path').textContent = '.';
+    document.getElementById('status-type').textContent = '';
+    selectedNode = null;
+
+    const panel = document.getElementById('tree-panel');
+    panel.innerHTML = `
+      <div id="upload-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:32px;">
+        <div id="json-drop-zone" style="border:2px dashed var(--border-active);border-radius:6px;padding:56px 80px;text-align:center;cursor:pointer;transition:background 0.15s;max-width:480px;width:100%;">
+          <div style="color:var(--border-active);font-size:14px;font-weight:bold;margin-bottom:8px;">drop .json file here</div>
+          <div style="color:var(--muted);font-size:12px;">or click to browse</div>
+          <input id="json-file-input" type="file" accept=".json,application/json" style="display:none" />
+        </div>
+        <button id="json-paste-btn" style="display:block;margin:16px auto 0;background:transparent;border:1px solid var(--border-active);border-radius:4px;color:var(--border-active);cursor:pointer;font-family:inherit;font-size:12px;padding:6px 18px;transition:background 0.15s;">paste from clipboard</button>
+        <div id="json-upload-error" style="color:#E06C75;font-size:12px;margin-top:12px;"></div>
+      </div>
+    `;
+
+    const dropZone = document.getElementById('json-drop-zone');
+    const fileInput = document.getElementById('json-file-input');
+    const errEl = document.getElementById('json-upload-error');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = 'var(--bg-hover)'; });
+    dropZone.addEventListener('dragleave', () => { dropZone.style.background = ''; });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.background = '';
+      const file = e.dataTransfer.files[0];
+      if (file) loadUploadFile(file, errEl);
+    });
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (file) loadUploadFile(file, errEl);
+    });
+    document.getElementById('json-paste-btn').addEventListener('click', () => pasteUpload(errEl));
+  }
+
+  function loadUploadFile(file, errEl) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try { await uploadAndLoad(e.target.result, file.name); }
+      catch (err) { errEl.textContent = '✗ ' + err.message; }
+    };
+    reader.onerror = () => { errEl.textContent = '✗ failed to read file'; };
+    reader.readAsText(file);
+  }
+
+  async function pasteUpload(errEl) {
+    errEl.textContent = '';
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) { errEl.textContent = '✗ clipboard is empty'; return; }
+      await uploadAndLoad(text, '(clipboard)');
+    } catch (e) {
+      errEl.textContent = '✗ ' + (e.name === 'NotAllowedError' ? 'clipboard access denied' : e.message);
+    }
+  }
+
+  async function uploadAndLoad(content, filename) {
+    const resp = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: filename, content: content }),
+    });
+    if (!resp.ok) {
+      const msg = await resp.text();
+      throw new Error(msg.trim() || resp.statusText);
+    }
+    const { key } = await resp.json();
+    const treeResp = await fetch('/api/tree?key=' + encodeURIComponent(key));
+    if (!treeResp.ok) throw new Error('Failed to load tree: ' + treeResp.status);
+    treeData = await treeResp.json();
+    document.getElementById('sidebar').style.display = '';
+    document.getElementById('search-bar').style.display = '';
+    renderHeader();
+    renderTree();
+    renderSidebar();
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────────

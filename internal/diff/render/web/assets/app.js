@@ -35,12 +35,17 @@
 
   function showUploadPanel() {
     document.getElementById('toolbar').style.display = 'none';
-    document.getElementById('status-bar').style.display = 'none';
+    document.getElementById('status-format').textContent = '';
+    document.getElementById('status-hints').textContent = 'drop files A and B · select format · diff →';
     fileAContent = null; fileAName = '';
     fileBContent = null; fileBName = '';
 
-    document.getElementById('hdr-filea').textContent = 'drop two files to diff';
-    document.getElementById('sep-filea').style.display = '';
+    document.getElementById('sep-filea').style.display = 'none';
+    document.getElementById('hdr-filea').textContent = '';
+    document.getElementById('sep-fileb').style.display = 'none';
+    document.getElementById('hdr-fileb').textContent = '';
+    document.getElementById('sep-stats').style.display = 'none';
+    document.getElementById('hdr-stats').innerHTML = '';
 
     const panel = document.getElementById('diff-panel');
     panel.innerHTML = `
@@ -51,12 +56,14 @@
               <span class="drop-zone-label" id="drop-a-label">drop file A here<br>or click to browse</span>
               <input type="file" id="file-input-a" style="display:none" />
             </div>
+            <button class="paste-btn" id="paste-a">paste A from clipboard</button>
           </div>
           <div class="upload-field">
             <div class="drop-zone" id="drop-b">
               <span class="drop-zone-label" id="drop-b-label">drop file B here<br>or click to browse</span>
               <input type="file" id="file-input-b" style="display:none" />
             </div>
+            <button class="paste-btn" id="paste-b">paste B from clipboard</button>
           </div>
         </div>
         <div class="upload-controls">
@@ -82,7 +89,23 @@
       fileBName = name;
     });
 
+    document.getElementById('paste-a').addEventListener('click', () => pasteInto('drop-a', 'drop-a-label', (c, n) => { fileAContent = c; fileAName = n; }));
+    document.getElementById('paste-b').addEventListener('click', () => pasteInto('drop-b', 'drop-b-label', (c, n) => { fileBContent = c; fileBName = n; }));
     document.getElementById('up-submit').addEventListener('click', submitDiff);
+  }
+
+  async function pasteInto(zoneId, labelId, onLoad) {
+    const errEl = document.getElementById('up-error');
+    errEl.textContent = '';
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) { errEl.textContent = 'clipboard is empty'; return; }
+      onLoad(text, '(clipboard)');
+      document.getElementById(zoneId).classList.add('loaded');
+      document.getElementById(labelId).textContent = '(clipboard)';
+    } catch (e) {
+      errEl.textContent = e.name === 'NotAllowedError' ? 'clipboard access denied' : e.message;
+    }
   }
 
   function setupDropZone(zoneId, inputId, labelId, onLoad) {
@@ -178,6 +201,22 @@
     // Set default view mode and wire up the toolbar toggle
     viewMode = diffData.tree ? 'semantic' : 'unified';
     renderViewToggle();
+
+    // [new] button — insert before the dark/light toggle
+    if (!document.getElementById('new-btn')) {
+      const header = document.getElementById('header');
+      const btn = document.createElement('button');
+      btn.id = 'new-btn';
+      btn.textContent = '[ new ]';
+      btn.style.cssText = 'background:none;border:none;color:var(--muted);font-size:11px;' +
+        'cursor:pointer;font-family:inherit;transition:color 0.15s;padding:0;margin-left:auto;margin-right:6px;';
+      btn.onmouseover = () => { btn.style.color = 'var(--border-active)'; };
+      btn.onmouseout  = () => { btn.style.color = 'var(--muted)'; };
+      btn.onclick = () => showUploadPanel();
+      const toggle = document.getElementById('mode-toggle');
+      if (toggle) { toggle.style.marginLeft = '0'; header.insertBefore(btn, toggle); }
+      else header.appendChild(btn);
+    }
   }
 
   // ── View mode toggle ──────────────────────────────────────────────────────────
@@ -191,8 +230,10 @@
   }
 
   function renderViewToggle() {
-    const placeholder = document.getElementById('toggle-view');
     const modes = availableModes();
+    // After the first render, #toggle-view is replaced by #view-modes — find whichever exists.
+    const placeholder = document.getElementById('view-modes') || document.getElementById('toggle-view');
+    if (!placeholder) return;
 
     if (modes.length === 0) {
       placeholder.style.display = 'none';
@@ -202,6 +243,7 @@
     const group = document.createElement('div');
     group.className = 'view-modes';
     group.id = 'view-modes';
+    group.style.display = '';
 
     for (const mode of modes) {
       const btn = document.createElement('button');
@@ -232,6 +274,12 @@
 
     if (viewMode === 'semantic' && diffData.tree) {
       renderTreeView(panel, diffData.tree);
+      if (!panel.hasChildNodes()) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = '(no differences)';
+        panel.appendChild(empty);
+      }
       if (searchQuery) applyHighlight();
       return;
     }
@@ -561,6 +609,9 @@
       }
       if (e.key === 'k') {
         document.getElementById('diff-panel').scrollBy(0, -40);
+      }
+      if (e.key === 'q') {
+        showUploadPanel();
       }
     });
   }
