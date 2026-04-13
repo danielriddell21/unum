@@ -23,8 +23,8 @@ yeet:
 
 # golangci-lint
 [group('core')]
-lint:
-    golangci-lint run ./...
+lint *args:
+    golangci-lint run ./... {{args}}
 
 # install to GOPATH/bin
 [group('core')]
