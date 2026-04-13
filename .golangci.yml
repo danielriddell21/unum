@@ -48,4 +48,5 @@ formatters:
     - goimports
   settings:
     goimports:
-      local-prefixes: github.com/danielriddell21/unum
+      local-prefixes:
+        - github.com/danielriddell21/unum

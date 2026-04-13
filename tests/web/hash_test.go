@@ -198,7 +198,7 @@ func TestWebFrontend_HashUIDerivesOnSubmit(t *testing.T) {
 	waitForElement(t, page, "#hashInput").MustInput("test-service")
 	page.MustElement("#deriveBtn").MustClick()
 
-	waitForElement(t, page, "#resultBody")
+	waitForElement(t, page, "#resultBody tr")
 
 	rows := page.MustElements("#resultBody tr")
 	if len(rows) == 0 {
