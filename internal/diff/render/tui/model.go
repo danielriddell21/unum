@@ -119,7 +119,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) { //nolint:cyclop // key dispatch switch covers every navigation + action key; extracting helpers would obscure control flow
+func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) { //nolint:cyclop // NOSONAR: key dispatch switch covers every navigation + action key; extracting helpers would obscure control flow
 	k := msg.String()
 
 	if k == "ctrl+c" {

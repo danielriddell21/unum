@@ -244,7 +244,7 @@ func (r *renderer) renderLeaf(n *node.Node, indent string) {
 }
 
 // renderInline renders an object or array opening + children inline from the current position.
-func (r *renderer) renderInline(n *node.Node, depth int) { //nolint:gocognit // renders every value kind inline; branching on kind is the algorithm
+func (r *renderer) renderInline(n *node.Node, depth int) { //nolint:gocognit // NOSONAR: renders every value kind inline; branching on kind is the algorithm
 	t := r.opts.Theme
 	indent := strings.Repeat("  ", depth)
 

@@ -32,7 +32,7 @@ func Text(a, b []byte, contextLines int) (*node.Diff, error) {
 }
 
 // buildHunks converts go-diff output into Hunk slices with context lines.
-func buildHunks(diffs []diffmatchpatch.Diff, ctx int) ([]node.Hunk, int, int) { //nolint:cyclop,gocognit // processes every diff operation type in a single pass; branching on op kind is the algorithm
+func buildHunks(diffs []diffmatchpatch.Diff, ctx int) ([]node.Hunk, int, int) { //nolint:cyclop,gocognit // NOSONAR: processes every diff operation type in a single pass; branching on op kind is the algorithm
 	// Expand diffs into a flat line list with change kind
 	type rawLine struct {
 		kind    node.ChangeKind

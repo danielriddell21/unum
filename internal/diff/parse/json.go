@@ -38,7 +38,7 @@ func JSON(a, b []byte) (*diffnode.Diff, error) {
 
 // compareNodes recursively compares two JSON nodes and returns a DiffNode.
 // counts is [added, removed, modified].
-func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]int) *diffnode.DiffNode { //nolint:cyclop,gocognit,dupl // recursive tree comparison; branching on node kind/array bounds is inherent to the diff algorithm
+func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]int) *diffnode.DiffNode { //nolint:cyclop,gocognit,dupl // NOSONAR: recursive tree comparison; branching on node kind/array bounds is inherent to the diff algorithm
 	dn := &diffnode.DiffNode{Path: path, Key: key, Index: index}
 
 	if a.Kind != b.Kind {

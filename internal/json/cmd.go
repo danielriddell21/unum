@@ -125,7 +125,7 @@ Config file (~/.config/unum/config.json):
 	return cmd
 }
 
-func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // dispatch on output flags + render modes; each branch is a distinct user-facing mode
+func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // NOSONAR: dispatch on output flags + render modes; each branch is a distinct user-facing mode
 	mode := "cli"
 	if f.ui {
 		mode = "tui"

@@ -48,7 +48,7 @@ func parseYAMLDoc(data []byte) (*yaml.Node, error) {
 	return &doc, nil
 }
 
-func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]int) *diffnode.DiffNode { //nolint:cyclop,gocognit,dupl // recursive tree comparison; branching on node kind/sequence bounds is inherent to the diff algorithm
+func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]int) *diffnode.DiffNode { //nolint:cyclop,gocognit,dupl // NOSONAR: recursive tree comparison; branching on node kind/sequence bounds is inherent to the diff algorithm
 	// Resolve aliases before comparing
 	a = resolveAlias(a)
 	b = resolveAlias(b)

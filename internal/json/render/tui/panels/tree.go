@@ -73,7 +73,7 @@ func (p *TreePanel) Resize(w, h int) {
 }
 
 // Update handles keystrokes when the tree panel is focused.
-func (p *TreePanel) Update(msg tea.KeyMsg) (changed bool) { //nolint:cyclop,gocognit // tree navigation covers many keys; each case is a distinct cursor/expand/collapse action
+func (p *TreePanel) Update(msg tea.KeyMsg) (changed bool) { //nolint:cyclop,gocognit // NOSONAR: tree navigation covers many keys; each case is a distinct cursor/expand/collapse action
 	switch msg.String() {
 	case "j", "down":
 		if p.cursor < len(p.flat)-1 {
@@ -151,7 +151,7 @@ func (p *TreePanel) scrollToCursor() {
 	}
 }
 
-func (p *TreePanel) renderTreeNode(tn TreeNode, selected bool) string { //nolint:cyclop,gocognit // renders every node kind with distinct connectors and styles; branching on kind is the algorithm
+func (p *TreePanel) renderTreeNode(tn TreeNode, selected bool) string { //nolint:cyclop,gocognit // NOSONAR: renders every node kind with distinct connectors and styles; branching on kind is the algorithm
 	n := tn.Node
 	indent := strings.Repeat("  ", tn.Depth)
 
