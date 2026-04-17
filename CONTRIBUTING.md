@@ -21,8 +21,6 @@ just mutate     # mutation testing via gremlins
 
 Run `just ci` before every commit — all four stages must pass. CI runs the same gate on every push to `trunk` and on every pull request targeting `trunk`.
 
-Mutation testing (`just mutate`) runs automatically in CI on pushes to `trunk` via `go-gremlins/gremlins-action`. Thresholds and enabled mutation types are configured in `.gremlins.yaml`. The gate requires ≥60% efficacy (killed/tested mutants) with a coverage floor of 60% — only mutants in covered code are tested.
-
 Run `just --list` to see all available recipes, including per-tool smoke-testing shortcuts.
 
 ## Project layout
@@ -32,22 +30,16 @@ cmd/unum/           entry point
 internal/
   cli/              root cobra command + flag wiring
   config/           ~/.config/unum/config.json loader
-  json/             unum json tool
-    analyze/        analyzer suite (runs enabled lenses)
-    lens/<n>/       individual annotation lenses
-    parse/          JSON parser + validator
+  telemetry/        OpenTelemetry + Umami analytics
+  theme/            shared colour/style definitions
+  tui/              shared Bubble Tea panel primitives
+  web/              shared embedded HTTP server utilities
+  <tool>/           one directory per tool (json, diff, hash, …)
     render/
-      static/       terminal syntax-highlighted output
-      tui/          Bubble Tea TUI navigator
+      static/       terminal output
+      tui/          Bubble Tea TUI
       web/          embedded HTTP server + browser UI
-  diff/             unum diff tool
-    format/         file-extension format detection
-    node/           shared Diff / DiffNode / Hunk types
-    parse/          text, JSON, YAML, Terraform parsers
-    render/
-      static/       coloured +/- terminal output
-      tui/          Bubble Tea TUI (unified + split views)
-      web/          embedded HTTP server + browser diff UI
+    …               tool-specific packages (parse/, derive/, lens/, etc.)
 testdata/           fixture files used by justfile recipes and tests
 tests/              CLI functional tests (go test ./tests/...)
 ```

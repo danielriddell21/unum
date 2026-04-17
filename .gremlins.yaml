@@ -2,8 +2,33 @@ silent: false
 
 unleash:
   threshold:
-    efficacy: 60        # ≥60% of tested mutants must be killed
+    efficacy: 65        # ≥65% of tested mutants must be killed
     mutant-coverage: 60 # skip mutants in code with <60% line coverage
+  exclude-files:
+    # Bubbletea TUI renderers: View/Update methods produce terminal output;
+    # mutations to layout arithmetic and key-binding branches survive because
+    # no test asserts against rendered byte sequences.
+    - "internal/tui/.*"
+    - "internal/diff/render/tui/.*"
+    - "internal/json/render/tui/.*"
+    - "internal/hash/render/tui/.*"
+    # Static ANSI renderers: lipgloss column/offset arithmetic is presentation-
+    # only; off-by-one mutations still produce well-formed (just slightly
+    # misaligned) output that no test checks.
+    - "internal/diff/render/static/.*"
+    - "internal/json/render/static/.*"
+    - "internal/hash/render/static/.*"
+    # Telemetry bootstrap: OTel pipeline init and Umami HTTP fire-and-forget;
+    # construction-time mutations are unreachable from unit tests.
+    - "internal/telemetry/otel\\.go"
+    - "internal/telemetry/umami\\.go"
+    # CLI wiring: cobra command definitions and flag parsing; exercised only by
+    # functional tests in tests/ which gremlins does not run per-mutant.
+    - "cmd/.*"
+    - "internal/cli/.*"
+    - "internal/diff/cmd\\.go"
+    - "internal/json/cmd\\.go"
+    - "internal/hash/cmd\\.go"
 
 mutants:
   arithmetic-base:
@@ -15,16 +40,16 @@ mutants:
   increment-decrement:
     enabled: true
   invert-assignments:
-    enabled: false
+    enabled: false # generates many equivalent/uncompilable mutants in Go
   invert-bitwise:
-    enabled: false
+    enabled: false # bitwise ops are absent from business logic; low signal
   invert-bwassign:
-    enabled: false
+    enabled: false # same reason as invert-bitwise
   invert-negatives:
     enabled: true
   invert-logical:
     enabled: true
   invert-loopctrl:
-    enabled: false
+    enabled: false # swapping break/continue can hang the test suite
   remove-self-assignments:
-    enabled: false
+    enabled: false # self-assignments are already dead code; mutating them is noise
