@@ -26,8 +26,8 @@ func SearchBar(label, query, suffix string, width int, accentStyle lipgloss.Styl
 	prompt := accentStyle.Render("[ " + label + " > ")
 	cursor := accentStyle.Render("█")
 	q := accentStyle.Render(query)
-	close_ := accentStyle.Render(" ]")
-	line := prompt + q + cursor + close_ + suffix
+	closeBracket := accentStyle.Render(" ]")
+	line := prompt + q + cursor + closeBracket + suffix
 	return Pad(line, width)
 }
 

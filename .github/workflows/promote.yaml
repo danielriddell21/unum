@@ -4,13 +4,12 @@ on:
   release:
     types: [released]
 
-permissions:
-  packages: write
-
 jobs:
   retag:
     name: Retag image
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     steps:
       - uses: docker/login-action@v4
         with:

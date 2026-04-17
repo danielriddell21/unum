@@ -137,7 +137,7 @@ func runDiff(f *flags, fileA, fileB string) error {
 		return fmt.Errorf("cannot read %s: %w", fileB, err)
 	}
 
-	fmt_ := format.Parse(f.format, fileA, fileB)
+	diffFormat := format.Parse(f.format, fileA, fileB)
 
 	theme := static.ResolveTheme(f.theme)
 	opts := static.Options{
@@ -152,7 +152,7 @@ func runDiff(f *flags, fileA, fileB string) error {
 	start := time.Now()
 
 	var diff *node.Diff
-	switch fmt_ {
+	switch diffFormat {
 	case node.FormatJSON:
 		diff, err = parse.JSON(dataA, dataB)
 	case node.FormatYAML:
@@ -176,12 +176,12 @@ func runDiff(f *flags, fileA, fileB string) error {
 	bootDone(diff.Added, diff.Removed, diff.Modified, elapsed)
 	diff.FileA = fileA
 	diff.FileB = fileB
-	diff.Format = fmt_
+	diff.Format = diffFormat
 
 	span.SetAttributes(
 		attribute.Int("diff.size_bytes_a", len(dataA)),
 		attribute.Int("diff.size_bytes_b", len(dataB)),
-		attribute.String("diff.format", fmt_.String()),
+		attribute.String("diff.format", diffFormat.String()),
 		attribute.Int("diff.added", diff.Added),
 		attribute.Int("diff.removed", diff.Removed),
 		attribute.Int("diff.modified", diff.Modified),

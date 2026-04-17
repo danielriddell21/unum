@@ -78,15 +78,17 @@
 
 table { border-collapse: collapse; width: 100%; }
 
-td {
+td, th {
   padding: 3px 0;
   vertical-align: top;
 }
 
-td.label {
+th.label, td.label {
   color: var(--border-active);
   width: 90px;
   padding-right: 16px;
+  font-weight: normal;
+  text-align: left;
 }
 
 td.value { color: var(--text); word-break: break-all; }

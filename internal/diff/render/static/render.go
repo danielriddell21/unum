@@ -66,6 +66,7 @@ type Options struct {
 // Boot prints the diff boot sequence to w.
 // Call before parsing; invoke the returned func after parsing to complete the line.
 func Boot(w io.Writer, fileA, fileB string, opts Options) func(added, removed, modified int, elapsed time.Duration) {
+	// noop is the quiet-mode completion callback — intentionally empty.
 	noop := func(int, int, int, time.Duration) {}
 	if opts.Quiet {
 		return noop

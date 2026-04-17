@@ -52,7 +52,7 @@ function renderResult(data) {
     } else {
       valCell = `<td class="value">${escHtml(r.value)}</td>`;
     }
-    return `<tr><td class="label">${r.label}</td>${valCell}</tr>`;
+    return `<tr><th class="label" scope="row">${r.label}</th>${valCell}</tr>`;
   }).join('');
 }
 
@@ -79,13 +79,13 @@ function loadHistory(activeInput) {
 
 function escHtml(s) {
   return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
 }
 
 function escAttr(s) {
-  return String(s).replace(/"/g, '&quot;');
+  return String(s).replaceAll('"', '&quot;');
 }
 
 // Derive on Enter key
