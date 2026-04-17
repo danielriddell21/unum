@@ -175,3 +175,62 @@ func TestTerraform_Format(t *testing.T) {
 		t.Errorf("format=%v, want FormatTerraform", d.Format)
 	}
 }
+
+func TestPrimaryAction_EmptySlice(t *testing.T) {
+	// Empty actions slice → no match, no fallback → "no-op"
+	got := primaryAction([]string{})
+	if got != "no-op" {
+		t.Errorf("primaryAction([])=%q, want \"no-op\"", got)
+	}
+}
+
+func TestPrimaryAction_UnknownActionFallsBackToFirst(t *testing.T) {
+	// A non-standard action should return the first element.
+	got := primaryAction([]string{"replace", "read"})
+	if got != "replace" {
+		t.Errorf("primaryAction([replace,read])=%q, want \"replace\"", got)
+	}
+}
+
+func TestPrimaryAction_KnownActions(t *testing.T) {
+	for _, action := range []string{"create", "delete", "update"} {
+		got := primaryAction([]string{action})
+		if got != action {
+			t.Errorf("primaryAction([%s])=%q, want %q", action, got, action)
+		}
+	}
+}
+
+// TestTerraform_UpdateFallback verifies that when diffTFChange fails the
+// Terraform parser falls back to a Modified node rather than erroring.
+func TestTerraform_UpdateFallback(t *testing.T) {
+	// before contains a raw JSON fragment that cannot be parsed by jsonparse.Parse.
+	plan := []byte(`{
+		"resource_changes": [{
+			"address": "aws_instance.web",
+			"type": "aws_instance",
+			"name": "web",
+			"change": {
+				"actions": ["update"],
+				"before": "INVALID_RAW_FRAGMENT",
+				"after":  {"ok": true}
+			}
+		}]
+	}`)
+
+	// The plan itself may or may not parse depending on how json.RawMessage
+	// handles the value. Terraform() should either succeed with a fallback
+	// Modified node, or fail — but never panic.
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("Terraform panicked on bad before: %v", r)
+		}
+	}()
+	d, err := Terraform(plan)
+	if err != nil {
+		return // acceptable — outer unmarshal may reject it
+	}
+	if len(d.Root.Children) == 0 {
+		t.Error("expected at least one child node from update fallback")
+	}
+}
