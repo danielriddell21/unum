@@ -28,6 +28,8 @@ jobs:
     name: Pin version in k8s-unum
     needs: retag
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
         with:
