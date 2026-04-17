@@ -458,14 +458,18 @@
     const panel = document.getElementById('tree-panel');
     panel.innerHTML = `
       <div id="upload-panel">
-        <textarea class="paste-area" id="json-paste-area" placeholder="drop .json file here, paste, or click browse..." spellcheck="false"></textarea>
-        <div class="paste-meta">
-          <span class="paste-filename" id="json-filename"></span>
-          <button class="browse-btn" id="json-browse-btn">browse...</button>
-          <input id="json-file-input" type="file" accept=".json,application/json" style="display:none" />
-          <button class="load-btn" id="json-load-btn">load →</button>
+        <div class="upload-field">
+          <textarea class="paste-area" id="json-paste-area" placeholder="drop .json file here, paste, or click browse..." spellcheck="false"></textarea>
+          <div class="paste-meta">
+            <span class="paste-filename" id="json-filename"></span>
+            <button class="browse-btn" id="json-browse-btn">browse...</button>
+            <input id="json-file-input" type="file" accept=".json,application/json" style="display:none" />
+          </div>
         </div>
-        <div id="json-upload-error" class="upload-error"></div>
+        <div class="upload-controls">
+          <button id="json-load-btn">load →</button>
+          <span id="json-upload-error" class="upload-error"></span>
+        </div>
       </div>
     `;
 

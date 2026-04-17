@@ -70,6 +70,8 @@
   padding: 8px 0;
 }
 
+#tree-panel:has(#upload-panel) { width: 100%; }
+
 /* ── Sidebar ─────────────────────────────────────────────────────────────────── */
 
 #sidebar {
@@ -271,24 +273,30 @@
 #upload-panel {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 32px;
   gap: 12px;
+  padding: 24px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.upload-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
 .paste-area {
-  width: 100%;
-  max-width: 480px;
-  height: 200px;
+  flex: 1;
+  min-height: 160px;
   background: var(--bg-panel);
   border: 1px solid var(--border-active);
-  border-radius: 6px;
+  border-radius: 4px;
   color: var(--text);
   font-family: inherit;
   font-size: 12px;
-  padding: 16px;
+  padding: 10px 12px;
   resize: none;
   outline: none;
   transition: background 0.15s;
@@ -302,8 +310,6 @@
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  width: 100%;
-  max-width: 480px;
 }
 
 .paste-filename {
@@ -332,20 +338,27 @@
   color: var(--border-active);
 }
 
-.load-btn {
-  background: transparent;
-  border: 1px solid var(--border-active);
-  border-radius: 3px;
-  color: var(--border-active);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 11px;
-  padding: 3px 12px;
-  transition: background 0.15s, color 0.15s;
-  white-space: nowrap;
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
-.load-btn:hover {
+#json-load-btn {
+  background: none;
+  border: 1px solid var(--border-active);
+  color: var(--border-active);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 16px;
+  cursor: pointer;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  transition: all 0.15s;
+}
+
+#json-load-btn:hover {
   background: var(--border-active);
   color: var(--bg);
 }
