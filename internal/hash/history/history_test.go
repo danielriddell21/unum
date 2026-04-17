@@ -81,3 +81,24 @@ func TestHistory_EmptyFile(t *testing.T) {
 		t.Errorf("expected empty history, got %v", entries)
 	}
 }
+
+func TestHistory_MalformedJSON(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("APPDATA", tmp)
+	t.Setenv("XDG_CONFIG_HOME", tmp)
+
+	// Write corrupt JSON directly to the history file.
+	dir := tmp
+	histDir := filepath.Join(dir, "unum")
+	if err := os.MkdirAll(histDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(histDir, "hash-history.json"), []byte("{broken"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	entries := history.Load()
+	if len(entries) != 0 {
+		t.Errorf("malformed JSON should return empty slice, got %d entries", len(entries))
+	}
+}

@@ -78,3 +78,111 @@ func TestJSONModel_EmptyObjectNoPanic(t *testing.T) {
 	}()
 	_ = next.(Model).View()
 }
+
+func TestJSONModel_TabCyclesFocus(t *testing.T) {
+	root := mustParse(t, `{"a": 1}`)
+	m := NewModel(root, testJSONFile, "dev")
+	next, _ := m.Update(windowMsg(120, 40))
+	nm := next.(Model)
+
+	initialFocus := nm.focused
+
+	nm2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyTab})
+	nm = nm2.(Model)
+	if nm.focused == initialFocus {
+		t.Error("tab should cycle focus")
+	}
+}
+
+func TestJSONModel_QuestionMarkTogglesHelp(t *testing.T) {
+	root := mustParse(t, `{"a": 1}`)
+	m := NewModel(root, testJSONFile, "dev")
+	next, _ := m.Update(windowMsg(120, 40))
+	nm := next.(Model)
+
+	nm2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
+	nm = nm2.(Model)
+	if nm.currentMode != modeHelp {
+		t.Error("? should enter help mode")
+	}
+
+	nm3, _ := nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
+	nm = nm3.(Model)
+	if nm.currentMode == modeHelp {
+		t.Error("? in help mode should exit help")
+	}
+}
+
+func TestJSONModel_SlashEntersSearchMode(t *testing.T) {
+	root := mustParse(t, `{"a": 1}`)
+	m := NewModel(root, testJSONFile, "dev")
+	next, _ := m.Update(windowMsg(120, 40))
+	nm := next.(Model)
+
+	nm2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	nm = nm2.(Model)
+	if nm.currentMode != modeSearch {
+		t.Error("/ should enter search mode")
+	}
+}
+
+func TestJSONModel_EscExitsSearchMode(t *testing.T) {
+	root := mustParse(t, `{"a": 1}`)
+	m := NewModel(root, testJSONFile, "dev")
+	next, _ := m.Update(windowMsg(120, 40))
+	nm := next.(Model)
+
+	nm2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	nm = nm2.(Model)
+
+	nm3, _ := nm.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	nm = nm3.(Model)
+	if nm.currentMode != modeNormal {
+		t.Error("esc should exit search mode")
+	}
+}
+
+func TestJSONModel_OKeySetsReloadRequest(t *testing.T) {
+	root := mustParse(t, `{"a": 1}`)
+	m := NewModel(root, testJSONFile, "dev")
+	next, _ := m.Update(windowMsg(120, 40))
+	nm := next.(Model)
+
+	nm2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("o")})
+	nm = nm2.(Model)
+	if !nm.ReloadRequest {
+		t.Error("o key should set ReloadRequest")
+	}
+}
+
+func TestJSONModel_LensDigitKeys(t *testing.T) {
+	root := mustParse(t, `{"a": 1}`)
+	m := NewModel(root, testJSONFile, "dev")
+	next, _ := m.Update(windowMsg(120, 40))
+	nm := next.(Model)
+
+	// Digit keys should not panic.
+	for _, digit := range []string{"1", "2", "3", "4", "5", "6"} {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("digit key %q panicked: %v", digit, r)
+			}
+		}()
+		nm2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(digit)})
+		nm = nm2.(Model)
+	}
+}
+
+func TestJSONModel_ShiftTabCyclesBackward(t *testing.T) {
+	root := mustParse(t, `{"a": 1}`)
+	m := NewModel(root, testJSONFile, "dev")
+	next, _ := m.Update(windowMsg(120, 40))
+	nm := next.(Model)
+	initialFocus := nm.focused
+
+	nm2, _ := nm.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	nm = nm2.(Model)
+	if nm.focused == initialFocus {
+		t.Error("shift+tab should cycle focus backward")
+	}
+}
