@@ -307,9 +307,9 @@ func TestWebFrontend_DiffUIRendersAndToggles(t *testing.T) {
 	page.MustElement("#file-input-a").MustSetFiles(absA)
 	page.MustElement("#file-input-b").MustSetFiles(absB)
 
-	// Wait for FileReader.onload — JS adds class "loaded" to each drop zone.
-	waitForElement(t, page, "#drop-a.loaded")
-	waitForElement(t, page, "#drop-b.loaded")
+	// Wait for FileReader.onload — JS adds class "loaded" to each textarea.
+	waitForElement(t, page, "#paste-a.loaded")
+	waitForElement(t, page, "#paste-b.loaded")
 
 	page.MustElement("#up-submit").MustClick()
 

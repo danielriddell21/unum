@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -197,9 +198,9 @@ func TestJSONWebAPI_IndexHTML(t *testing.T) {
 	}
 }
 
-// TestWebFrontend_JSONUIExploreLoads uploads sample.json via the HTTP API,
-// navigates the browser to the explore page, and verifies the JSON tree
-// renders. Requires Chromium to be installed.
+// TestWebFrontend_JSONUIExploreLoads uses the browser upload UI to load
+// sample.json via the file input and verifies the JSON tree renders.
+// Requires Chromium to be installed.
 func TestWebFrontend_JSONUIExploreLoads(t *testing.T) {
 	const port = "19858"
 	cmd := exec.Command(unumBin, "json", "--web")
@@ -211,43 +212,23 @@ func TestWebFrontend_JSONUIExploreLoads(t *testing.T) {
 
 	_ = waitForServer(t, fmt.Sprintf(jsonTreeURLFmt, port))
 
-	// Upload sample.json to get a session key.
-	content, err := os.ReadFile("testdata/sample.json")
+	absPath, err := filepath.Abs("testdata/sample.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	uploadPayload, _ := json.Marshal(map[string]string{
-		"filename": "sample.json",
-		"content":  string(content),
-	})
-	upResp, err := http.Post( //nolint:noctx // integration test hitting local server; context not needed in tests
-		fmt.Sprintf(jsonUploadURLFmt, port),
-		jsonContentType,
-		bytes.NewReader(uploadPayload),
-	)
-	if err != nil {
-		t.Fatalf("upload: %v", err)
-	}
-	upBody, _ := io.ReadAll(upResp.Body)
-	_ = upResp.Body.Close()
-	var upResult map[string]string
-	if err := json.Unmarshal(upBody, &upResult); err != nil {
-		t.Fatalf(jsonUploadNotJSON, err, upBody)
-	}
-	key := upResult["key"]
-	if key == "" {
-		t.Fatalf("upload returned no key: %s", upBody)
-	}
 
-	// Navigate to the explore page and verify the tree renders.
 	browser := newBrowser(t)
-	page := browser.MustPage(fmt.Sprintf("http://localhost:%s/explore?key=%s", port, key))
+	page := browser.MustPage(fmt.Sprintf("http://localhost:%s/", port))
 	page.MustWaitLoad()
 
+	// Set the hidden file input — JS fires FileReader then auto-uploads.
+	page.MustElement("#json-file-input").MustSetFiles(absPath)
+
+	// Wait for auto-upload to complete and tree to render.
 	waitForElement(t, page, ".tree-node")
 
 	nodes := page.MustElements(".tree-node")
 	if len(nodes) == 0 {
-		t.Error("expected tree nodes to render in explorer")
+		t.Error("expected tree nodes to render after upload")
 	}
 }

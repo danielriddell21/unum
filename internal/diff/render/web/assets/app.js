@@ -7,9 +7,6 @@
   let viewMode = 'unified'; // set properly in renderHeader once data arrives
   let searchQuery = '';
 
-  // File state for upload panel
-  let fileAContent = null, fileAName = '';
-  let fileBContent = null, fileBName = '';
 
   // ── Boot ─────────────────────────────────────────────────────────────────────
 
@@ -36,9 +33,7 @@
   function showUploadPanel() {
     document.getElementById('toolbar').style.display = 'none';
     document.getElementById('status-format').textContent = '';
-    document.getElementById('status-hints').textContent = 'drop files A and B · select format · diff →';
-    fileAContent = null; fileAName = '';
-    fileBContent = null; fileBName = '';
+    document.getElementById('status-hints').textContent = 'drop, paste, or browse files A/B · select format · diff →';
 
     document.getElementById('sep-filea').style.display = 'none';
     document.getElementById('hdr-filea').textContent = '';
@@ -52,18 +47,20 @@
       <div id="upload-panel">
         <div class="upload-row">
           <div class="upload-field">
-            <div class="drop-zone" id="drop-a">
-              <span class="drop-zone-label" id="drop-a-label">drop file A here<br>or click to browse</span>
+            <textarea class="paste-area" id="paste-a" placeholder="drop file A here, paste, or click browse..." spellcheck="false"></textarea>
+            <div class="paste-meta">
+              <span class="paste-filename" id="filename-a"></span>
+              <button class="browse-btn" id="browse-a">browse...</button>
               <input type="file" id="file-input-a" style="display:none" />
             </div>
-            <button class="paste-btn" id="paste-a">paste A from clipboard</button>
           </div>
           <div class="upload-field">
-            <div class="drop-zone" id="drop-b">
-              <span class="drop-zone-label" id="drop-b-label">drop file B here<br>or click to browse</span>
+            <textarea class="paste-area" id="paste-b" placeholder="drop file B here, paste, or click browse..." spellcheck="false"></textarea>
+            <div class="paste-meta">
+              <span class="paste-filename" id="filename-b"></span>
+              <button class="browse-btn" id="browse-b">browse...</button>
               <input type="file" id="file-input-b" style="display:none" />
             </div>
-            <button class="paste-btn" id="paste-b">paste B from clipboard</button>
           </div>
         </div>
         <div class="upload-controls">
@@ -80,73 +77,57 @@
       </div>
     `;
 
-    setupDropZone('drop-a', 'file-input-a', 'drop-a-label', (content, name) => {
-      fileAContent = content;
-      fileAName = name;
-    });
-    setupDropZone('drop-b', 'file-input-b', 'drop-b-label', (content, name) => {
-      fileBContent = content;
-      fileBName = name;
-    });
-
-    document.getElementById('paste-a').addEventListener('click', () => pasteInto('drop-a', 'drop-a-label', (c, n) => { fileAContent = c; fileAName = n; }));
-    document.getElementById('paste-b').addEventListener('click', () => pasteInto('drop-b', 'drop-b-label', (c, n) => { fileBContent = c; fileBName = n; }));
+    setupPasteField('paste-a', 'file-input-a', 'filename-a', 'browse-a');
+    setupPasteField('paste-b', 'file-input-b', 'filename-b', 'browse-b');
     document.getElementById('up-submit').addEventListener('click', submitDiff);
   }
 
-  async function pasteInto(zoneId, labelId, onLoad) {
-    const errEl = document.getElementById('up-error');
-    errEl.textContent = '';
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!text.trim()) { errEl.textContent = 'clipboard is empty'; return; }
-      onLoad(text, '(clipboard)');
-      document.getElementById(zoneId).classList.add('loaded');
-      document.getElementById(labelId).textContent = '(clipboard)';
-    } catch (e) {
-      errEl.textContent = e.name === 'NotAllowedError' ? 'clipboard access denied' : e.message;
-    }
-  }
-
-  function setupDropZone(zoneId, inputId, labelId, onLoad) {
-    const zone  = document.getElementById(zoneId);
+  function setupPasteField(taId, inputId, filenameId, browseId) {
+    const ta = document.getElementById(taId);
     const input = document.getElementById(inputId);
-    const label = document.getElementById(labelId);
+    const filenameEl = document.getElementById(filenameId);
 
-    zone.addEventListener('click', () => input.click());
-    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
-    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-    zone.addEventListener('drop', (e) => {
+    document.getElementById(browseId).addEventListener('click', () => input.click());
+    ta.addEventListener('dragover', (e) => { e.preventDefault(); ta.classList.add('drag-over'); });
+    ta.addEventListener('dragleave', () => ta.classList.remove('drag-over'));
+    ta.addEventListener('drop', (e) => {
       e.preventDefault();
-      zone.classList.remove('drag-over');
+      ta.classList.remove('drag-over');
       const file = e.dataTransfer.files[0];
-      if (file) loadDropFile(file, zone, label, onLoad);
+      if (file) loadFileIntoTextarea(file, ta, filenameEl);
     });
     input.addEventListener('change', () => {
       const file = input.files[0];
-      if (file) loadDropFile(file, zone, label, onLoad);
+      if (file) loadFileIntoTextarea(file, ta, filenameEl);
     });
   }
 
-  function loadDropFile(file, zone, label, onLoad) {
+  function loadFileIntoTextarea(file, ta, filenameEl) {
     const reader = new FileReader();
     reader.onload = (e) => {
-      onLoad(e.target.result, file.name);
-      zone.classList.add('loaded');
-      label.textContent = file.name;
+      ta.value = e.target.result;
+      ta._fileName = file.name;
+      ta._fileContent = e.target.result;
+      ta.classList.add('loaded');
+      filenameEl.textContent = file.name;
     };
     reader.readAsText(file);
   }
 
   async function submitDiff() {
+    const taA   = document.getElementById('paste-a');
+    const taB   = document.getElementById('paste-b');
     const fmt   = document.getElementById('up-format').value;
     const errEl = document.getElementById('up-error');
 
     errEl.textContent = '';
-    if (!fileAContent || !fileBContent) {
+    if (!taA.value || !taB.value) {
       errEl.textContent = 'both files required';
       return;
     }
+
+    const nameA = (taA._fileContent !== undefined && taA.value === taA._fileContent && taA._fileName) ? taA._fileName : '(pasted)';
+    const nameB = (taB._fileContent !== undefined && taB.value === taB._fileContent && taB._fileName) ? taB._fileName : '(pasted)';
 
     const btn = document.getElementById('up-submit');
     btn.textContent = 'computing...';
@@ -157,10 +138,10 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nameA: fileAName || 'a',
-          contentA: fileAContent,
-          nameB: fileBName || 'b',
-          contentB: fileBContent,
+          nameA,
+          contentA: taA.value,
+          nameB,
+          contentB: taB.value,
           format: fmt,
         }),
       });
@@ -592,7 +573,7 @@
 
   function setupKeyboard() {
     document.addEventListener('keydown', (e) => {
-      if (e.target.tagName === 'INPUT') return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.key === '/') {
         e.preventDefault();
         document.getElementById('search-input').focus();

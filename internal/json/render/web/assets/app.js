@@ -420,8 +420,7 @@
 
   function setupKeyboard() {
     document.addEventListener('keydown', (e) => {
-      // Ignore when typing in inputs
-      if (e.target.tagName === 'INPUT') return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
       if (e.key === '/') {
         e.preventDefault();
@@ -451,63 +450,66 @@
     document.getElementById('sep-meta').style.display = 'none';
     document.getElementById('sidebar').style.display = 'none';
     document.getElementById('search-bar').style.display = 'none';
-    document.getElementById('status-hints').textContent = 'drop or paste a .json file';
+    document.getElementById('status-hints').textContent = 'drop, paste, or browse a .json file';
     document.getElementById('status-path').textContent = '.';
     document.getElementById('status-type').textContent = '';
     selectedNode = null;
 
     const panel = document.getElementById('tree-panel');
     panel.innerHTML = `
-      <div id="upload-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:32px;">
-        <div id="json-drop-zone" style="border:2px dashed var(--border-active);border-radius:6px;padding:56px 80px;text-align:center;cursor:pointer;transition:background 0.15s;max-width:480px;width:100%;">
-          <div style="color:var(--border-active);font-size:14px;font-weight:bold;margin-bottom:8px;">drop .json file here</div>
-          <div style="color:var(--muted);font-size:12px;">or click to browse</div>
+      <div id="upload-panel">
+        <textarea class="paste-area" id="json-paste-area" placeholder="drop .json file here, paste, or click browse..." spellcheck="false"></textarea>
+        <div class="paste-meta">
+          <span class="paste-filename" id="json-filename"></span>
+          <button class="browse-btn" id="json-browse-btn">browse...</button>
           <input id="json-file-input" type="file" accept=".json,application/json" style="display:none" />
+          <button class="load-btn" id="json-load-btn">load →</button>
         </div>
-        <button id="json-paste-btn" style="display:block;margin:16px auto 0;background:transparent;border:1px solid var(--border-active);border-radius:4px;color:var(--border-active);cursor:pointer;font-family:inherit;font-size:12px;padding:6px 18px;transition:background 0.15s;">paste from clipboard</button>
-        <div id="json-upload-error" style="color:#E06C75;font-size:12px;margin-top:12px;"></div>
+        <div id="json-upload-error" class="upload-error"></div>
       </div>
     `;
 
-    const dropZone = document.getElementById('json-drop-zone');
+    const ta = document.getElementById('json-paste-area');
     const fileInput = document.getElementById('json-file-input');
     const errEl = document.getElementById('json-upload-error');
+    const filenameEl = document.getElementById('json-filename');
 
-    dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = 'var(--bg-hover)'; });
-    dropZone.addEventListener('dragleave', () => { dropZone.style.background = ''; });
-    dropZone.addEventListener('drop', (e) => {
+    document.getElementById('json-browse-btn').addEventListener('click', () => fileInput.click());
+    ta.addEventListener('dragover', (e) => { e.preventDefault(); ta.classList.add('drag-over'); });
+    ta.addEventListener('dragleave', () => ta.classList.remove('drag-over'));
+    ta.addEventListener('drop', (e) => {
       e.preventDefault();
-      dropZone.style.background = '';
+      ta.classList.remove('drag-over');
       const file = e.dataTransfer.files[0];
-      if (file) loadUploadFile(file, errEl);
+      if (file) loadUploadFile(file, errEl, ta, filenameEl);
     });
     fileInput.addEventListener('change', () => {
       const file = fileInput.files[0];
-      if (file) loadUploadFile(file, errEl);
+      if (file) loadUploadFile(file, errEl, ta, filenameEl);
     });
-    document.getElementById('json-paste-btn').addEventListener('click', () => pasteUpload(errEl));
+    document.getElementById('json-load-btn').addEventListener('click', () => {
+      errEl.textContent = '';
+      if (!ta.value.trim()) { errEl.textContent = '✗ nothing to load'; return; }
+      const name = (ta._fileContent !== undefined && ta.value === ta._fileContent && ta._fileName) ? ta._fileName : '(pasted)';
+      uploadAndLoad(ta.value, name).catch(err => { errEl.textContent = '✗ ' + err.message; });
+    });
   }
 
-  function loadUploadFile(file, errEl) {
+  function loadUploadFile(file, errEl, ta, filenameEl) {
     const reader = new FileReader();
     reader.onload = async (e) => {
-      try { await uploadAndLoad(e.target.result, file.name); }
+      const content = e.target.result;
+      if (ta) {
+        ta.value = content;
+        ta._fileName = file.name;
+        ta._fileContent = content;
+      }
+      if (filenameEl) filenameEl.textContent = file.name;
+      try { await uploadAndLoad(content, file.name); }
       catch (err) { errEl.textContent = '✗ ' + err.message; }
     };
     reader.onerror = () => { errEl.textContent = '✗ failed to read file'; };
     reader.readAsText(file);
-  }
-
-  async function pasteUpload(errEl) {
-    errEl.textContent = '';
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!text.trim()) { errEl.textContent = '✗ clipboard is empty'; return; }
-      await uploadAndLoad(text, '(clipboard)');
-    } catch (e) {
-      errEl.textContent = '✗ ' + (e.name === 'NotAllowedError' ? 'clipboard access denied' : e.message);
-    }
   }
 
   async function uploadAndLoad(content, filename) {

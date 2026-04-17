@@ -266,6 +266,95 @@
 .syn-kw     { color: var(--bool-true); }
 .syn-hash   { color: var(--hash); }
 
+/* ── Upload panel ────────────────────────────────────────────────────────────── */
+
+#upload-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 32px;
+  gap: 12px;
+}
+
+.paste-area {
+  width: 100%;
+  max-width: 480px;
+  height: 200px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-active);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 16px;
+  resize: none;
+  outline: none;
+  transition: background 0.15s;
+}
+
+.paste-area:focus { border-color: var(--border-active); }
+.paste-area.drag-over { background: var(--bg-hover); }
+
+.paste-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.paste-filename {
+  color: var(--border-active);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browse-btn {
+  background: transparent;
+  border: 1px solid var(--muted);
+  border-radius: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.browse-btn:hover {
+  border-color: var(--border-active);
+  color: var(--border-active);
+}
+
+.load-btn {
+  background: transparent;
+  border: 1px solid var(--border-active);
+  border-radius: 3px;
+  color: var(--border-active);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 3px 12px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.load-btn:hover {
+  background: var(--border-active);
+  color: var(--bg);
+}
+
+.upload-error {
+  color: var(--bool-false);
+  font-size: 12px;
+}
+
 /* ── Toast ───────────────────────────────────────────────────────────────────── */
 
 #toast {
