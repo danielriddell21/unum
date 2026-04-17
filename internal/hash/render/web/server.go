@@ -12,8 +12,10 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/danielriddell21/unum/internal/hash/types"
+	"github.com/danielriddell21/unum/internal/telemetry"
 	"github.com/danielriddell21/unum/internal/web/shared"
 )
 
@@ -27,6 +29,7 @@ type Options struct {
 	DarkTheme  string // cyber | matrix | dracula | nord
 	LightTheme string // clean | solarized
 	Version    string
+	Tel        *telemetry.Telemetry
 }
 
 // deriveFn is injected to avoid import cycles.
@@ -68,7 +71,7 @@ func Start(opts Options) error {
 	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
 	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
-	mux.HandleFunc("/api/derive", handleDerive())
+	mux.HandleFunc("/api/derive", handleDerive(opts.Tel))
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 	shared.RegisterMetrics(mux)
 	shared.RegisterUmamiProxy(mux)
@@ -87,7 +90,7 @@ func Start(opts Options) error {
 	return nil
 }
 
-func handleDerive() http.HandlerFunc {
+func handleDerive(tel *telemetry.Telemetry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		input := r.URL.Query().Get("input")
 		if input == "" {
@@ -98,7 +101,17 @@ func handleDerive() http.HandlerFunc {
 			http.Error(w, "derive not configured", http.StatusInternalServerError)
 			return
 		}
+
+		ctx, span := tel.Tracer().Start(r.Context(), "hash.derive")
+		defer span.End()
+
 		result := deriveFn(input)
+		span.SetAttributes(attribute.String("hash.input_length", strconv.Itoa(len(input))))
+		tel.TrackEvent("hash-derive", "/api/derive", map[string]string{
+			"input_length": strconv.Itoa(len(input)),
+		})
+		_ = ctx // used by Tracer().Start above
+
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(result)
 	}

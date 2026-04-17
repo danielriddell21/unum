@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
+	ometric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/danielriddell21/unum/internal/config"
@@ -99,7 +100,7 @@ func runHash(f *flags, args []string) error {
 	} else if f.web {
 		mode = "web"
 	}
-	_, span := f.tel.Tracer().Start(context.Background(), "hash.execute",
+	ctx, span := f.tel.Tracer().Start(context.Background(), "hash.execute",
 		trace.WithAttributes(
 			attribute.String("tool", "hash"),
 			attribute.String("mode", mode),
@@ -111,6 +112,13 @@ func runHash(f *flags, args []string) error {
 	defer span.End()
 
 	if f.ui {
+		f.tel.M.Invocations.Add(ctx, 1, ometric.WithAttributes(
+			attribute.String("tool", "hash"),
+			attribute.String("mode", "tui"),
+			attribute.String("os", runtime.GOOS),
+			attribute.String("arch", runtime.GOARCH),
+			attribute.String("version", f.version),
+		))
 		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
 		hashTUI.ApplyPalette(panels.ResolvePalette(f.theme))
 		hashTUI.SetFuncs(derive.Derive, history.Append, history.Load)
@@ -123,9 +131,16 @@ func runHash(f *flags, args []string) error {
 	}
 
 	if f.web {
+		f.tel.M.Invocations.Add(ctx, 1, ometric.WithAttributes(
+			attribute.String("tool", "hash"),
+			attribute.String("mode", "web"),
+			attribute.String("os", runtime.GOOS),
+			attribute.String("arch", runtime.GOARCH),
+			attribute.String("version", f.version),
+		))
 		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
 		hashWeb.SetFuncs(derive.Derive)
-		if err := hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version}); err != nil {
+		if err := hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version, Tel: f.tel}); err != nil {
 			return fmt.Errorf("hash web: %w", err)
 		}
 		return nil
@@ -139,18 +154,25 @@ func runHash(f *flags, args []string) error {
 	r := derive.Derive(input)
 	_ = history.Append(input)
 
+	outputField := "full"
 	switch {
 	case f.portOnly:
+		outputField = "port"
 		static.RenderSingle(os.Stdout, fmt.Sprintf("%d", r.Port))
 	case f.uuidOnly:
+		outputField = "uuid"
 		static.RenderSingle(os.Stdout, r.UUID)
 	case f.colorOnly:
+		outputField = "color"
 		static.RenderSingle(os.Stdout, r.Color)
 	case f.shortOnly:
+		outputField = "short"
 		static.RenderSingle(os.Stdout, r.Short)
 	case f.emojiOnly:
+		outputField = "emoji"
 		static.RenderSingle(os.Stdout, r.Emoji)
 	case f.phraseOnly:
+		outputField = "phrase"
 		static.RenderSingle(os.Stdout, r.Phrase)
 	default:
 		opts := static.Options{
@@ -161,6 +183,15 @@ func runHash(f *flags, args []string) error {
 		static.Boot(os.Stderr, opts)
 		static.RenderTable(os.Stdout, r, opts)
 	}
+
+	span.SetAttributes(attribute.String("hash.output_field", outputField))
+	f.tel.M.Invocations.Add(ctx, 1, ometric.WithAttributes(
+		attribute.String("tool", "hash"),
+		attribute.String("mode", "cli"),
+		attribute.String("os", runtime.GOOS),
+		attribute.String("arch", runtime.GOARCH),
+		attribute.String("version", f.version),
+	))
 
 	return nil
 }

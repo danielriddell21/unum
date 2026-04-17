@@ -10,6 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	ometric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/danielriddell21/unum/internal/config"
@@ -103,7 +105,7 @@ func runDiff(f *flags, fileA, fileB string) error {
 	} else if f.web {
 		mode = "web"
 	}
-	_, span := f.tel.Tracer().Start(context.Background(), "diff.execute",
+	ctx, span := f.tel.Tracer().Start(context.Background(), "diff.execute",
 		trace.WithAttributes(
 			attribute.String("tool", "diff"),
 			attribute.String("mode", mode),
@@ -116,10 +118,22 @@ func runDiff(f *flags, fileA, fileB string) error {
 
 	dataA, err := os.ReadFile(fileA)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "read")
+		f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+			attribute.String("tool", "diff"),
+			attribute.String("error_type", "read"),
+		))
 		return fmt.Errorf("cannot read %s: %w", fileA, err)
 	}
 	dataB, err := os.ReadFile(fileB)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "read")
+		f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+			attribute.String("tool", "diff"),
+			attribute.String("error_type", "read"),
+		))
 		return fmt.Errorf("cannot read %s: %w", fileB, err)
 	}
 
@@ -149,12 +163,46 @@ func runDiff(f *flags, fileA, fileB string) error {
 		diff, err = parse.Text(dataA, dataB, f.context)
 	}
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "parse")
+		f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+			attribute.String("tool", "diff"),
+			attribute.String("error_type", "parse"),
+		))
 		return fmt.Errorf("diff: %w", err)
 	}
-	bootDone(diff.Added, diff.Removed, diff.Modified, time.Since(start))
+
+	elapsed := time.Since(start)
+	bootDone(diff.Added, diff.Removed, diff.Modified, elapsed)
 	diff.FileA = fileA
 	diff.FileB = fileB
 	diff.Format = fmt_
+
+	span.SetAttributes(
+		attribute.Int("diff.size_bytes_a", len(dataA)),
+		attribute.Int("diff.size_bytes_b", len(dataB)),
+		attribute.String("diff.format", fmt_.String()),
+		attribute.Int("diff.added", diff.Added),
+		attribute.Int("diff.removed", diff.Removed),
+		attribute.Int("diff.modified", diff.Modified),
+	)
+	f.tel.M.Invocations.Add(ctx, 1, ometric.WithAttributes(
+		attribute.String("tool", "diff"),
+		attribute.String("mode", mode),
+		attribute.String("os", runtime.GOOS),
+		attribute.String("arch", runtime.GOARCH),
+		attribute.String("version", f.version),
+	))
+	f.tel.M.InputBytes.Record(ctx, int64(len(dataA)+len(dataB)), ometric.WithAttributes(
+		attribute.String("tool", "diff"),
+	))
+	f.tel.M.Duration.Record(ctx, elapsed.Seconds(), ometric.WithAttributes(
+		attribute.String("tool", "diff"),
+		attribute.String("mode", mode),
+	))
+	f.tel.M.DiffChanges.Add(ctx, int64(diff.Added), ometric.WithAttributes(attribute.String("kind", "added")))
+	f.tel.M.DiffChanges.Add(ctx, int64(diff.Removed), ometric.WithAttributes(attribute.String("kind", "removed")))
+	f.tel.M.DiffChanges.Add(ctx, int64(diff.Modified), ometric.WithAttributes(attribute.String("kind", "modified")))
 
 	if f.ui {
 		if err := tui.Start(diff, f.theme, f.version); err != nil {
@@ -163,13 +211,19 @@ func runDiff(f *flags, fileA, fileB string) error {
 		return nil
 	}
 	if f.web {
-		if err := diffweb.Start(diff, diffweb.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version}); err != nil {
+		if err := diffweb.Start(diff, diffweb.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version, Tel: f.tel}); err != nil {
 			return fmt.Errorf("diff web: %w", err)
 		}
 		return nil
 	}
 
 	if err := static.Render(os.Stdout, diff, opts); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "render")
+		f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+			attribute.String("tool", "diff"),
+			attribute.String("error_type", "render"),
+		))
 		return fmt.Errorf("diff render: %w", err)
 	}
 	return nil

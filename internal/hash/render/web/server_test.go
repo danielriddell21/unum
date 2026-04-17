@@ -40,7 +40,7 @@ func TestHandleDerive_ReturnsResult(t *testing.T) {
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/derive?input=my-service", nil)
 	w := httptest.NewRecorder()
 
-	handleDerive()(w, req)
+	handleDerive(nil)(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status %d, want 200", w.Code)
@@ -62,7 +62,7 @@ func TestHandleDerive_MissingInput(t *testing.T) {
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/derive", nil)
 	w := httptest.NewRecorder()
 
-	handleDerive()(w, req)
+	handleDerive(nil)(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("status %d, want 400", w.Code)
@@ -73,7 +73,7 @@ func TestHandleDerive_Deterministic(t *testing.T) {
 	makeReq := func() types.Result {
 		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/derive?input=test-svc", nil)
 		w := httptest.NewRecorder()
-		handleDerive()(w, req)
+		handleDerive(nil)(w, req)
 		var r types.Result
 		_ = json.NewDecoder(w.Body).Decode(&r)
 		return r

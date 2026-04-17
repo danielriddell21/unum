@@ -18,6 +18,7 @@ import (
 // All methods are safe to call on a nil or disabled instance.
 type Telemetry struct {
 	Umami    *UmamiClient
+	M        Metrics
 	tracer   otrace.Tracer
 	meter    ometric.Meter
 	shutdown func(context.Context) error
@@ -31,8 +32,9 @@ func Init(cfg config.Config, serviceName, version string) *Telemetry {
 
 	shutdown, err := initOTel(cfg, serviceName, version)
 	if err != nil {
-		t.tracer = nooptrace.NewTracerProvider().Tracer(serviceName)
 		t.meter = noop.NewMeterProvider().Meter(serviceName)
+		t.tracer = nooptrace.NewTracerProvider().Tracer(serviceName)
+		t.M = newMetrics(t.meter)
 		t.shutdown = func(context.Context) error { return nil }
 		return t
 	}
@@ -40,6 +42,7 @@ func Init(cfg config.Config, serviceName, version string) *Telemetry {
 	t.shutdown = shutdown
 	t.tracer = otel.GetTracerProvider().Tracer(serviceName)
 	t.meter = otel.GetMeterProvider().Meter(serviceName)
+	t.M = newMetrics(t.meter)
 
 	// Umami — only for web mode (env vars set in k8s).
 	t.Umami = NewUmami(

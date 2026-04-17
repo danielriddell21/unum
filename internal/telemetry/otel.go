@@ -78,6 +78,7 @@ func initOTel(cfg config.Config, serviceName, version string) (func(context.Cont
 			semconv.ServiceName(serviceName),
 			semconv.ServiceVersion(version),
 			attribute.String("deployment.environment", env),
+			attribute.String("client.id", cfg.ClientID),
 		),
 	)
 	if err != nil {

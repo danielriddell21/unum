@@ -11,6 +11,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	ometric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/danielriddell21/unum/internal/config"
@@ -143,6 +145,12 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "read")
+		f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+			attribute.String("tool", "json"),
+			attribute.String("error_type", "read"),
+		))
 		return fmt.Errorf("cannot read %s: %w", filename, err)
 	}
 
@@ -163,6 +171,12 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 	if f.validateOnly {
 		if err := parse.Validate(data); err != nil {
 			static.RenderError(os.Stderr, err, renderOpts)
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "validate")
+			f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+				attribute.String("tool", "json"),
+				attribute.String("error_type", "parse"),
+			))
 			span.End()
 			os.Exit(1) //nolint:gocritic // validate-only mode requires hard exit for CI tooling
 		}
@@ -175,17 +189,40 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 	if err := parse.Validate(data); err != nil {
 		fmt.Fprintln(os.Stderr)
 		static.RenderError(os.Stderr, err, renderOpts)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "validate")
+		f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+			attribute.String("tool", "json"),
+			attribute.String("error_type", "parse"),
+		))
 		span.End()
 		os.Exit(1) //nolint:gocritic // validation failure requires hard exit for CI tooling
 	}
 
+	_, parseSpan := f.tel.Tracer().Start(ctx, "json.parse")
 	root, err := parse.Parse(data)
 	if err != nil {
+		parseSpan.RecordError(err)
+		parseSpan.SetStatus(codes.Error, err.Error())
+		parseSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "parse")
+		f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+			attribute.String("tool", "json"),
+			attribute.String("error_type", "parse"),
+		))
 		return fmt.Errorf("parse: %w", err)
 	}
+	parseSpan.End()
 
 	nodeCount := root.CountNodes()
 	done(nodeCount, time.Since(start))
+	span.SetAttributes(
+		attribute.Int("json.size_bytes", len(data)),
+		attribute.Int("json.node_count", nodeCount),
+		attribute.String("json.root_kind", root.Kind.String()),
+	)
+	f.tel.M.JSONNodes.Record(ctx, int64(nodeCount))
 
 	// ── Output-mode lenses (mutually exclusive) ───────────────────────────────
 
@@ -193,9 +230,16 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 		result, err := query.Execute(root, f.jqExpr)
 		if err != nil {
 			static.RenderError(os.Stderr, err, renderOpts)
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "query")
+			f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+				attribute.String("tool", "json"),
+				attribute.String("error_type", "query"),
+			))
 			span.End()
 			os.Exit(2) //nolint:gocritic // query failure requires hard exit with distinct code
 		}
+		recordSuccess(ctx, f, mode, len(data), time.Since(start))
 		fmt.Println(result)
 		return nil
 	}
@@ -207,8 +251,15 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 			TypeName:    f.typegenType,
 		})
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "typegen")
+			f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+				attribute.String("tool", "json"),
+				attribute.String("error_type", "render"),
+			))
 			return fmt.Errorf("typegen: %w", err)
 		}
+		recordSuccess(ctx, f, mode, len(data), time.Since(start))
 		fmt.Print(result)
 		return nil
 	}
@@ -216,8 +267,15 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 	if f.transformYAML {
 		yamlBytes, err := transform.ToYAML(root)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "transform")
+			f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+				attribute.String("tool", "json"),
+				attribute.String("error_type", "render"),
+			))
 			return fmt.Errorf("transform: %w", err)
 		}
+		recordSuccess(ctx, f, mode, len(data), time.Since(start))
 		fmt.Print(string(yamlBytes))
 		return nil
 	}
@@ -234,11 +292,23 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 		merkle.Analyzer{},
 	}
 	suite := analyze.Build(analyzeOpts, allAnalyzers)
+	_, analyzeSpan := f.tel.Tracer().Start(ctx, "json.analyze")
 	if err := suite.Run(ctx, root, analyzeOpts); err != nil {
+		analyzeSpan.RecordError(err)
+		analyzeSpan.SetStatus(codes.Error, err.Error())
+		analyzeSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "analyze")
+		f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+			attribute.String("tool", "json"),
+			attribute.String("error_type", "analyze"),
+		))
 		return fmt.Errorf("analyze: %w", err)
 	}
+	analyzeSpan.End()
 
 	if f.hashOnly {
+		recordSuccess(ctx, f, mode, len(data), time.Since(start))
 		fmt.Println(merkle.RootHash(root))
 		return nil
 	}
@@ -246,6 +316,7 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 	// ── TUI / Web modes ───────────────────────────────────────────────────────
 
 	if f.ui {
+		recordSuccess(ctx, f, mode, len(data), time.Since(start))
 		if err := tui.Start(root, filename, f.theme, f.version); err != nil {
 			return fmt.Errorf("json TUI: %w", err)
 		}
@@ -253,6 +324,7 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 	}
 
 	if f.web {
+		recordSuccess(ctx, f, mode, len(data), time.Since(start))
 		if err := web.Start(root, web.Options{
 			Port:       f.port,
 			Filename:   filename,
@@ -260,6 +332,7 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 			DarkTheme:  f.theme,
 			LightTheme: f.lightTheme,
 			Version:    f.version,
+			Tel:        f.tel,
 		}); err != nil {
 			return fmt.Errorf("json web: %w", err)
 		}
@@ -271,9 +344,33 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // disp
 	renderOpts.ShowStats = f.showStats
 	renderOpts.ShowMerkle = f.showMerkle
 	if err := static.Render(os.Stdout, root, renderOpts); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "render")
+		f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+			attribute.String("tool", "json"),
+			attribute.String("error_type", "render"),
+		))
 		return fmt.Errorf("json render: %w", err)
 	}
+	recordSuccess(ctx, f, mode, len(data), time.Since(start))
 	return nil
+}
+
+func recordSuccess(ctx context.Context, f *flags, mode string, sizeBytes int, elapsed time.Duration) {
+	f.tel.M.Invocations.Add(ctx, 1, ometric.WithAttributes(
+		attribute.String("tool", "json"),
+		attribute.String("mode", mode),
+		attribute.String("os", runtime.GOOS),
+		attribute.String("arch", runtime.GOARCH),
+		attribute.String("version", f.version),
+	))
+	f.tel.M.InputBytes.Record(ctx, int64(sizeBytes), ometric.WithAttributes(
+		attribute.String("tool", "json"),
+	))
+	f.tel.M.Duration.Record(ctx, elapsed.Seconds(), ometric.WithAttributes(
+		attribute.String("tool", "json"),
+		attribute.String("mode", mode),
+	))
 }
 
 func runJSONNoFile(f *flags) error {
@@ -302,7 +399,7 @@ func runJSONNoFile(f *flags) error {
 		return nil
 	}
 	if f.web {
-		if err := web.StartServer(web.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version}); err != nil {
+		if err := web.StartServer(web.Options{Port: f.port, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version, Tel: f.tel}); err != nil {
 			return fmt.Errorf("json web: %w", err)
 		}
 		return nil

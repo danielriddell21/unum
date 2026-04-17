@@ -13,10 +13,13 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 
 	"github.com/danielriddell21/unum/internal/diff/format"
 	"github.com/danielriddell21/unum/internal/diff/node"
 	"github.com/danielriddell21/unum/internal/diff/parse"
+	"github.com/danielriddell21/unum/internal/telemetry"
 	"github.com/danielriddell21/unum/internal/web/shared"
 )
 
@@ -30,6 +33,7 @@ type Options struct {
 	DarkTheme  string // cyber | matrix | dracula | nord
 	LightTheme string // clean | solarized
 	Version    string
+	Tel        *telemetry.Telemetry
 }
 
 // Start launches the diff web server, auto-opens the browser, and blocks until
@@ -71,7 +75,7 @@ func Start(d *node.Diff, opts Options) error {
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
 	mux.HandleFunc("/api/diff", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			handleServerDiff()(w, r)
+			handleServerDiff(opts.Tel)(w, r)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -249,7 +253,7 @@ func StartServer(opts Options) error {
 	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
 	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
-	mux.HandleFunc("/api/diff", handleServerDiff())
+	mux.HandleFunc("/api/diff", handleServerDiff(opts.Tel))
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 	shared.RegisterMetrics(mux)
 	shared.RegisterUmamiProxy(mux)
@@ -268,7 +272,7 @@ func StartServer(opts Options) error {
 	return nil
 }
 
-func handleServerDiff() http.HandlerFunc {
+func handleServerDiff(tel *telemetry.Telemetry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			w.WriteHeader(http.StatusNoContent)
@@ -279,13 +283,20 @@ func handleServerDiff() http.HandlerFunc {
 			return
 		}
 
+		ctx, span := tel.Tracer().Start(r.Context(), "diff.compute")
+		defer span.End()
+
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "read body")
 			http.Error(w, "cannot read body", http.StatusBadRequest)
 			return
 		}
 		var req postDiffRequest
 		if err := json.Unmarshal(body, &req); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "invalid JSON body")
 			http.Error(w, "invalid JSON body", http.StatusBadRequest)
 			return
 		}
@@ -310,12 +321,29 @@ func handleServerDiff() http.HandlerFunc {
 			diff, err = parse.Text(dataA, dataB, 3)
 		}
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "diff")
 			http.Error(w, "diff: "+err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 		diff.FileA = req.NameA
 		diff.FileB = req.NameB
 		diff.Format = fmt_
+
+		span.SetAttributes(
+			attribute.Int("diff.size_bytes_a", len(dataA)),
+			attribute.Int("diff.size_bytes_b", len(dataB)),
+			attribute.String("diff.format", fmt_.String()),
+			attribute.Int("diff.added", diff.Added),
+			attribute.Int("diff.removed", diff.Removed),
+			attribute.Int("diff.modified", diff.Modified),
+		)
+		tel.TrackEvent("diff-compute", "/api/diff", map[string]string{
+			"format":  fmt_.String(),
+			"added":   strconv.Itoa(diff.Added),
+			"removed": strconv.Itoa(diff.Removed),
+		})
+		_ = ctx // used by Tracer().Start above
 
 		payload := buildPayload(diff)
 

@@ -17,6 +17,9 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	ometric "go.opentelemetry.io/otel/metric"
 
 	"github.com/danielriddell21/unum/internal/json/analyze"
 	"github.com/danielriddell21/unum/internal/json/lens/merkle"
@@ -25,6 +28,7 @@ import (
 	"github.com/danielriddell21/unum/internal/json/lens/typegen"
 	"github.com/danielriddell21/unum/internal/json/node"
 	"github.com/danielriddell21/unum/internal/json/parse"
+	"github.com/danielriddell21/unum/internal/telemetry"
 	"github.com/danielriddell21/unum/internal/web/shared"
 )
 
@@ -39,6 +43,7 @@ type Options struct {
 	DarkTheme  string // cyber | matrix | dracula | nord
 	LightTheme string // clean | solarized
 	Version    string
+	Tel        *telemetry.Telemetry
 }
 
 // Start launches the web server, auto-opens the browser, and blocks until the
@@ -101,7 +106,7 @@ func Start(root *node.Node, opts Options) error {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(payloadBytes)
 	})
-	mux.HandleFunc("/api/upload", handleUpload())
+	mux.HandleFunc("/api/upload", handleUpload(opts.Tel))
 	mux.HandleFunc("/api/query", handleQuery(root))
 	shared.RegisterMetrics(mux)
 	shared.RegisterUmamiProxy(mux)
@@ -315,7 +320,7 @@ func StartServer(opts Options) error {
 	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
 	mux.HandleFunc("/api/tree", handleKeyedTree())
-	mux.HandleFunc("/api/upload", handleUpload())
+	mux.HandleFunc("/api/upload", handleUpload(opts.Tel))
 	mux.HandleFunc("/api/query", handleKeyedQuery())
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 	shared.RegisterMetrics(mux)
@@ -377,19 +382,27 @@ type uploadRequest struct {
 	Content  string `json:"content"`
 }
 
-func handleUpload() http.HandlerFunc {
+func handleUpload(tel *telemetry.Telemetry) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+
+		ctx, span := tel.Tracer().Start(r.Context(), "json.upload.process")
+		defer span.End()
+
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "read body")
 			http.Error(w, "cannot read body", http.StatusBadRequest)
 			return
 		}
 		var req uploadRequest
 		if err := json.Unmarshal(body, &req); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "invalid JSON body")
 			http.Error(w, "invalid JSON body", http.StatusBadRequest)
 			return
 		}
@@ -399,11 +412,15 @@ func handleUpload() http.HandlerFunc {
 		}
 		root, err := parse.Parse([]byte(req.Content))
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "parse")
 			http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		payload, err := buildPayload(root, req.Filename)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "build payload")
 			http.Error(w, "build payload: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -411,9 +428,22 @@ func handleUpload() http.HandlerFunc {
 
 		payloadBytes, err := json.Marshal(payload)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "marshal payload")
 			http.Error(w, "marshal payload: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		nodeCount := root.CountNodes()
+		span.SetAttributes(
+			attribute.Int("json.node_count", nodeCount),
+			attribute.Int("json.size_bytes", len(req.Content)),
+		)
+		tel.M.WebUploads.Add(ctx, 1, ometric.WithAttributes(attribute.String("tool", "json")))
+		tel.TrackEvent("json-upload", "/api/upload", map[string]string{
+			"node_count": strconv.Itoa(nodeCount),
+			"size_bytes": strconv.Itoa(len(req.Content)),
+		})
 
 		key := generateKey()
 		rootCache.Store(key, root)

@@ -80,7 +80,7 @@ func terraformDiff() *node.Diff {
 // ─── handleServerDiff ────────────────────────────────────────────────────────
 
 func TestHandleServerDiff_GET_Returns204(t *testing.T) {
-	handler := handleServerDiff()
+	handler := handleServerDiff(nil)
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/diff", nil)
 	w := httptest.NewRecorder()
 	handler(w, req)
@@ -90,7 +90,7 @@ func TestHandleServerDiff_GET_Returns204(t *testing.T) {
 }
 
 func TestHandleServerDiff_POST_Text(t *testing.T) {
-	handler := handleServerDiff()
+	handler := handleServerDiff(nil)
 	body := postDiffRequest{
 		NameA:    "a.txt",
 		ContentA: "hello\nworld\n",
@@ -118,7 +118,7 @@ func TestHandleServerDiff_POST_Text(t *testing.T) {
 }
 
 func TestHandleServerDiff_POST_JSON(t *testing.T) {
-	handler := handleServerDiff()
+	handler := handleServerDiff(nil)
 	body := postDiffRequest{
 		NameA:    "a.json",
 		ContentA: `{"version":"1.0"}`,
@@ -143,7 +143,7 @@ func TestHandleServerDiff_POST_JSON(t *testing.T) {
 }
 
 func TestHandleServerDiff_POST_MissingContent(t *testing.T) {
-	handler := handleServerDiff()
+	handler := handleServerDiff(nil)
 	body := postDiffRequest{NameA: "a.txt", ContentA: "hello"}
 	b, _ := json.Marshal(body)
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/diff", bytes.NewReader(b))
@@ -155,7 +155,7 @@ func TestHandleServerDiff_POST_MissingContent(t *testing.T) {
 }
 
 func TestHandleServerDiff_POST_InvalidJSON(t *testing.T) {
-	handler := handleServerDiff()
+	handler := handleServerDiff(nil)
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/diff", bytes.NewReader([]byte("not json")))
 	w := httptest.NewRecorder()
 	handler(w, req)
@@ -165,7 +165,7 @@ func TestHandleServerDiff_POST_InvalidJSON(t *testing.T) {
 }
 
 func TestHandleServerDiff_MethodNotAllowed(t *testing.T) {
-	handler := handleServerDiff()
+	handler := handleServerDiff(nil)
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodDelete, "/api/diff", nil)
 	w := httptest.NewRecorder()
 	handler(w, req)
