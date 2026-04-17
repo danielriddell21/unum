@@ -12,6 +12,13 @@ import (
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
+const (
+	errFilePickerFmt = "file picker: %w"
+	errParseFmt      = "parse: %w"
+	errCannotReadFmt = "cannot read %s: %w"
+	msgInvalidJSON   = "invalid JSON: %v\n"
+)
+
 // applyTheme applies the named palette to all style vars.
 func applyTheme(theme string) {
 	ApplyPalette(tuipanels.ResolvePalette(theme))
@@ -21,56 +28,14 @@ func applyTheme(theme string) {
 // It takes over the terminal (AltScreen) and restores it cleanly on exit.
 // If the user presses 'o' to open a new file, the picker is shown and the
 // explorer restarts with the selected file.
-func Start(root *node.Node, filename string, theme string, version string) error {
+func Start(root *node.Node, filename, theme, version string) error {
 	applyTheme(theme)
-
-	for { //nolint:dupl // mirrors startLoop body; Start applies theme first, startLoop skips it — extracting shared loop would require a theme parameter or closure
-		m := NewModel(root, filename, version)
-		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
-
-		result, err := p.Run()
-		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
-			return fmt.Errorf("json TUI: %w", err)
-		}
-
-		final, ok := result.(Model)
-		if !ok || !final.ReloadRequest {
-			return nil
-		}
-
-		// User wants to pick a different file.
-		cwd, _ := os.Getwd()
-		pm := newPickerModel(cwd)
-		pp := tea.NewProgram(pm, tea.WithAltScreen())
-		pr, err := pp.Run()
-		if err != nil {
-			return fmt.Errorf("file picker: %w", err)
-		}
-		picked, ok := pr.(pickerModel)
-		if !ok || picked.Selected == "" {
-			return nil // picker dismissed — exit cleanly
-		}
-
-		data, err := os.ReadFile(picked.Selected)
-		if err != nil {
-			return fmt.Errorf("cannot read %s: %w", picked.Selected, err)
-		}
-		if err := parse.Validate(data); err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "invalid JSON: %v\n", err)
-			return nil
-		}
-		root, err = parse.Parse(data)
-		if err != nil {
-			return fmt.Errorf("parse: %w", err)
-		}
-		filename = picked.Selected
-	}
+	return startLoop(root, filename, version)
 }
 
 // StartWithPicker launches a file picker TUI. Once a .json file is selected
 // it parses it and transitions directly into the main JSON explorer.
-func StartWithPicker(initialDir string, theme string, version string) error {
+func StartWithPicker(initialDir, theme, version string) error {
 	applyTheme(theme)
 
 	pm := newPickerModel(initialDir)
@@ -78,7 +43,7 @@ func StartWithPicker(initialDir string, theme string, version string) error {
 
 	result, err := p.Run()
 	if err != nil {
-		return fmt.Errorf("file picker: %w", err)
+		return fmt.Errorf(errFilePickerFmt, err)
 	}
 
 	picked, ok := result.(pickerModel)
@@ -88,24 +53,23 @@ func StartWithPicker(initialDir string, theme string, version string) error {
 
 	data, err := os.ReadFile(picked.Selected)
 	if err != nil {
-		return fmt.Errorf("cannot read %s: %w", picked.Selected, err)
+		return fmt.Errorf(errCannotReadFmt, picked.Selected, err)
 	}
 	if err := parse.Validate(data); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "invalid JSON: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, msgInvalidJSON, err)
 		os.Exit(1)
 	}
 	root, err := parse.Parse(data)
 	if err != nil {
-		return fmt.Errorf("parse: %w", err)
+		return fmt.Errorf(errParseFmt, err)
 	}
 
-	// Theme already applied — call Start with empty theme to skip re-applying
 	return startLoop(root, picked.Selected, version)
 }
 
-// startLoop runs the main TUI loop without re-applying the theme.
-func startLoop(root *node.Node, filename string, version string) error {
-	for { //nolint:dupl // mirrors Start body; Start applies theme first, startLoop skips it — extracting shared loop would require a theme parameter or closure
+// startLoop runs the main TUI loop. Theme must already have been applied.
+func startLoop(root *node.Node, filename, version string) error {
+	for {
 		m := NewModel(root, filename, version)
 		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
@@ -120,30 +84,44 @@ func startLoop(root *node.Node, filename string, version string) error {
 			return nil
 		}
 
-		cwd, _ := os.Getwd()
-		pm := newPickerModel(cwd)
-		pp := tea.NewProgram(pm, tea.WithAltScreen())
-		pr, err := pp.Run()
+		newRoot, newFilename, ok, err := promptAndReload()
 		if err != nil {
-			return fmt.Errorf("file picker: %w", err)
+			return err
 		}
-		picked, ok := pr.(pickerModel)
-		if !ok || picked.Selected == "" {
+		if !ok {
 			return nil
 		}
-
-		data, err := os.ReadFile(picked.Selected)
-		if err != nil {
-			return fmt.Errorf("cannot read %s: %w", picked.Selected, err)
-		}
-		if err := parse.Validate(data); err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "invalid JSON: %v\n", err)
-			return nil
-		}
-		root, err = parse.Parse(data)
-		if err != nil {
-			return fmt.Errorf("parse: %w", err)
-		}
-		filename = picked.Selected
+		root, filename = newRoot, newFilename
 	}
+}
+
+// promptAndReload shows the file picker and parses the selected JSON file.
+// Returns ok=false (with nil err) when the user cancels or validation fails —
+// the caller should stop the reload loop without surfacing an error.
+func promptAndReload() (*node.Node, string, bool, error) {
+	cwd, _ := os.Getwd()
+	pm := newPickerModel(cwd)
+	pp := tea.NewProgram(pm, tea.WithAltScreen())
+	pr, err := pp.Run()
+	if err != nil {
+		return nil, "", false, fmt.Errorf(errFilePickerFmt, err)
+	}
+	picked, ok := pr.(pickerModel)
+	if !ok || picked.Selected == "" {
+		return nil, "", false, nil
+	}
+
+	data, err := os.ReadFile(picked.Selected)
+	if err != nil {
+		return nil, "", false, fmt.Errorf(errCannotReadFmt, picked.Selected, err)
+	}
+	if err := parse.Validate(data); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, msgInvalidJSON, err)
+		return nil, "", false, nil
+	}
+	root, err := parse.Parse(data)
+	if err != nil {
+		return nil, "", false, fmt.Errorf(errParseFmt, err)
+	}
+	return root, picked.Selected, true, nil
 }

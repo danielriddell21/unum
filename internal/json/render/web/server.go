@@ -35,6 +35,14 @@ import (
 //go:embed assets/*
 var assets embed.FS
 
+const (
+	contentTypeHdr  = "Content-Type"
+	contentTypeJSON = "application/json"
+	contentTypeCSS  = "text/css"
+	contentTypeJS   = "application/javascript"
+	errKeyNotFound  = "key not found"
+)
+
 // Options configures the web server.
 type Options struct {
 	Port       int    // 0 = find a free port
@@ -85,27 +93,14 @@ func Start(root *node.Node, opts Options) error {
 
 	// Static assets
 	d := shared.NewIndexData(opts.DarkTheme, opts.LightTheme, opts.Version)
-	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
-	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
-	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
-	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
+	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", contentTypeCSS))
+	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", contentTypeJS))
+	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", contentTypeCSS))
+	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", contentTypeJS))
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 
 	// API
-	mux.HandleFunc("/api/tree", func(w http.ResponseWriter, r *http.Request) {
-		if key := r.URL.Query().Get("key"); key != "" {
-			v, ok := payloadCache.Load(key)
-			if !ok {
-				http.Error(w, "key not found", http.StatusNotFound)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(v.([]byte)) //nolint:gosec // v is always []byte; type assertion is safe
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(payloadBytes)
-	})
+	mux.HandleFunc("/api/tree", handleTree(payloadBytes))
 	mux.HandleFunc("/api/upload", handleUpload(opts.Tel))
 	mux.HandleFunc("/api/query", handleQuery(root))
 	shared.RegisterMetrics(mux)
@@ -315,10 +310,10 @@ func StartServer(opts Options) error {
 
 	d := shared.NewIndexData(opts.DarkTheme, opts.LightTheme, opts.Version)
 	mux := http.NewServeMux()
-	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
-	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
-	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
-	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
+	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", contentTypeCSS))
+	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", contentTypeJS))
+	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", contentTypeCSS))
+	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", contentTypeJS))
 	mux.HandleFunc("/api/tree", handleKeyedTree())
 	mux.HandleFunc("/api/upload", handleUpload(opts.Tel))
 	mux.HandleFunc("/api/query", handleKeyedQuery())
@@ -339,6 +334,26 @@ func StartServer(opts Options) error {
 	return nil
 }
 
+// handleTree serves /api/tree — either the pre-built payload for the file
+// passed on the command line, or the per-session payload stored under the
+// key returned from /api/upload.
+func handleTree(payloadBytes []byte) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if key := r.URL.Query().Get("key"); key != "" {
+			v, ok := payloadCache.Load(key)
+			if !ok {
+				http.Error(w, errKeyNotFound, http.StatusNotFound)
+				return
+			}
+			w.Header().Set(contentTypeHdr, contentTypeJSON)
+			_, _ = w.Write(v.([]byte)) //nolint:gosec // v is always []byte; type assertion is safe
+			return
+		}
+		w.Header().Set(contentTypeHdr, contentTypeJSON)
+		_, _ = w.Write(payloadBytes)
+	}
+}
+
 // handleKeyedTree serves GET /api/tree — returns 204 when no key is given
 // (signals the frontend to show the upload panel), or the pre-built payload
 // for a key returned by /api/upload.
@@ -351,10 +366,10 @@ func handleKeyedTree() http.HandlerFunc {
 		}
 		v, ok := payloadCache.Load(key)
 		if !ok {
-			http.Error(w, "key not found", http.StatusNotFound)
+			http.Error(w, errKeyNotFound, http.StatusNotFound)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(contentTypeHdr, contentTypeJSON)
 		_, _ = w.Write(v.([]byte)) //nolint:gosec // v is always []byte; type assertion is safe
 	}
 }
@@ -369,7 +384,7 @@ func handleKeyedQuery() http.HandlerFunc {
 		}
 		v, ok := rootCache.Load(key)
 		if !ok {
-			writeJSON(w, queryResponse{Error: "key not found"})
+			writeJSON(w, queryResponse{Error: errKeyNotFound})
 			return
 		}
 		handleQuery(v.(*node.Node))(w, r) //nolint:gosec // v is always *node.Node; type assertion is safe
@@ -449,7 +464,7 @@ func handleUpload(tel *telemetry.Telemetry) http.HandlerFunc {
 		rootCache.Store(key, root)
 		payloadCache.Store(key, payloadBytes)
 
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(contentTypeHdr, contentTypeJSON)
 		_ = json.NewEncoder(w).Encode(map[string]string{"key": key})
 	}
 }

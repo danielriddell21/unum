@@ -26,6 +26,11 @@ import (
 //go:embed assets/*
 var assets embed.FS
 
+const (
+	contentTypeCSS = "text/css"
+	contentTypeJS  = "application/javascript"
+)
+
 // Options configures the diff web server.
 type Options struct {
 	Port       int
@@ -69,10 +74,10 @@ func Start(d *node.Diff, opts Options) error {
 
 	idx := shared.NewIndexData(opts.DarkTheme, opts.LightTheme, opts.Version)
 	mux := http.NewServeMux()
-	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
-	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
-	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
-	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
+	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", contentTypeCSS))
+	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", contentTypeJS))
+	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", contentTypeCSS))
+	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", contentTypeJS))
 	mux.HandleFunc("/api/diff", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleServerDiff(opts.Tel)(w, r)
@@ -249,10 +254,10 @@ func StartServer(opts Options) error {
 
 	d := shared.NewIndexData(opts.DarkTheme, opts.LightTheme, opts.Version)
 	mux := http.NewServeMux()
-	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", "text/css"))
-	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
-	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
-	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
+	mux.HandleFunc("/shared.css", shared.ServeSharedAsset("assets/shared.css", contentTypeCSS))
+	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", contentTypeJS))
+	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", contentTypeCSS))
+	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", contentTypeJS))
 	mux.HandleFunc("/api/diff", handleServerDiff(opts.Tel))
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 	shared.RegisterMetrics(mux)
@@ -307,10 +312,10 @@ func handleServerDiff(tel *telemetry.Telemetry) http.HandlerFunc {
 
 		dataA := []byte(req.ContentA)
 		dataB := []byte(req.ContentB)
-		fmt_ := format.Parse(req.Format, req.NameA, req.NameB)
+		diffFormat := format.Parse(req.Format, req.NameA, req.NameB)
 
 		var diff *node.Diff
-		switch fmt_ {
+		switch diffFormat {
 		case node.FormatJSON:
 			diff, err = parse.JSON(dataA, dataB)
 		case node.FormatYAML:
@@ -328,18 +333,18 @@ func handleServerDiff(tel *telemetry.Telemetry) http.HandlerFunc {
 		}
 		diff.FileA = req.NameA
 		diff.FileB = req.NameB
-		diff.Format = fmt_
+		diff.Format = diffFormat
 
 		span.SetAttributes(
 			attribute.Int("diff.size_bytes_a", len(dataA)),
 			attribute.Int("diff.size_bytes_b", len(dataB)),
-			attribute.String("diff.format", fmt_.String()),
+			attribute.String("diff.format", diffFormat.String()),
 			attribute.Int("diff.added", diff.Added),
 			attribute.Int("diff.removed", diff.Removed),
 			attribute.Int("diff.modified", diff.Modified),
 		)
 		tel.TrackEvent("diff-compute", "/api/diff", map[string]string{
-			"format":  fmt_.String(),
+			"format":  diffFormat.String(),
 			"added":   strconv.Itoa(diff.Added),
 			"removed": strconv.Itoa(diff.Removed),
 		})

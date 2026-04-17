@@ -10,6 +10,8 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/node"
 )
 
+const noDifferencesPadded = "  (no differences)"
+
 // UnifiedPanel renders the diff in classic unified format.
 type UnifiedPanel struct {
 	diff     *node.Diff
@@ -102,7 +104,7 @@ func (p *UnifiedPanel) build() {
 	p.matches = nil
 
 	if p.diff == nil {
-		p.viewport.SetContent(diffUnchanged.Render("  (no differences)"))
+		p.viewport.SetContent(diffUnchanged.Render(noDifferencesPadded))
 		return
 	}
 
@@ -112,7 +114,7 @@ func (p *UnifiedPanel) build() {
 	}
 
 	if len(p.diff.Hunks) == 0 {
-		p.viewport.SetContent(diffUnchanged.Render("  (no differences)"))
+		p.viewport.SetContent(diffUnchanged.Render(noDifferencesPadded))
 		return
 	}
 
@@ -304,7 +306,7 @@ func (p *SplitPanel) View() string {
 	return sb.String()
 }
 
-func (p *SplitPanel) build() { //nolint:cyclop,gocognit // walks diff tree building side-by-side lines; branching on kind/added/removed is the algorithm
+func (p *SplitPanel) build() { //nolint:cyclop,gocognit // NOSONAR: walks diff tree building side-by-side lines; branching on kind/added/removed is the algorithm
 	if p.diff == nil {
 		return
 	}
@@ -432,12 +434,12 @@ func (p *SplitPanel) renderSide(l node.Line, kind node.ChangeKind, searchQ strin
 // buildJSON renders the DiffNode tree as a flat list of changed paths.
 func (p *UnifiedPanel) buildJSON() {
 	if p.diff.Root == nil {
-		p.viewport.SetContent(diffUnchanged.Render("  (no differences)"))
+		p.viewport.SetContent(diffUnchanged.Render(noDifferencesPadded))
 		return
 	}
 
 	if p.diff.Added == 0 && p.diff.Removed == 0 && p.diff.Modified == 0 {
-		p.viewport.SetContent(diffUnchanged.Render("  (no differences)"))
+		p.viewport.SetContent(diffUnchanged.Render(noDifferencesPadded))
 		return
 	}
 
