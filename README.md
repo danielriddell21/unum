@@ -5,6 +5,8 @@
 A unified developer tool suite, built in Go.
 
 [![CI](https://github.com/danielriddell21/unum/actions/workflows/ci.yaml/badge.svg)](https://github.com/danielriddell21/unum/actions/workflows/ci.yaml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=danielriddell21_unum&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=danielriddell21_unum)
+[![codecov](https://codecov.io/gh/danielriddell21/unum/graph/badge.svg?token=ICL8H52H58)](https://codecov.io/gh/danielriddell21/unum)
 [![Go 1.26](https://img.shields.io/badge/go-1.26-blue)](https://go.dev)
 [![MIT License](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 
