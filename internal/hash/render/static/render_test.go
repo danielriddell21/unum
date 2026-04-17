@@ -86,3 +86,20 @@ func TestBoot_Quiet(t *testing.T) {
 		t.Error("Boot Quiet should produce no output")
 	}
 }
+
+func TestBoot_ColoredMode(t *testing.T) {
+	var buf bytes.Buffer
+	Boot(&buf, Options{Theme: Cyber})
+	if buf.Len() == 0 {
+		t.Error("Boot colored mode should produce output")
+	}
+}
+
+func TestRenderTable_WithColor(t *testing.T) {
+	var buf bytes.Buffer
+	RenderTable(&buf, sampleResult, Options{Theme: Cyber, NoColor: false})
+	out := buf.String()
+	if !strings.Contains(out, "my-service") {
+		t.Errorf("RenderTable colored missing value:\n%s", out)
+	}
+}

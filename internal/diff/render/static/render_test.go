@@ -97,3 +97,73 @@ func TestBoot_QuietSuppresses(t *testing.T) {
 		t.Error("Boot quiet should produce no output")
 	}
 }
+
+func TestBoot_ColoredMode(t *testing.T) {
+	var buf bytes.Buffer
+	finish := Boot(&buf, "a.txt", "b.txt", Options{Theme: Cyber})
+	finish(1, 1, 0, 5*time.Millisecond)
+	if buf.Len() == 0 {
+		t.Error("Boot colored mode should write output")
+	}
+}
+
+func TestRender_JsonStructuredDiff(t *testing.T) {
+	d, err := parse.JSON(
+		[]byte(`{"version": "1.0"}`),
+		[]byte(`{"version": "2.0"}`),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Render(&buf, d, Options{Theme: Cyber, NoColor: true}); err != nil {
+		t.Fatalf("Render JSON: %v", err)
+	}
+	if buf.Len() == 0 {
+		t.Error("JSON structured diff produced no output")
+	}
+}
+
+func TestRender_TreeNoChanges(t *testing.T) {
+	d, err := parse.JSON(
+		[]byte(`{"x": 1}`),
+		[]byte(`{"x": 1}`),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	_ = Render(&buf, d, Options{Theme: Cyber, NoColor: true})
+	if !strings.Contains(buf.String(), "no differences") {
+		t.Errorf("identical JSON diff should print 'no differences', got:\n%s", buf.String())
+	}
+}
+
+func TestRender_TreeStat(t *testing.T) {
+	d, err := parse.JSON(
+		[]byte(`{"a": 1}`),
+		[]byte(`{"a": 2}`),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	_ = Render(&buf, d, Options{Theme: Cyber, NoColor: true, Stat: true})
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if len(lines) > 2 {
+		t.Errorf("stat tree render: expected ≤2 lines, got %d:\n%s", len(lines), buf.String())
+	}
+}
+
+func TestRender_TextNoColor(t *testing.T) {
+	d, err := parse.Text([]byte("hello\n"), []byte("world\n"), 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	_ = Render(&buf, d, Options{Theme: Cyber, NoColor: true})
+	out := buf.String()
+	if !strings.Contains(out, "world") {
+		t.Errorf("text diff NoColor: missing 'world' in:\n%s", out)
+	}
+}
