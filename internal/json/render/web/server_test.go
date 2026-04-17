@@ -12,6 +12,8 @@ import (
 	"github.com/danielriddell21/unum/internal/web/shared"
 )
 
+const testJSONFile = "test.json"
+
 func mustParse(t *testing.T, src string) *node.Node {
 	t.Helper()
 	root, err := parse.Parse([]byte(src))
@@ -34,7 +36,7 @@ func TestBuildPayload_Filename(t *testing.T) {
 
 func TestBuildPayload_TreePresent(t *testing.T) {
 	root := mustParse(t, `{"a": 1, "b": true}`)
-	p, err := buildPayload(root, "test.json")
+	p, err := buildPayload(root, testJSONFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +47,7 @@ func TestBuildPayload_TreePresent(t *testing.T) {
 
 func TestBuildPayload_NodeCount(t *testing.T) {
 	root := mustParse(t, `{"a": 1, "b": 2}`)
-	p, err := buildPayload(root, "test.json")
+	p, err := buildPayload(root, testJSONFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +59,7 @@ func TestBuildPayload_NodeCount(t *testing.T) {
 
 func TestBuildPayload_MaxDepth(t *testing.T) {
 	root := mustParse(t, `{"outer": {"inner": 1}}`)
-	p, err := buildPayload(root, "test.json")
+	p, err := buildPayload(root, testJSONFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +70,7 @@ func TestBuildPayload_MaxDepth(t *testing.T) {
 
 func TestBuildPayload_YAMLPopulated(t *testing.T) {
 	root := mustParse(t, `{"name": "alice"}`)
-	p, err := buildPayload(root, "test.json")
+	p, err := buildPayload(root, testJSONFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +81,7 @@ func TestBuildPayload_YAMLPopulated(t *testing.T) {
 
 func TestBuildPayload_TypegenKeys(t *testing.T) {
 	root := mustParse(t, `{"count": 1}`)
-	p, err := buildPayload(root, "test.json")
+	p, err := buildPayload(root, testJSONFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +94,7 @@ func TestBuildPayload_TypegenKeys(t *testing.T) {
 
 func TestBuildPayload_MerkleRoot(t *testing.T) {
 	root := mustParse(t, `{"x": 1}`)
-	p, err := buildPayload(root, "test.json")
+	p, err := buildPayload(root, testJSONFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +108,7 @@ func TestBuildPayload_MerkleRoot(t *testing.T) {
 
 func TestBuildPayload_TreeKinds(t *testing.T) {
 	root := mustParse(t, `{"s": "hello", "n": 42, "b": true, "arr": [1, 2]}`)
-	p, err := buildPayload(root, "test.json")
+	p, err := buildPayload(root, testJSONFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,8 +120,8 @@ func TestBuildPayload_TreeKinds(t *testing.T) {
 
 func TestBuildPayload_Deterministic(t *testing.T) {
 	root := mustParse(t, `{"a": 1, "b": [1, 2, 3]}`)
-	p1, _ := buildPayload(root, "test.json")
-	p2, _ := buildPayload(root, "test.json")
+	p1, _ := buildPayload(root, testJSONFile)
+	p2, _ := buildPayload(root, testJSONFile)
 	if p1.MerkleRoot != p2.MerkleRoot {
 		t.Errorf("non-deterministic MerkleRoot: %q vs %q", p1.MerkleRoot, p2.MerkleRoot)
 	}

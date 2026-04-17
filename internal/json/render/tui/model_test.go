@@ -9,6 +9,8 @@ import (
 	"github.com/danielriddell21/unum/internal/json/parse"
 )
 
+const testJSONFile = "test.json"
+
 func mustParse(t *testing.T, src string) *node.Node {
 	t.Helper()
 	root, err := parse.Parse([]byte(src))
@@ -24,7 +26,7 @@ func windowMsg(w, h int) tea.WindowSizeMsg {
 
 func TestJSONModel_InitNoPanic(t *testing.T) {
 	root := mustParse(t, `{"a": 1}`)
-	m := NewModel(root, "test.json", "dev")
+	m := NewModel(root, testJSONFile, "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	if next == nil {
 		t.Fatal("Update returned nil model")
@@ -33,7 +35,7 @@ func TestJSONModel_InitNoPanic(t *testing.T) {
 
 func TestJSONModel_SecondWindowSizeResizes(t *testing.T) {
 	root := mustParse(t, `{"a": 1}`)
-	m := NewModel(root, "test.json", "dev")
+	m := NewModel(root, testJSONFile, "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 	next2, _ := nm.Update(windowMsg(160, 50))
@@ -45,7 +47,7 @@ func TestJSONModel_SecondWindowSizeResizes(t *testing.T) {
 
 func TestJSONModel_PanelsInitialisedAfterWindowSize(t *testing.T) {
 	root := mustParse(t, `{"x": 42}`)
-	m := NewModel(root, "test.json", "dev")
+	m := NewModel(root, testJSONFile, "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 	if nm.tree.CursorNode() == nil {
@@ -55,7 +57,7 @@ func TestJSONModel_PanelsInitialisedAfterWindowSize(t *testing.T) {
 
 func TestJSONModel_ViewNoPanic(t *testing.T) {
 	root := mustParse(t, `{"hello": "world"}`)
-	m := NewModel(root, "test.json", "dev")
+	m := NewModel(root, testJSONFile, "dev")
 	next, _ := m.Update(windowMsg(120, 40))
 	defer func() {
 		if r := recover(); r != nil {

@@ -9,10 +9,17 @@ import (
 
 var sampleFile = filepath.Join("testdata", "sample.json")
 
+const (
+	flagTypegen  = "--typegen"
+	flagQuery    = "--query"
+	flagMerkle   = "--merkle"
+	flagHashOnly = "--hash-only"
+)
+
 func TestStaticMode(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--no-color")
+	stdout, _, code := run("json", sampleFile, flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "corpus") {
 		t.Errorf("expected 'corpus' key in output:\n%s", stdout)
@@ -42,9 +49,9 @@ func TestValidateInvalidJSON(t *testing.T) {
 }
 
 func TestCompactMode(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--compact", "--no-color")
+	stdout, _, code := run("json", sampleFile, "--compact", flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	lines := strings.Split(strings.TrimSpace(stdout), "\n")
 	if len(lines) != 1 {
@@ -53,9 +60,9 @@ func TestCompactMode(t *testing.T) {
 }
 
 func TestStatsMode(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--stats", "--no-color")
+	stdout, _, code := run("json", sampleFile, "--stats", flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "//") {
 		t.Errorf("expected stats annotation '//' in output:\n%s", stdout)
@@ -63,9 +70,9 @@ func TestStatsMode(t *testing.T) {
 }
 
 func TestHashOnly(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--merkle", "--hash-only")
+	stdout, _, code := run("json", sampleFile, flagMerkle, flagHashOnly)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	hash := strings.TrimSpace(stdout)
 	if len(hash) != 64 {
@@ -74,8 +81,8 @@ func TestHashOnly(t *testing.T) {
 }
 
 func TestHashDeterministic(t *testing.T) {
-	stdout1, _, _ := run("json", sampleFile, "--merkle", "--hash-only")
-	stdout2, _, _ := run("json", sampleFile, "--merkle", "--hash-only")
+	stdout1, _, _ := run("json", sampleFile, flagMerkle, flagHashOnly)
+	stdout2, _, _ := run("json", sampleFile, flagMerkle, flagHashOnly)
 	if strings.TrimSpace(stdout1) != strings.TrimSpace(stdout2) {
 		t.Errorf("non-deterministic hash:\n  run1: %s\n  run2: %s", stdout1, stdout2)
 	}
@@ -84,7 +91,7 @@ func TestHashDeterministic(t *testing.T) {
 func TestTransformYAML(t *testing.T) {
 	stdout, _, code := run("json", sampleFile, "--transform")
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "corpus:") {
 		t.Errorf("expected 'corpus:' in YAML output:\n%s", stdout)
@@ -95,9 +102,9 @@ func TestTransformYAML(t *testing.T) {
 }
 
 func TestTypegenGo(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--typegen", "go")
+	stdout, _, code := run("json", sampleFile, flagTypegen, "go")
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "package main") {
 		t.Errorf("expected 'package main':\n%s", stdout)
@@ -108,9 +115,9 @@ func TestTypegenGo(t *testing.T) {
 }
 
 func TestTypegenTS(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--typegen", "ts")
+	stdout, _, code := run("json", sampleFile, flagTypegen, "ts")
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "interface") {
 		t.Errorf("expected 'interface':\n%s", stdout)
@@ -118,9 +125,9 @@ func TestTypegenTS(t *testing.T) {
 }
 
 func TestTypegenJSONSchema(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--typegen", "jsonschema")
+	stdout, _, code := run("json", sampleFile, flagTypegen, "jsonschema")
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, `"$schema"`) {
 		t.Errorf("expected '$schema':\n%s", stdout)
@@ -128,9 +135,9 @@ func TestTypegenJSONSchema(t *testing.T) {
 }
 
 func TestQuery(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--query", ".corpus")
+	stdout, _, code := run("json", sampleFile, flagQuery, ".corpus")
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "Lexica Technica") {
 		t.Errorf("expected 'Lexica Technica':\n%s", stdout)
@@ -138,9 +145,9 @@ func TestQuery(t *testing.T) {
 }
 
 func TestQueryArrayLength(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--query", ".pageScores | length")
+	stdout, _, code := run("json", sampleFile, flagQuery, ".pageScores | length")
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if strings.TrimSpace(stdout) != "10" {
 		t.Errorf("expected '10', got %q", stdout)
@@ -148,9 +155,9 @@ func TestQueryArrayLength(t *testing.T) {
 }
 
 func TestJSONNoColor(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--no-color")
+	stdout, _, code := run("json", sampleFile, flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if strings.Contains(stdout, "\x1b[") {
 		t.Error("--no-color output contains ANSI escape codes")
@@ -158,9 +165,9 @@ func TestJSONNoColor(t *testing.T) {
 }
 
 func TestMerkleAnnotated(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--merkle", "--no-color")
+	stdout, _, code := run("json", sampleFile, flagMerkle, flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "#") {
 		t.Errorf("--merkle output should contain '#' hash annotations:\n%s", stdout)
@@ -168,9 +175,9 @@ func TestMerkleAnnotated(t *testing.T) {
 }
 
 func TestJSONTypegenGoOutput(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--typegen", "go", "--no-color")
+	stdout, _, code := run("json", sampleFile, flagTypegen, "go", flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "type ") {
 		t.Errorf("--typegen go output does not contain 'type ':\n%s", stdout)
@@ -181,9 +188,9 @@ func TestJSONTypegenGoOutput(t *testing.T) {
 }
 
 func TestJSONTypegenTSOutput(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--typegen", "ts", "--no-color")
+	stdout, _, code := run("json", sampleFile, flagTypegen, "ts", flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "interface") && !strings.Contains(stdout, "type ") {
 		t.Errorf("--typegen ts output missing 'interface' or 'type':\n%s", stdout)
@@ -191,9 +198,9 @@ func TestJSONTypegenTSOutput(t *testing.T) {
 }
 
 func TestJSONQueryNestedPath(t *testing.T) {
-	stdout, _, code := run("json", sampleFile, "--query", ".curator.nomen", "--no-color")
+	stdout, _, code := run("json", sampleFile, flagQuery, ".curator.nomen", flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "Iohannes") {
 		t.Errorf("--query .curator.nomen: expected 'Iohannes', got:\n%s", stdout)

@@ -21,6 +21,16 @@ var (
 	diffATF   = filepath.Join("testdata", "diff-a.tfplan.json")
 )
 
+const (
+	diffAPIURLFmt      = "http://localhost:%s/api/diff"
+	diffStartServerErr = "start server: %v"
+	diffContentType    = "application/json"
+	diffPostErr        = "POST /api/diff: %v"
+	diffPostBadStatus  = "POST /api/diff: status %d, want 200\nbody: %s"
+	diffReadBodyErr    = "read body: %v"
+	diffRespNotJSON    = "response not JSON: %v\nbody: %s"
+)
+
 // TestDiffWebContainerMode checks the diff --web server starts and returns 204
 // on GET /api/diff.
 func TestDiffWebContainerMode(t *testing.T) {
@@ -28,11 +38,11 @@ func TestDiffWebContainerMode(t *testing.T) {
 	cmd := exec.Command(unumBin, "diff", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(diffStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	resp := waitForServer(t, fmt.Sprintf("http://localhost:%s/api/diff", port))
+	resp := waitForServer(t, fmt.Sprintf(diffAPIURLFmt, port))
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusNoContent {
@@ -47,11 +57,11 @@ func TestDiffWebAPI_PostTextDiffReturnsPayload(t *testing.T) {
 	cmd := exec.Command(unumBin, "diff", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(diffStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	resp := waitForServer(t, fmt.Sprintf("http://localhost:%s/api/diff", port))
+	resp := waitForServer(t, fmt.Sprintf(diffAPIURLFmt, port))
 	_ = resp.Body.Close()
 
 	contentA, err := os.ReadFile(diffA)
@@ -72,28 +82,28 @@ func TestDiffWebAPI_PostTextDiffReturnsPayload(t *testing.T) {
 	})
 
 	postResp, err := http.Post( //nolint:noctx // integration test posting to local server; context not needed in tests
-		fmt.Sprintf("http://localhost:%s/api/diff", port),
-		"application/json",
+		fmt.Sprintf(diffAPIURLFmt, port),
+		diffContentType,
 		bytes.NewReader(reqBody),
 	)
 	if err != nil {
-		t.Fatalf("POST /api/diff: %v", err)
+		t.Fatalf(diffPostErr, err)
 	}
 	defer func() { _ = postResp.Body.Close() }()
 
 	if postResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(postResp.Body)
-		t.Fatalf("POST /api/diff: status %d, want 200\nbody: %s", postResp.StatusCode, body)
+		t.Fatalf(diffPostBadStatus, postResp.StatusCode, body)
 	}
 
 	body, err := io.ReadAll(postResp.Body)
 	if err != nil {
-		t.Fatalf("read body: %v", err)
+		t.Fatalf(diffReadBodyErr, err)
 	}
 
 	var payload map[string]any
 	if err := json.Unmarshal(body, &payload); err != nil {
-		t.Fatalf("response not JSON: %v\nbody: %s", err, body)
+		t.Fatalf(diffRespNotJSON, err, body)
 	}
 
 	for _, field := range []string{"fileA", "fileB", "format", "hunks"} {
@@ -118,11 +128,11 @@ func TestDiffWebAPI_PostJSONDiffReturnsSemanticTree(t *testing.T) {
 	cmd := exec.Command(unumBin, "diff", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(diffStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	resp := waitForServer(t, fmt.Sprintf("http://localhost:%s/api/diff", port))
+	resp := waitForServer(t, fmt.Sprintf(diffAPIURLFmt, port))
 	_ = resp.Body.Close()
 
 	contentA, err := os.ReadFile(diffAJSON)
@@ -143,28 +153,28 @@ func TestDiffWebAPI_PostJSONDiffReturnsSemanticTree(t *testing.T) {
 	})
 
 	postResp, err := http.Post( //nolint:noctx // integration test posting to local server; context not needed in tests
-		fmt.Sprintf("http://localhost:%s/api/diff", port),
-		"application/json",
+		fmt.Sprintf(diffAPIURLFmt, port),
+		diffContentType,
 		bytes.NewReader(reqBody),
 	)
 	if err != nil {
-		t.Fatalf("POST /api/diff: %v", err)
+		t.Fatalf(diffPostErr, err)
 	}
 	defer func() { _ = postResp.Body.Close() }()
 
 	if postResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(postResp.Body)
-		t.Fatalf("POST /api/diff: status %d, want 200\nbody: %s", postResp.StatusCode, body)
+		t.Fatalf(diffPostBadStatus, postResp.StatusCode, body)
 	}
 
 	body, err := io.ReadAll(postResp.Body)
 	if err != nil {
-		t.Fatalf("read body: %v", err)
+		t.Fatalf(diffReadBodyErr, err)
 	}
 
 	var payload map[string]any
 	if err := json.Unmarshal(body, &payload); err != nil {
-		t.Fatalf("response not JSON: %v\nbody: %s", err, body)
+		t.Fatalf(diffRespNotJSON, err, body)
 	}
 
 	if format, _ := payload["format"].(string); format != "json" {
@@ -182,21 +192,21 @@ func TestDiffWebAPI_PostMissingContentReturns400(t *testing.T) {
 	cmd := exec.Command(unumBin, "diff", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(diffStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	resp := waitForServer(t, fmt.Sprintf("http://localhost:%s/api/diff", port))
+	resp := waitForServer(t, fmt.Sprintf(diffAPIURLFmt, port))
 	_ = resp.Body.Close()
 
 	badBody := strings.NewReader(`{"nameA":"a.txt","contentA":"hello"}`)
 	postResp, err := http.Post( //nolint:noctx // integration test posting to local server; context not needed in tests
-		fmt.Sprintf("http://localhost:%s/api/diff", port),
-		"application/json",
+		fmt.Sprintf(diffAPIURLFmt, port),
+		diffContentType,
 		badBody,
 	)
 	if err != nil {
-		t.Fatalf("POST /api/diff: %v", err)
+		t.Fatalf(diffPostErr, err)
 	}
 	defer func() { _ = postResp.Body.Close() }()
 
@@ -213,11 +223,11 @@ func TestDiffWebAPI_PostTerraformDiffReturnsSemanticTree(t *testing.T) {
 	cmd := exec.Command(unumBin, "diff", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(diffStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	resp := waitForServer(t, fmt.Sprintf("http://localhost:%s/api/diff", port))
+	resp := waitForServer(t, fmt.Sprintf(diffAPIURLFmt, port))
 	_ = resp.Body.Close()
 
 	content, err := os.ReadFile(diffATF)
@@ -234,28 +244,28 @@ func TestDiffWebAPI_PostTerraformDiffReturnsSemanticTree(t *testing.T) {
 	})
 
 	postResp, err := http.Post( //nolint:noctx // integration test posting to local server; context not needed in tests
-		fmt.Sprintf("http://localhost:%s/api/diff", port),
-		"application/json",
+		fmt.Sprintf(diffAPIURLFmt, port),
+		diffContentType,
 		bytes.NewReader(reqBody),
 	)
 	if err != nil {
-		t.Fatalf("POST /api/diff: %v", err)
+		t.Fatalf(diffPostErr, err)
 	}
 	defer func() { _ = postResp.Body.Close() }()
 
 	if postResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(postResp.Body)
-		t.Fatalf("POST /api/diff: status %d, want 200\nbody: %s", postResp.StatusCode, body)
+		t.Fatalf(diffPostBadStatus, postResp.StatusCode, body)
 	}
 
 	body, err := io.ReadAll(postResp.Body)
 	if err != nil {
-		t.Fatalf("read body: %v", err)
+		t.Fatalf(diffReadBodyErr, err)
 	}
 
 	var payload map[string]any
 	if err := json.Unmarshal(body, &payload); err != nil {
-		t.Fatalf("response not JSON: %v\nbody: %s", err, body)
+		t.Fatalf(diffRespNotJSON, err, body)
 	}
 
 	if format, _ := payload["format"].(string); format != "terraform" {
@@ -275,11 +285,11 @@ func TestWebFrontend_DiffUIRendersAndToggles(t *testing.T) {
 	cmd := exec.Command(unumBin, "diff", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(diffStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	_ = waitForServer(t, fmt.Sprintf("http://localhost:%s/api/diff", port))
+	_ = waitForServer(t, fmt.Sprintf(diffAPIURLFmt, port))
 
 	browser := newBrowser(t)
 	page := browser.MustPage(fmt.Sprintf("http://localhost:%s/", port))

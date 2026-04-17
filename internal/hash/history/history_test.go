@@ -8,6 +8,11 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/history"
 )
 
+const (
+	svcA = "service-a"
+	svcB = "service-b"
+)
+
 func withTempHistory(t *testing.T) {
 	t.Helper()
 	tmp := t.TempDir()
@@ -20,10 +25,10 @@ func withTempHistory(t *testing.T) {
 func TestHistory_AppendAndLoad(t *testing.T) {
 	withTempHistory(t)
 
-	if err := history.Append("service-a"); err != nil {
+	if err := history.Append(svcA); err != nil {
 		t.Fatalf("AppendHistory: %v", err)
 	}
-	if err := history.Append("service-b"); err != nil {
+	if err := history.Append(svcB); err != nil {
 		t.Fatalf("AppendHistory: %v", err)
 	}
 
@@ -32,10 +37,10 @@ func TestHistory_AppendAndLoad(t *testing.T) {
 		t.Fatalf("want 2 entries, got %d", len(entries))
 	}
 	// Newest first
-	if entries[0].Input != "service-b" {
+	if entries[0].Input != svcB {
 		t.Errorf("entries[0].Input = %q, want service-b", entries[0].Input)
 	}
-	if entries[1].Input != "service-a" {
+	if entries[1].Input != svcA {
 		t.Errorf("entries[1].Input = %q, want service-a", entries[1].Input)
 	}
 }
@@ -43,15 +48,15 @@ func TestHistory_AppendAndLoad(t *testing.T) {
 func TestHistory_Deduplication(t *testing.T) {
 	withTempHistory(t)
 
-	_ = history.Append("service-a")
-	_ = history.Append("service-b")
-	_ = history.Append("service-a") // re-add — should move to front
+	_ = history.Append(svcA)
+	_ = history.Append(svcB)
+	_ = history.Append(svcA) // re-add — should move to front
 
 	entries := history.Load()
 	if len(entries) != 2 {
 		t.Fatalf("want 2 entries after dedup, got %d", len(entries))
 	}
-	if entries[0].Input != "service-a" {
+	if entries[0].Input != svcA {
 		t.Errorf("entries[0].Input = %q, want service-a", entries[0].Input)
 	}
 }

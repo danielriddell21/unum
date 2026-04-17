@@ -12,6 +12,14 @@ import (
 	"testing"
 )
 
+const (
+	jsonTreeURLFmt     = "http://localhost:%s/api/tree"
+	jsonUploadURLFmt   = "http://localhost:%s/api/upload"
+	jsonContentType    = "application/json"
+	jsonStartServerErr = "start server: %v"
+	jsonUploadNotJSON  = "upload response not JSON: %v\nbody: %s"
+)
+
 // TestJSONWebContainerMode checks the json --web server starts and returns 204
 // on /api/tree
 func TestJSONWebContainerMode(t *testing.T) {
@@ -19,11 +27,11 @@ func TestJSONWebContainerMode(t *testing.T) {
 	cmd := exec.Command(unumBin, "json", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(jsonStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	resp := waitForServer(t, fmt.Sprintf("http://localhost:%s/api/tree", port))
+	resp := waitForServer(t, fmt.Sprintf(jsonTreeURLFmt, port))
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusNoContent {
@@ -38,11 +46,11 @@ func TestJSONWebAPI_TreeBodyHasExpectedFields(t *testing.T) {
 	cmd := exec.Command(unumBin, "json", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(jsonStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	_ = waitForServer(t, fmt.Sprintf("http://localhost:%s/api/tree", port))
+	_ = waitForServer(t, fmt.Sprintf(jsonTreeURLFmt, port))
 
 	content, err := os.ReadFile("testdata/sample.json")
 	if err != nil {
@@ -53,8 +61,8 @@ func TestJSONWebAPI_TreeBodyHasExpectedFields(t *testing.T) {
 		"content":  string(content),
 	})
 	upResp, err := http.Post( //nolint:noctx // integration test hitting local server; context not needed in tests
-		fmt.Sprintf("http://localhost:%s/api/upload", port),
-		"application/json",
+		fmt.Sprintf(jsonUploadURLFmt, port),
+		jsonContentType,
 		bytes.NewReader(uploadPayload),
 	)
 	if err != nil {
@@ -67,7 +75,7 @@ func TestJSONWebAPI_TreeBodyHasExpectedFields(t *testing.T) {
 	}
 	var upResult map[string]string
 	if err := json.Unmarshal(upBody, &upResult); err != nil {
-		t.Fatalf("upload response not JSON: %v\nbody: %s", err, upBody)
+		t.Fatalf(jsonUploadNotJSON, err, upBody)
 	}
 	key := upResult["key"]
 	if key == "" {
@@ -99,12 +107,13 @@ func TestJSONWebAPI_TreeBodyHasExpectedFields(t *testing.T) {
 		}
 	}
 
-	if tree, ok := payload["tree"].(map[string]any); ok {
-		if kind, _ := tree["kind"].(string); kind != "object" {
-			t.Errorf("tree.kind = %q, want object", kind)
-		}
-	} else {
+	tree, ok := payload["tree"].(map[string]any)
+	if !ok {
 		t.Error("payload.tree is not an object")
+		return
+	}
+	if kind, _ := tree["kind"].(string); kind != "object" {
+		t.Errorf("tree.kind = %q, want object", kind)
 	}
 }
 
@@ -115,16 +124,16 @@ func TestJSONWebAPI_Upload(t *testing.T) {
 	cmd := exec.Command(unumBin, "json", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(jsonStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	_ = waitForServer(t, fmt.Sprintf("http://localhost:%s/api/tree", port))
+	_ = waitForServer(t, fmt.Sprintf(jsonTreeURLFmt, port))
 
 	uploadBody := `{"filename":"test.json","content":"{\"hello\":\"world\"}"}`
 	resp, err := http.Post( //nolint:noctx // integration test hitting local server; context not needed in tests
-		fmt.Sprintf("http://localhost:%s/api/upload", port),
-		"application/json",
+		fmt.Sprintf(jsonUploadURLFmt, port),
+		jsonContentType,
 		strings.NewReader(uploadBody),
 	)
 	if err != nil {
@@ -142,7 +151,7 @@ func TestJSONWebAPI_Upload(t *testing.T) {
 
 	var uploadResp map[string]string
 	if err := json.Unmarshal(body, &uploadResp); err != nil {
-		t.Fatalf("upload response not JSON: %v\nbody: %s", err, body)
+		t.Fatalf(jsonUploadNotJSON, err, body)
 	}
 	key := uploadResp["key"]
 	if key == "" {
@@ -175,7 +184,7 @@ func TestJSONWebAPI_IndexHTML(t *testing.T) {
 	cmd := exec.Command(unumBin, "json", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(jsonStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
@@ -196,11 +205,11 @@ func TestWebFrontend_JSONUIExploreLoads(t *testing.T) {
 	cmd := exec.Command(unumBin, "json", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(jsonStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
-	_ = waitForServer(t, fmt.Sprintf("http://localhost:%s/api/tree", port))
+	_ = waitForServer(t, fmt.Sprintf(jsonTreeURLFmt, port))
 
 	// Upload sample.json to get a session key.
 	content, err := os.ReadFile("testdata/sample.json")
@@ -212,8 +221,8 @@ func TestWebFrontend_JSONUIExploreLoads(t *testing.T) {
 		"content":  string(content),
 	})
 	upResp, err := http.Post( //nolint:noctx // integration test hitting local server; context not needed in tests
-		fmt.Sprintf("http://localhost:%s/api/upload", port),
-		"application/json",
+		fmt.Sprintf(jsonUploadURLFmt, port),
+		jsonContentType,
 		bytes.NewReader(uploadPayload),
 	)
 	if err != nil {
@@ -223,7 +232,7 @@ func TestWebFrontend_JSONUIExploreLoads(t *testing.T) {
 	_ = upResp.Body.Close()
 	var upResult map[string]string
 	if err := json.Unmarshal(upBody, &upResult); err != nil {
-		t.Fatalf("upload response not JSON: %v\nbody: %s", err, upBody)
+		t.Fatalf(jsonUploadNotJSON, err, upBody)
 	}
 	key := upResult["key"]
 	if key == "" {

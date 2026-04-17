@@ -16,6 +16,8 @@ var (
 	webColorRe = regexp.MustCompile(`^#[0-9a-f]{6}$`)
 )
 
+const hashStartServerErr = "start server: %v"
+
 // TestHashWebContainerMode checks the hash --web server starts and returns 200
 // on /api/derive?input=test.
 func TestHashWebContainerMode(t *testing.T) {
@@ -23,7 +25,7 @@ func TestHashWebContainerMode(t *testing.T) {
 	cmd := exec.Command(unumBin, "hash", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(hashStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
@@ -42,7 +44,7 @@ func TestHashWebAPI_DeriveReturnsAllFields(t *testing.T) {
 	cmd := exec.Command(unumBin, "hash", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(hashStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
@@ -78,7 +80,7 @@ func TestHashWebAPI_DeriveFieldFormats(t *testing.T) {
 	cmd := exec.Command(unumBin, "hash", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(hashStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
@@ -129,7 +131,7 @@ func TestHashWebAPI_DeriveNoInputReturns400(t *testing.T) {
 	cmd := exec.Command(unumBin, "hash", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(hashStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
@@ -154,7 +156,7 @@ func TestHashWebAPI_DeriveIsDeterministic(t *testing.T) {
 	cmd := exec.Command(unumBin, "hash", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(hashStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 
@@ -185,7 +187,7 @@ func TestWebFrontend_HashUIDerivesOnSubmit(t *testing.T) {
 	cmd := exec.Command(unumBin, "hash", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("start server: %v", err)
+		t.Fatalf(hashStartServerErr, err)
 	}
 	defer func() { _ = cmd.Process.Kill() }()
 

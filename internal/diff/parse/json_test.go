@@ -6,6 +6,8 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/node"
 )
 
+const modifiedWant1 = "modified=%d, want 1"
+
 func TestJSON_Identical(t *testing.T) {
 	a := []byte(`{"name":"alice","age":30}`)
 	d, err := JSON(a, a)
@@ -72,7 +74,7 @@ func TestJSON_ModifiedScalar(t *testing.T) {
 		t.Fatal(err)
 	}
 	if d.Modified != 1 {
-		t.Errorf("modified=%d, want 1", d.Modified)
+		t.Errorf(modifiedWant1, d.Modified)
 	}
 	child := findChild(d.Root, "version")
 	if child == nil {
@@ -95,7 +97,7 @@ func TestJSON_TypeChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	if d.Modified != 1 {
-		t.Errorf("modified=%d, want 1", d.Modified)
+		t.Errorf(modifiedWant1, d.Modified)
 	}
 }
 
@@ -107,7 +109,7 @@ func TestJSON_NestedObject(t *testing.T) {
 		t.Fatal(err)
 	}
 	if d.Modified != 1 {
-		t.Errorf("modified=%d, want 1", d.Modified)
+		t.Errorf(modifiedWant1, d.Modified)
 	}
 	server := findChild(d.Root, "server")
 	if server == nil {

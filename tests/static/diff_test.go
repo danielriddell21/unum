@@ -16,10 +16,15 @@ var (
 	diffATF   = filepath.Join("testdata", "diff-a.tfplan.json")
 )
 
+const (
+	flagNoColor = "--no-color"
+	exitFmt     = "exit %d"
+)
+
 func TestDiffTextStatic(t *testing.T) {
-	stdout, _, code := run("diff", diffA, diffB, "--no-color")
+	stdout, _, code := run("diff", diffA, diffB, flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "+") || !strings.Contains(stdout, "-") {
 		t.Errorf("expected + and - lines in output:\n%s", stdout)
@@ -34,9 +39,9 @@ func TestDiffIdentical(t *testing.T) {
 }
 
 func TestDiffStat(t *testing.T) {
-	stdout, _, code := run("diff", diffA, diffB, "--stat", "--no-color")
+	stdout, _, code := run("diff", diffA, diffB, "--stat", flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "+") || !strings.Contains(stdout, "-") {
 		t.Errorf("expected count summary in stat output:\n%s", stdout)
@@ -51,9 +56,9 @@ func TestDiffStat(t *testing.T) {
 }
 
 func TestDiffJSONSemantic(t *testing.T) {
-	stdout, _, code := run("diff", diffAJSON, diffBJSON, "--no-color")
+	stdout, _, code := run("diff", diffAJSON, diffBJSON, flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.ContainsAny(stdout, "~+-") {
 		t.Errorf("expected semantic change markers in output:\n%s", stdout)
@@ -61,9 +66,9 @@ func TestDiffJSONSemantic(t *testing.T) {
 }
 
 func TestDiffYAMLSemantic(t *testing.T) {
-	stdout, _, code := run("diff", diffAYAML, diffBYAML, "--no-color")
+	stdout, _, code := run("diff", diffAYAML, diffBYAML, flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.ContainsAny(stdout, "~+-") {
 		t.Errorf("expected semantic change markers in output:\n%s", stdout)
@@ -71,15 +76,15 @@ func TestDiffYAMLSemantic(t *testing.T) {
 }
 
 func TestDiffTerraform(t *testing.T) {
-	_, _, code := run("diff", diffATF, diffATF, "--format", "terraform", "--no-color")
+	_, _, code := run("diff", diffATF, diffATF, "--format", "terraform", flagNoColor)
 	if code != 0 {
 		t.Fatalf("terraform diff: exit %d, want 0", code)
 	}
 }
 
 func TestDiffFormatOverride(t *testing.T) {
-	stdout1, _, code1 := run("diff", diffAJSON, diffBJSON, "--no-color")
-	stdout2, _, code2 := run("diff", diffAJSON, diffBJSON, "--format", "json", "--no-color")
+	stdout1, _, code1 := run("diff", diffAJSON, diffBJSON, flagNoColor)
+	stdout2, _, code2 := run("diff", diffAJSON, diffBJSON, "--format", "json", flagNoColor)
 	if code1 != 0 || code2 != 0 {
 		t.Fatalf("exit codes: %d %d", code1, code2)
 	}
@@ -109,9 +114,9 @@ func TestDiffMissingFile(t *testing.T) {
 }
 
 func TestDiffNoColorFlag(t *testing.T) {
-	stdout, _, code := run("diff", diffA, diffB, "--no-color")
+	stdout, _, code := run("diff", diffA, diffB, flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if strings.Contains(stdout, "\033[") {
 		t.Errorf("--no-color output contains ANSI escapes:\n%s", stdout)
@@ -119,9 +124,9 @@ func TestDiffNoColorFlag(t *testing.T) {
 }
 
 func TestDiffContextFlag(t *testing.T) {
-	stdout, _, code := run("diff", diffA, diffB, "--context", "0", "--no-color")
+	stdout, _, code := run("diff", diffA, diffB, "--context", "0", flagNoColor)
 	if code != 0 {
-		t.Fatalf("exit %d", code)
+		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "+") || !strings.Contains(stdout, "-") {
 		t.Errorf("--context 0: expected + and - lines:\n%s", stdout)

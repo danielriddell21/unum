@@ -23,15 +23,17 @@ var (
 	diffATF   = filepath.Join("testdata", "diff-a.tfplan.json")
 )
 
+const readFileErrFmt = "read %s: %v"
+
 func mustParseDiffFiles(t *testing.T, pathA, pathB string) *diffnode.Diff {
 	t.Helper()
 	dataA, err := os.ReadFile(pathA)
 	if err != nil {
-		t.Fatalf("read %s: %v", pathA, err)
+		t.Fatalf(readFileErrFmt, pathA, err)
 	}
 	dataB, err := os.ReadFile(pathB)
 	if err != nil {
-		t.Fatalf("read %s: %v", pathB, err)
+		t.Fatalf(readFileErrFmt, pathB, err)
 	}
 	d, err := diffparse.Text(dataA, dataB, 3)
 	if err != nil {
@@ -46,11 +48,11 @@ func mustParseJSONDiffFiles(t *testing.T, pathA, pathB string) *diffnode.Diff {
 	t.Helper()
 	dataA, err := os.ReadFile(pathA)
 	if err != nil {
-		t.Fatalf("read %s: %v", pathA, err)
+		t.Fatalf(readFileErrFmt, pathA, err)
 	}
 	dataB, err := os.ReadFile(pathB)
 	if err != nil {
-		t.Fatalf("read %s: %v", pathB, err)
+		t.Fatalf(readFileErrFmt, pathB, err)
 	}
 	d, err := diffparse.JSON(dataA, dataB)
 	if err != nil {
@@ -138,7 +140,7 @@ func mustParseTerraformDiff(t *testing.T, path string) *diffnode.Diff {
 	t.Helper()
 	data, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("read %s: %v", path, err)
+		t.Fatalf(readFileErrFmt, path, err)
 	}
 	d, err := diffparse.Terraform(data)
 	if err != nil {

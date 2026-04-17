@@ -6,8 +6,13 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/node"
 )
 
+const (
+	threeLinesText = "line1\nline2\nline3\n"
+	hunksWant1     = "got %d hunks, want 1"
+)
+
 func TestText_Identical(t *testing.T) {
-	a := []byte("line1\nline2\nline3\n")
+	a := []byte(threeLinesText)
 	d, err := Text(a, a, 3)
 	if err != nil {
 		t.Fatal(err)
@@ -22,7 +27,7 @@ func TestText_Identical(t *testing.T) {
 
 func TestText_AddedLines(t *testing.T) {
 	a := []byte("line1\nline2\n")
-	b := []byte("line1\nline2\nline3\n")
+	b := []byte(threeLinesText)
 	d, err := Text(a, b, 3)
 	if err != nil {
 		t.Fatal(err)
@@ -31,7 +36,7 @@ func TestText_AddedLines(t *testing.T) {
 		t.Errorf("added=%d removed=%d, want 1 0", d.Added, d.Removed)
 	}
 	if len(d.Hunks) != 1 {
-		t.Fatalf("got %d hunks, want 1", len(d.Hunks))
+		t.Fatalf(hunksWant1, len(d.Hunks))
 	}
 	// The added line should have a new line number
 	var found bool
@@ -49,7 +54,7 @@ func TestText_AddedLines(t *testing.T) {
 }
 
 func TestText_RemovedLines(t *testing.T) {
-	a := []byte("line1\nline2\nline3\n")
+	a := []byte(threeLinesText)
 	b := []byte("line1\nline3\n")
 	d, err := Text(a, b, 3)
 	if err != nil {
@@ -72,7 +77,7 @@ func TestText_ModifiedLine(t *testing.T) {
 		t.Errorf("added=%d removed=%d, want 1 1", d.Added, d.Removed)
 	}
 	if len(d.Hunks) != 1 {
-		t.Fatalf("got %d hunks, want 1", len(d.Hunks))
+		t.Fatalf(hunksWant1, len(d.Hunks))
 	}
 	h := d.Hunks[0]
 	var gotRemoved, gotAdded bool
@@ -101,7 +106,7 @@ func TestText_LineNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(d.Hunks) != 1 {
-		t.Fatalf("got %d hunks, want 1", len(d.Hunks))
+		t.Fatalf(hunksWant1, len(d.Hunks))
 	}
 	h := d.Hunks[0]
 	for _, l := range h.Lines {
@@ -127,7 +132,7 @@ func TestText_HunkCounts(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(d.Hunks) != 1 {
-		t.Fatalf("got %d hunks, want 1", len(d.Hunks))
+		t.Fatalf(hunksWant1, len(d.Hunks))
 	}
 	h := d.Hunks[0]
 	// With context=1: hunk covers lines 1-3 (all of them)
@@ -189,7 +194,7 @@ func TestText_CRLFStripped(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(d.Hunks) != 1 {
-		t.Fatalf("got %d hunks, want 1", len(d.Hunks))
+		t.Fatalf(hunksWant1, len(d.Hunks))
 	}
 	for _, l := range d.Hunks[0].Lines {
 		for _, ch := range l.Content {

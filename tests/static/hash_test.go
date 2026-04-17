@@ -12,12 +12,17 @@ var (
 	hashColorRe = regexp.MustCompile(`^#[0-9a-f]{6}$`)
 )
 
+const (
+	hashSampleInput = "my-api-service"
+	hashExitWant0   = "exit %d, want 0"
+)
+
 func TestHash_TableExitZero(t *testing.T) {
-	stdout, _, code := run("hash", "my-api-service")
+	stdout, _, code := run("hash", hashSampleInput)
 	if code != 0 {
-		t.Fatalf("exit %d, want 0", code)
+		t.Fatalf(hashExitWant0, code)
 	}
-	if !strings.Contains(stdout, "my-api-service") {
+	if !strings.Contains(stdout, hashSampleInput) {
 		t.Error("output should contain the input string")
 	}
 	if !strings.Contains(stdout, "port") {
@@ -29,11 +34,11 @@ func TestHash_TableExitZero(t *testing.T) {
 }
 
 func TestHash_NoColor(t *testing.T) {
-	stdout, _, code := run("hash", "--no-color", "my-api-service")
+	stdout, _, code := run("hash", flagNoColor, hashSampleInput)
 	if code != 0 {
-		t.Fatalf("exit %d, want 0", code)
+		t.Fatalf(hashExitWant0, code)
 	}
-	if !strings.Contains(stdout, "my-api-service") {
+	if !strings.Contains(stdout, hashSampleInput) {
 		t.Error("output should contain the input string")
 	}
 	if strings.Contains(stdout, "\x1b[") {
@@ -42,17 +47,17 @@ func TestHash_NoColor(t *testing.T) {
 }
 
 func TestHash_Deterministic(t *testing.T) {
-	stdout1, _, _ := run("hash", "--no-color", "stable-service")
-	stdout2, _, _ := run("hash", "--no-color", "stable-service")
+	stdout1, _, _ := run("hash", flagNoColor, "stable-service")
+	stdout2, _, _ := run("hash", flagNoColor, "stable-service")
 	if stdout1 != stdout2 {
 		t.Errorf("hash is not deterministic:\n  run1=%q\n  run2=%q", stdout1, stdout2)
 	}
 }
 
 func TestHash_PortFlag(t *testing.T) {
-	stdout, _, code := run("hash", "--port", "my-api-service")
+	stdout, _, code := run("hash", "--port", hashSampleInput)
 	if code != 0 {
-		t.Fatalf("exit %d, want 0", code)
+		t.Fatalf(hashExitWant0, code)
 	}
 	trimmed := strings.TrimSpace(stdout)
 	if trimmed == "" {
@@ -67,9 +72,9 @@ func TestHash_PortFlag(t *testing.T) {
 }
 
 func TestHash_UUIDFlag(t *testing.T) {
-	stdout, _, code := run("hash", "--uuid", "my-api-service")
+	stdout, _, code := run("hash", "--uuid", hashSampleInput)
 	if code != 0 {
-		t.Fatalf("exit %d, want 0", code)
+		t.Fatalf(hashExitWant0, code)
 	}
 	trimmed := strings.TrimSpace(stdout)
 	if !hashUUIDRe.MatchString(trimmed) {
@@ -78,9 +83,9 @@ func TestHash_UUIDFlag(t *testing.T) {
 }
 
 func TestHash_ColorFlag(t *testing.T) {
-	stdout, _, code := run("hash", "--color", "my-api-service")
+	stdout, _, code := run("hash", "--color", hashSampleInput)
 	if code != 0 {
-		t.Fatalf("exit %d, want 0", code)
+		t.Fatalf(hashExitWant0, code)
 	}
 	trimmed := strings.TrimSpace(stdout)
 	if !hashColorRe.MatchString(trimmed) {
@@ -89,9 +94,9 @@ func TestHash_ColorFlag(t *testing.T) {
 }
 
 func TestHash_ShortFlag(t *testing.T) {
-	stdout, _, code := run("hash", "--short", "my-api-service")
+	stdout, _, code := run("hash", "--short", hashSampleInput)
 	if code != 0 {
-		t.Fatalf("exit %d, want 0", code)
+		t.Fatalf(hashExitWant0, code)
 	}
 	trimmed := strings.TrimSpace(stdout)
 	if len(trimmed) != 8 {
@@ -100,9 +105,9 @@ func TestHash_ShortFlag(t *testing.T) {
 }
 
 func TestHash_EmojiFlag(t *testing.T) {
-	stdout, _, code := run("hash", "--emoji", "my-api-service")
+	stdout, _, code := run("hash", "--emoji", hashSampleInput)
 	if code != 0 {
-		t.Fatalf("exit %d, want 0", code)
+		t.Fatalf(hashExitWant0, code)
 	}
 	if strings.TrimSpace(stdout) == "" {
 		t.Error("--emoji produced empty output")
@@ -110,9 +115,9 @@ func TestHash_EmojiFlag(t *testing.T) {
 }
 
 func TestHash_PhraseFlag(t *testing.T) {
-	stdout, _, code := run("hash", "--phrase", "my-api-service")
+	stdout, _, code := run("hash", "--phrase", hashSampleInput)
 	if code != 0 {
-		t.Fatalf("exit %d, want 0", code)
+		t.Fatalf(hashExitWant0, code)
 	}
 	trimmed := strings.TrimSpace(stdout)
 	parts := strings.Split(trimmed, "-")
@@ -139,7 +144,7 @@ func TestHashConcurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			stdout, _, code := run("hash", input, "--no-color")
+			stdout, _, code := run("hash", input, flagNoColor)
 			results[i] = stdout
 			errs[i] = code
 		}()

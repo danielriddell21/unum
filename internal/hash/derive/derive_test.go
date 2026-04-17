@@ -13,9 +13,14 @@ var (
 	colorRe = regexp.MustCompile(`^#[0-9a-f]{6}$`)
 )
 
+const (
+	sampleAPIService = "my-api-service"
+	testService      = "test-service"
+)
+
 func TestDerive_Deterministic(t *testing.T) {
-	r1 := derive.Derive("my-api-service")
-	r2 := derive.Derive("my-api-service")
+	r1 := derive.Derive(sampleAPIService)
+	r2 := derive.Derive(sampleAPIService)
 	if r1 != r2 {
 		t.Errorf("Derive is not deterministic:\n  r1=%+v\n  r2=%+v", r1, r2)
 	}
@@ -52,21 +57,21 @@ func TestDerive_Port(t *testing.T) {
 }
 
 func TestDerive_UUID(t *testing.T) {
-	r := derive.Derive("test-service")
+	r := derive.Derive(testService)
 	if !uuidRe.MatchString(r.UUID) {
 		t.Errorf("UUID %q does not match v5 pattern", r.UUID)
 	}
 }
 
 func TestDerive_Color(t *testing.T) {
-	r := derive.Derive("test-service")
+	r := derive.Derive(testService)
 	if !colorRe.MatchString(r.Color) {
 		t.Errorf("color %q does not match #rrggbb pattern", r.Color)
 	}
 }
 
 func TestDerive_Short(t *testing.T) {
-	r := derive.Derive("test-service")
+	r := derive.Derive(testService)
 	if len(r.Short) != 8 {
 		t.Errorf("short %q: want 8 chars, got %d", r.Short, len(r.Short))
 	}
@@ -77,7 +82,7 @@ func TestDerive_Short(t *testing.T) {
 }
 
 func TestDerive_Phrase(t *testing.T) {
-	r := derive.Derive("test-service")
+	r := derive.Derive(testService)
 	parts := strings.Split(r.Phrase, "-")
 	if len(parts) != 3 {
 		t.Errorf("phrase %q: want 3 words, got %d", r.Phrase, len(parts))
@@ -90,14 +95,14 @@ func TestDerive_Phrase(t *testing.T) {
 }
 
 func TestDerive_Emoji(t *testing.T) {
-	r := derive.Derive("test-service")
+	r := derive.Derive(testService)
 	if r.Emoji == "" {
 		t.Error("emoji should not be empty")
 	}
 }
 
 func TestDerive_InputPreserved(t *testing.T) {
-	input := "my-api-service"
+	input := sampleAPIService
 	r := derive.Derive(input)
 	if r.Input != input {
 		t.Errorf("Input field: got %q, want %q", r.Input, input)

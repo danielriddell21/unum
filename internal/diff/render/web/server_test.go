@@ -11,6 +11,8 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/node"
 )
 
+const apiDiffPath = "/api/diff"
+
 func textDiff() *node.Diff {
 	return &node.Diff{
 		Format:  node.FormatText,
@@ -81,7 +83,7 @@ func terraformDiff() *node.Diff {
 
 func TestHandleServerDiff_GET_Returns204(t *testing.T) {
 	handler := handleServerDiff(nil)
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/diff", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, apiDiffPath, nil)
 	w := httptest.NewRecorder()
 	handler(w, req)
 	if w.Code != http.StatusNoContent {
@@ -98,7 +100,7 @@ func TestHandleServerDiff_POST_Text(t *testing.T) {
 		ContentB: "hello\nunum\n",
 	}
 	b, _ := json.Marshal(body)
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/diff", bytes.NewReader(b))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, apiDiffPath, bytes.NewReader(b))
 	w := httptest.NewRecorder()
 	handler(w, req)
 
@@ -126,7 +128,7 @@ func TestHandleServerDiff_POST_JSON(t *testing.T) {
 		ContentB: `{"version":"2.0"}`,
 	}
 	b, _ := json.Marshal(body)
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/diff", bytes.NewReader(b))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, apiDiffPath, bytes.NewReader(b))
 	w := httptest.NewRecorder()
 	handler(w, req)
 
@@ -146,7 +148,7 @@ func TestHandleServerDiff_POST_MissingContent(t *testing.T) {
 	handler := handleServerDiff(nil)
 	body := postDiffRequest{NameA: "a.txt", ContentA: "hello"}
 	b, _ := json.Marshal(body)
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/diff", bytes.NewReader(b))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, apiDiffPath, bytes.NewReader(b))
 	w := httptest.NewRecorder()
 	handler(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -156,7 +158,7 @@ func TestHandleServerDiff_POST_MissingContent(t *testing.T) {
 
 func TestHandleServerDiff_POST_InvalidJSON(t *testing.T) {
 	handler := handleServerDiff(nil)
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/diff", bytes.NewReader([]byte("not json")))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, apiDiffPath, bytes.NewReader([]byte("not json")))
 	w := httptest.NewRecorder()
 	handler(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -166,7 +168,7 @@ func TestHandleServerDiff_POST_InvalidJSON(t *testing.T) {
 
 func TestHandleServerDiff_MethodNotAllowed(t *testing.T) {
 	handler := handleServerDiff(nil)
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodDelete, "/api/diff", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodDelete, apiDiffPath, nil)
 	w := httptest.NewRecorder()
 	handler(w, req)
 	if w.Code != http.StatusMethodNotAllowed {

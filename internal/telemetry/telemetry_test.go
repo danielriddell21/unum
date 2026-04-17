@@ -13,6 +13,11 @@ import (
 	"github.com/danielriddell21/unum/internal/config"
 )
 
+const (
+	testVersion = "v0.0.1"
+	closeErrFmt = "Close: %v"
+)
+
 func boolPtr(v bool) *bool { return &v }
 
 func TestInit_Disabled(t *testing.T) {
@@ -22,7 +27,7 @@ func TestInit_Disabled(t *testing.T) {
 	t.Setenv("DO_NOT_TRACK", "")
 	t.Setenv("UNUM_NO_TELEMETRY", "")
 
-	tel := Init(config.Config{}, "test", "v0.0.1")
+	tel := Init(config.Config{}, "test", testVersion)
 	if tel == nil {
 		t.Fatal("Init should return non-nil even when disabled")
 	}
@@ -33,7 +38,7 @@ func TestInit_Disabled(t *testing.T) {
 	tel.TrackEvent("test", "/test", nil)
 	tel.Disable()
 	if err := tel.Close(context.Background()); err != nil {
-		t.Errorf("Close: %v", err)
+		t.Errorf(closeErrFmt, err)
 	}
 }
 
@@ -43,12 +48,12 @@ func TestInit_DONotTrack(t *testing.T) {
 	t.Setenv("UMAMI_URL", "")
 	t.Setenv("UMAMI_WEBSITE_ID", "")
 
-	tel := Init(config.Config{}, "test", "v0.0.1")
+	tel := Init(config.Config{}, "test", testVersion)
 	// Should not panic and should be effectively a no-op.
 	tel.Tracer()
 	tel.Meter()
 	if err := tel.Close(context.Background()); err != nil {
-		t.Errorf("Close: %v", err)
+		t.Errorf(closeErrFmt, err)
 	}
 }
 
@@ -60,12 +65,12 @@ func TestInit_ConfigDisabled(t *testing.T) {
 	t.Setenv("UMAMI_WEBSITE_ID", "")
 
 	cfg := config.Config{Telemetry: boolPtr(false)}
-	tel := Init(cfg, "test", "v0.0.1")
+	tel := Init(cfg, "test", testVersion)
 	// Should produce no-op providers since config says disabled.
 	tel.Tracer()
 	tel.Meter()
 	if err := tel.Close(context.Background()); err != nil {
-		t.Errorf("Close: %v", err)
+		t.Errorf(closeErrFmt, err)
 	}
 }
 
@@ -76,7 +81,7 @@ func TestDisable_SwitchesToNoop(t *testing.T) {
 	t.Setenv("DO_NOT_TRACK", "")
 	t.Setenv("UNUM_NO_TELEMETRY", "")
 
-	tel := Init(config.Config{}, "test", "v0.0.1")
+	tel := Init(config.Config{}, "test", testVersion)
 	tel.Disable()
 
 	// All methods should still be safe.
@@ -94,7 +99,7 @@ func TestNilTelemetry_Safe(t *testing.T) {
 	tel.TrackEvent("test", "/test", nil)
 	tel.Disable()
 	if err := tel.Close(context.Background()); err != nil {
-		t.Errorf("Close: %v", err)
+		t.Errorf(closeErrFmt, err)
 	}
 }
 
@@ -174,7 +179,7 @@ func TestConcurrentTrack(t *testing.T) {
 	t.Setenv("DO_NOT_TRACK", "")
 	t.Setenv("UNUM_NO_TELEMETRY", "")
 
-	tel := Init(config.Config{}, "test", "v0.0.1")
+	tel := Init(config.Config{}, "test", testVersion)
 	done := make(chan struct{})
 
 	for i := range 10 {
@@ -194,6 +199,6 @@ func TestConcurrentTrack(t *testing.T) {
 	}
 
 	if err := tel.Close(context.Background()); err != nil {
-		t.Errorf("Close: %v", err)
+		t.Errorf(closeErrFmt, err)
 	}
 }

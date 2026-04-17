@@ -7,6 +7,8 @@ import (
 	"github.com/danielriddell21/unum/internal/json/typeinfo"
 )
 
+const expectedTypeArrayFmt = "expected TypeArray, got %v"
+
 func infer(t *testing.T, src string) *typeinfo.TypeInfo {
 	t.Helper()
 	root, err := parse.Parse([]byte(src))
@@ -86,7 +88,7 @@ func TestInferNullField(t *testing.T) {
 func TestInferArrayOfNumbers(t *testing.T) {
 	ti := infer(t, `[1, 2, 3]`)
 	if ti.Kind != typeinfo.TypeArray {
-		t.Fatalf("expected TypeArray, got %v", ti.Kind)
+		t.Fatalf(expectedTypeArrayFmt, ti.Kind)
 	}
 	if ti.Elem.Kind != typeinfo.TypeNumber {
 		t.Errorf("elem: got %v, want TypeNumber", ti.Elem.Kind)
@@ -98,7 +100,7 @@ func TestInferArrayMergesObjectFields(t *testing.T) {
 	// First element has "a" absent in second → "a" must be nullable
 	ti := infer(t, `[{"a": 1}, {"a": 2, "b": "x"}]`)
 	if ti.Kind != typeinfo.TypeArray {
-		t.Fatalf("expected TypeArray, got %v", ti.Kind)
+		t.Fatalf(expectedTypeArrayFmt, ti.Kind)
 	}
 	elem := ti.Elem
 	if elem.Kind != typeinfo.TypeObject {
@@ -124,7 +126,7 @@ func TestInferArrayMergesObjectFields(t *testing.T) {
 func TestInferEmptyArray(t *testing.T) {
 	ti := infer(t, `[]`)
 	if ti.Kind != typeinfo.TypeArray {
-		t.Fatalf("expected TypeArray, got %v", ti.Kind)
+		t.Fatalf(expectedTypeArrayFmt, ti.Kind)
 	}
 	if ti.Elem == nil {
 		t.Fatal("elem should not be nil")
