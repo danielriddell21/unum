@@ -86,3 +86,17 @@ func TestHandleDerive_Deterministic(t *testing.T) {
 		t.Error("derive endpoint is not deterministic")
 	}
 }
+
+func TestHandleDerive_NilDeriveFn(t *testing.T) {
+	old := deriveFn
+	deriveFn = nil
+	defer func() { deriveFn = old }()
+
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/derive?input=test", nil)
+	w := httptest.NewRecorder()
+	handleDerive(nil)(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("nil deriveFn: status %d, want 500", w.Code)
+	}
+}
