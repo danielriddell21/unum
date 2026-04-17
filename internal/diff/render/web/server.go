@@ -29,6 +29,7 @@ var assets embed.FS
 const (
 	contentTypeCSS = "text/css"
 	contentTypeJS  = "application/javascript"
+	apiDiffPath    = "/api/diff"
 )
 
 // Options configures the diff web server.
@@ -78,7 +79,7 @@ func Start(d *node.Diff, opts Options) error {
 	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", contentTypeJS))
 	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", contentTypeCSS))
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", contentTypeJS))
-	mux.HandleFunc("/api/diff", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(apiDiffPath, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleServerDiff(opts.Tel)(w, r)
 			return
@@ -258,7 +259,7 @@ func StartServer(opts Options) error {
 	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", contentTypeJS))
 	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", contentTypeCSS))
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", contentTypeJS))
-	mux.HandleFunc("/api/diff", handleServerDiff(opts.Tel))
+	mux.HandleFunc(apiDiffPath, handleServerDiff(opts.Tel))
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 	shared.RegisterMetrics(mux)
 	shared.RegisterUmamiProxy(mux)
@@ -343,7 +344,7 @@ func handleServerDiff(tel *telemetry.Telemetry) http.HandlerFunc {
 			attribute.Int("diff.removed", diff.Removed),
 			attribute.Int("diff.modified", diff.Modified),
 		)
-		tel.TrackEvent("diff-compute", "/api/diff", map[string]string{
+		tel.TrackEvent("diff-compute", apiDiffPath, map[string]string{
 			"format":  diffFormat.String(),
 			"added":   strconv.Itoa(diff.Added),
 			"removed": strconv.Itoa(diff.Removed),

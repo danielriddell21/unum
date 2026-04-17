@@ -306,7 +306,7 @@ func (p *SplitPanel) View() string {
 	return sb.String()
 }
 
-func (p *SplitPanel) build() { //nolint:cyclop,gocognit // NOSONAR: walks diff tree building side-by-side lines; branching on kind/added/removed is the algorithm
+func (p *SplitPanel) build() {
 	if p.diff == nil {
 		return
 	}
@@ -326,66 +326,59 @@ func (p *SplitPanel) build() { //nolint:cyclop,gocognit // NOSONAR: walks diff t
 		leftLines = append(leftLines, hdr)
 		rightLines = append(rightLines, hdr)
 
-		// Pair up removed/added lines so they sit on the same row
-		var removed, added []node.Line
-		var unchanged []node.Line
-		flush := func() {
-			maxPairs := len(removed)
-			if len(added) > maxPairs {
-				maxPairs = len(added)
-			}
-			for i := 0; i < maxPairs; i++ {
-				lineIdx := len(leftLines)
-				var lLine, rLine string
-				if i < len(removed) {
-					lLine = p.renderSide(removed[i], node.Removed, q)
-					if q != "" && strings.Contains(strings.ToLower(removed[i].Content), q) {
-						p.matches = append(p.matches, lineIdx)
-					}
-				} else {
-					lLine = ""
-				}
-				if i < len(added) {
-					rLine = p.renderSide(added[i], node.Added, q)
-					if q != "" && strings.Contains(strings.ToLower(added[i].Content), q) {
-						p.matches = append(p.matches, lineIdx)
-					}
-				} else {
-					rLine = ""
-				}
-				leftLines = append(leftLines, lLine)
-				rightLines = append(rightLines, rLine)
-			}
-			removed = removed[:0]
-			added = added[:0]
-			for _, u := range unchanged {
-				leftLines = append(leftLines, p.renderSide(u, node.Unchanged, q))
-				rightLines = append(rightLines, p.renderSide(u, node.Unchanged, q))
-			}
-			unchanged = unchanged[:0]
-		}
-
+		var removed, added, unchanged []node.Line
 		for _, l := range h.Lines {
 			switch l.Kind {
 			case node.Removed:
 				if len(unchanged) > 0 {
-					flush()
+					p.flushHunk(removed, added, unchanged, &leftLines, &rightLines, q)
+					removed, added, unchanged = removed[:0], added[:0], unchanged[:0]
 				}
 				removed = append(removed, l)
 			case node.Added:
 				added = append(added, l)
 			default:
 				if len(removed) > 0 || len(added) > 0 {
-					flush()
+					p.flushHunk(removed, added, unchanged, &leftLines, &rightLines, q)
+					removed, added, unchanged = removed[:0], added[:0], unchanged[:0]
 				}
 				unchanged = append(unchanged, l)
 			}
 		}
-		flush()
+		p.flushHunk(removed, added, unchanged, &leftLines, &rightLines, q)
 	}
 
 	p.left.SetContent(strings.Join(leftLines, "\n"))
 	p.right.SetContent(strings.Join(rightLines, "\n"))
+}
+
+func (p *SplitPanel) flushHunk(removed, added, unchanged []node.Line, leftLines, rightLines *[]string, q string) {
+	maxPairs := len(removed)
+	if len(added) > maxPairs {
+		maxPairs = len(added)
+	}
+	for i := 0; i < maxPairs; i++ {
+		lineIdx := len(*leftLines)
+		var lLine, rLine string
+		if i < len(removed) {
+			lLine = p.renderSide(removed[i], node.Removed, q)
+			if q != "" && strings.Contains(strings.ToLower(removed[i].Content), q) {
+				p.matches = append(p.matches, lineIdx)
+			}
+		}
+		if i < len(added) {
+			rLine = p.renderSide(added[i], node.Added, q)
+			if q != "" && strings.Contains(strings.ToLower(added[i].Content), q) {
+				p.matches = append(p.matches, lineIdx)
+			}
+		}
+		*leftLines = append(*leftLines, lLine)
+		*rightLines = append(*rightLines, rLine)
+	}
+	for _, u := range unchanged {
+		*leftLines = append(*leftLines, p.renderSide(u, node.Unchanged, q))
+		*rightLines = append(*rightLines, p.renderSide(u, node.Unchanged, q))
+	}
 }
 
 func (p *SplitPanel) renderSide(l node.Line, kind node.ChangeKind, searchQ string) string {

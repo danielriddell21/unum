@@ -22,6 +22,7 @@ import (
 	"github.com/danielriddell21/unum/internal/json/lens/stats"
 	"github.com/danielriddell21/unum/internal/json/lens/transform"
 	"github.com/danielriddell21/unum/internal/json/lens/typegen"
+	"github.com/danielriddell21/unum/internal/json/node"
 	"github.com/danielriddell21/unum/internal/json/parse"
 	"github.com/danielriddell21/unum/internal/json/render/static"
 	"github.com/danielriddell21/unum/internal/json/render/tui"
@@ -125,7 +126,7 @@ Config file (~/.config/unum/config.json):
 	return cmd
 }
 
-func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // NOSONAR: dispatch on output flags + render modes; each branch is a distinct user-facing mode
+func runJSON(f *flags, filename string) error {
 	mode := "cli"
 	if f.ui {
 		mode = "tui"
@@ -224,74 +225,19 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // NOSO
 	)
 	f.tel.M.JSONNodes.Record(ctx, int64(nodeCount))
 
-	// ── Output-mode lenses (mutually exclusive) ───────────────────────────────
-
-	if f.jqExpr != "" {
-		result, err := query.Execute(root, f.jqExpr)
-		if err != nil {
-			static.RenderError(os.Stderr, err, renderOpts)
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "query")
-			f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
-				attribute.String("tool", "json"),
-				attribute.String("error_type", "query"),
-			))
-			span.End()
-			os.Exit(2) //nolint:gocritic // query failure requires hard exit with distinct code
-		}
-		recordSuccess(ctx, f, mode, len(data), time.Since(start))
-		fmt.Println(result)
-		return nil
+	if handled, err := dispatchLensMode(ctx, f, root, renderOpts, span, start, mode, len(data)); handled || err != nil {
+		return err
 	}
 
-	if f.typegenTarget != "" {
-		result, err := typegen.Generate(root, typegen.Options{
-			Target:      typegen.Target(f.typegenTarget),
-			PackageName: f.typegenPkg,
-			TypeName:    f.typegenType,
-		})
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "typegen")
-			f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
-				attribute.String("tool", "json"),
-				attribute.String("error_type", "render"),
-			))
-			return fmt.Errorf("typegen: %w", err)
-		}
-		recordSuccess(ctx, f, mode, len(data), time.Since(start))
-		fmt.Print(result)
-		return nil
-	}
+	return dispatchRenderMode(ctx, f, root, renderOpts, span, start, mode, len(data), filename)
+}
 
-	if f.transformYAML {
-		yamlBytes, err := transform.ToYAML(root)
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "transform")
-			f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
-				attribute.String("tool", "json"),
-				attribute.String("error_type", "render"),
-			))
-			return fmt.Errorf("transform: %w", err)
-		}
-		recordSuccess(ctx, f, mode, len(data), time.Since(start))
-		fmt.Print(string(yamlBytes))
-		return nil
-	}
-
-	// ── Annotation lenses ─────────────────────────────────────────────────────
-
+func dispatchRenderMode(ctx context.Context, f *flags, root *node.Node, renderOpts static.Options, span trace.Span, start time.Time, mode string, sizeBytes int, filename string) error {
 	analyzeOpts := analyze.Options{
 		RunStats:  f.showStats,
 		RunMerkle: f.showMerkle || f.hashOnly,
 	}
-
-	allAnalyzers := []analyze.Analyzer{
-		stats.Analyzer{},
-		merkle.Analyzer{},
-	}
-	suite := analyze.Build(analyzeOpts, allAnalyzers)
+	suite := analyze.Build(analyzeOpts, []analyze.Analyzer{stats.Analyzer{}, merkle.Analyzer{}})
 	_, analyzeSpan := f.tel.Tracer().Start(ctx, "json.analyze")
 	if err := suite.Run(ctx, root, analyzeOpts); err != nil {
 		analyzeSpan.RecordError(err)
@@ -308,15 +254,13 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // NOSO
 	analyzeSpan.End()
 
 	if f.hashOnly {
-		recordSuccess(ctx, f, mode, len(data), time.Since(start))
+		recordSuccess(ctx, f, mode, sizeBytes, time.Since(start))
 		fmt.Println(merkle.RootHash(root))
 		return nil
 	}
 
-	// ── TUI / Web modes ───────────────────────────────────────────────────────
-
 	if f.ui {
-		recordSuccess(ctx, f, mode, len(data), time.Since(start))
+		recordSuccess(ctx, f, mode, sizeBytes, time.Since(start))
 		if err := tui.Start(root, filename, f.theme, f.version); err != nil {
 			return fmt.Errorf("json TUI: %w", err)
 		}
@@ -324,7 +268,7 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // NOSO
 	}
 
 	if f.web {
-		recordSuccess(ctx, f, mode, len(data), time.Since(start))
+		recordSuccess(ctx, f, mode, sizeBytes, time.Since(start))
 		if err := web.Start(root, web.Options{
 			Port:       f.port,
 			Filename:   filename,
@@ -339,8 +283,6 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // NOSO
 		return nil
 	}
 
-	// ── Default: static render ────────────────────────────────────────────────
-
 	renderOpts.ShowStats = f.showStats
 	renderOpts.ShowMerkle = f.showMerkle
 	if err := static.Render(os.Stdout, root, renderOpts); err != nil {
@@ -352,8 +294,66 @@ func runJSON(f *flags, filename string) error { //nolint:cyclop,gocognit // NOSO
 		))
 		return fmt.Errorf("json render: %w", err)
 	}
-	recordSuccess(ctx, f, mode, len(data), time.Since(start))
+	recordSuccess(ctx, f, mode, sizeBytes, time.Since(start))
 	return nil
+}
+
+func dispatchLensMode(ctx context.Context, f *flags, root *node.Node, renderOpts static.Options, span trace.Span, start time.Time, mode string, sizeBytes int) (bool, error) {
+	if f.jqExpr != "" {
+		result, err := query.Execute(root, f.jqExpr)
+		if err != nil {
+			static.RenderError(os.Stderr, err, renderOpts)
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "query")
+			f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+				attribute.String("tool", "json"),
+				attribute.String("error_type", "query"),
+			))
+			span.End()
+			os.Exit(2) //nolint:gocritic // query failure requires hard exit with distinct code
+		}
+		recordSuccess(ctx, f, mode, sizeBytes, time.Since(start))
+		fmt.Println(result)
+		return true, nil
+	}
+
+	if f.typegenTarget != "" {
+		result, err := typegen.Generate(root, typegen.Options{
+			Target:      typegen.Target(f.typegenTarget),
+			PackageName: f.typegenPkg,
+			TypeName:    f.typegenType,
+		})
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "typegen")
+			f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+				attribute.String("tool", "json"),
+				attribute.String("error_type", "render"),
+			))
+			return false, fmt.Errorf("typegen: %w", err)
+		}
+		recordSuccess(ctx, f, mode, sizeBytes, time.Since(start))
+		fmt.Print(result)
+		return true, nil
+	}
+
+	if f.transformYAML {
+		yamlBytes, err := transform.ToYAML(root)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "transform")
+			f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+				attribute.String("tool", "json"),
+				attribute.String("error_type", "render"),
+			))
+			return false, fmt.Errorf("transform: %w", err)
+		}
+		recordSuccess(ctx, f, mode, sizeBytes, time.Since(start))
+		fmt.Print(string(yamlBytes))
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func recordSuccess(ctx context.Context, f *flags, mode string, sizeBytes int, elapsed time.Duration) {

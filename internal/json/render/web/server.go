@@ -41,6 +41,7 @@ const (
 	contentTypeCSS  = "text/css"
 	contentTypeJS   = "application/javascript"
 	errKeyNotFound  = "key not found"
+	apiUploadPath   = "/api/upload"
 )
 
 // Options configures the web server.
@@ -101,7 +102,7 @@ func Start(root *node.Node, opts Options) error {
 
 	// API
 	mux.HandleFunc("/api/tree", handleTree(payloadBytes))
-	mux.HandleFunc("/api/upload", handleUpload(opts.Tel))
+	mux.HandleFunc(apiUploadPath, handleUpload(opts.Tel))
 	mux.HandleFunc("/api/query", handleQuery(root))
 	shared.RegisterMetrics(mux)
 	shared.RegisterUmamiProxy(mux)
@@ -198,7 +199,7 @@ func buildPayload(root *node.Node, filename string) (*treePayload, error) { //no
 	return p, nil
 }
 
-func toWebNode(n *node.Node) *webNode { //nolint:gocognit // maps every node kind to its web representation; branching on kind is the algorithm
+func toWebNode(n *node.Node) *webNode {
 	wn := &webNode{
 		Kind:  n.Kind.String(),
 		Key:   n.Key,
@@ -207,7 +208,6 @@ func toWebNode(n *node.Node) *webNode { //nolint:gocognit // maps every node kin
 		Path:  n.Path(),
 	}
 
-	// Display value for strings (unquoted)
 	if n.Kind == node.KindString {
 		var s string
 		if json.Unmarshal([]byte(n.Raw), &s) == nil {
@@ -215,42 +215,12 @@ func toWebNode(n *node.Node) *webNode { //nolint:gocognit // maps every node kin
 		}
 	}
 
-	// Merkle hash
 	if v, ok := n.GetAnnotation(merkle.Lens, "hash"); ok {
 		wn.MerkleHash, _ = v.(string)
 	}
 
-	// Stats
 	if n.Kind == node.KindArray {
-		if nc, ok := n.GetAnnotation(stats.Lens, "numeric_count"); ok {
-			ws := &webStats{}
-			ws.NumericCount = nc.(int)
-			if v, ok := n.GetAnnotation(stats.Lens, "count"); ok {
-				ws.Count = v.(int)
-			}
-			if v, ok := n.GetAnnotation(stats.Lens, "min"); ok {
-				ws.Min = v.(float64)
-			}
-			if v, ok := n.GetAnnotation(stats.Lens, "max"); ok {
-				ws.Max = v.(float64)
-			}
-			if v, ok := n.GetAnnotation(stats.Lens, "mean"); ok {
-				ws.Mean = v.(float64)
-			}
-			if v, ok := n.GetAnnotation(stats.Lens, "stddev"); ok {
-				ws.Stddev = v.(float64)
-			}
-			if v, ok := n.GetAnnotation(stats.Lens, "p50"); ok {
-				ws.P50 = v.(float64)
-			}
-			if v, ok := n.GetAnnotation(stats.Lens, "p95"); ok {
-				ws.P95 = v.(float64)
-			}
-			if v, ok := n.GetAnnotation(stats.Lens, "p99"); ok {
-				ws.P99 = v.(float64)
-			}
-			wn.Stats = ws
-		}
+		wn.Stats = buildWebStats(n)
 	}
 
 	for _, c := range n.Children {
@@ -258,6 +228,39 @@ func toWebNode(n *node.Node) *webNode { //nolint:gocognit // maps every node kin
 	}
 
 	return wn
+}
+
+func buildWebStats(n *node.Node) *webStats {
+	nc, ok := n.GetAnnotation(stats.Lens, "numeric_count")
+	if !ok {
+		return nil
+	}
+	ws := &webStats{NumericCount: nc.(int)}
+	if v, ok := n.GetAnnotation(stats.Lens, "count"); ok {
+		ws.Count = v.(int)
+	}
+	if v, ok := n.GetAnnotation(stats.Lens, "min"); ok {
+		ws.Min = v.(float64)
+	}
+	if v, ok := n.GetAnnotation(stats.Lens, "max"); ok {
+		ws.Max = v.(float64)
+	}
+	if v, ok := n.GetAnnotation(stats.Lens, "mean"); ok {
+		ws.Mean = v.(float64)
+	}
+	if v, ok := n.GetAnnotation(stats.Lens, "stddev"); ok {
+		ws.Stddev = v.(float64)
+	}
+	if v, ok := n.GetAnnotation(stats.Lens, "p50"); ok {
+		ws.P50 = v.(float64)
+	}
+	if v, ok := n.GetAnnotation(stats.Lens, "p95"); ok {
+		ws.P95 = v.(float64)
+	}
+	if v, ok := n.GetAnnotation(stats.Lens, "p99"); ok {
+		ws.P99 = v.(float64)
+	}
+	return ws
 }
 
 func maxDepth(n *node.Node) int {
@@ -315,7 +318,7 @@ func StartServer(opts Options) error {
 	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", contentTypeCSS))
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", contentTypeJS))
 	mux.HandleFunc("/api/tree", handleKeyedTree())
-	mux.HandleFunc("/api/upload", handleUpload(opts.Tel))
+	mux.HandleFunc(apiUploadPath, handleUpload(opts.Tel))
 	mux.HandleFunc("/api/query", handleKeyedQuery())
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 	shared.RegisterMetrics(mux)
@@ -455,7 +458,7 @@ func handleUpload(tel *telemetry.Telemetry) http.HandlerFunc {
 			attribute.Int("json.size_bytes", len(req.Content)),
 		)
 		tel.M.WebUploads.Add(ctx, 1, ometric.WithAttributes(attribute.String("tool", "json")))
-		tel.TrackEvent("json-upload", "/api/upload", map[string]string{
+		tel.TrackEvent("json-upload", apiUploadPath, map[string]string{
 			"node_count": strconv.Itoa(nodeCount),
 			"size_bytes": strconv.Itoa(len(req.Content)),
 		})

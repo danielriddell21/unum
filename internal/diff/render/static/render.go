@@ -67,7 +67,7 @@ type Options struct {
 // Call before parsing; invoke the returned func after parsing to complete the line.
 func Boot(w io.Writer, fileA, fileB string, opts Options) func(added, removed, modified int, elapsed time.Duration) {
 	// noop is the quiet-mode completion callback — intentionally empty.
-	noop := func(int, int, int, time.Duration) {}
+	noop := func(int, int, int, time.Duration) { /* quiet mode: suppress all output */ }
 	if opts.Quiet {
 		return noop
 	}

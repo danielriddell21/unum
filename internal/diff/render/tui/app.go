@@ -14,7 +14,7 @@ import (
 )
 
 // Start launches the diff TUI.
-func Start(d *node.Diff, theme string, version string) error { //nolint:cyclop,gocognit // NOSONAR: file-picker reload loop branches on multiple picker/parse outcomes; each case is necessary
+func Start(d *node.Diff, theme string, version string) error {
 	applyTheme(theme)
 	diff := d
 	for {
@@ -29,61 +29,73 @@ func Start(d *node.Diff, theme string, version string) error { //nolint:cyclop,g
 			return nil
 		}
 
-		// Pick file A
 		cwd, _ := os.Getwd()
-		pmA := newPickerModel(cwd, "SELECT FILE A")
-		ppA := tea.NewProgram(pmA, tea.WithAltScreen())
-		prA, err := ppA.Run()
+		fileA, err := pickFile("SELECT FILE A", cwd)
 		if err != nil {
-			return fmt.Errorf("file picker: %w", err)
+			return err
 		}
-		pickedA, ok := prA.(pickerModel)
-		if !ok || pickedA.Selected == "" {
+		if fileA == "" {
 			return nil
 		}
 
-		// Pick file B (start in same dir as file A)
-		pmB := newPickerModel(filepath.Dir(pickedA.Selected), "SELECT FILE B")
-		ppB := tea.NewProgram(pmB, tea.WithAltScreen())
-		prB, err := ppB.Run()
+		fileB, err := pickFile("SELECT FILE B", filepath.Dir(fileA))
 		if err != nil {
-			return fmt.Errorf("file picker: %w", err)
+			return err
 		}
-		pickedB, ok := prB.(pickerModel)
-		if !ok || pickedB.Selected == "" {
+		if fileB == "" {
 			return nil
 		}
 
-		// Re-read and re-diff
-		dataA, err := os.ReadFile(pickedA.Selected)
+		newDiff, err := reloadDiff(fileA, fileB)
 		if err != nil {
-			return fmt.Errorf("cannot read %s: %w", pickedA.Selected, err)
+			return err
 		}
-		dataB, err := os.ReadFile(pickedB.Selected)
-		if err != nil {
-			return fmt.Errorf("cannot read %s: %w", pickedB.Selected, err)
-		}
-
-		diffFormat := format.Parse("", pickedA.Selected, pickedB.Selected)
-		var newDiff *node.Diff
-		switch diffFormat {
-		case node.FormatJSON:
-			newDiff, err = parse.JSON(dataA, dataB)
-		case node.FormatYAML:
-			newDiff, err = parse.YAML(dataA, dataB)
-		case node.FormatTerraform:
-			newDiff, err = parse.Terraform(dataA)
-		default:
-			newDiff, err = parse.Text(dataA, dataB, 3)
-		}
-		if err != nil {
-			return fmt.Errorf("diff: %w", err)
-		}
-		newDiff.FileA = pickedA.Selected
-		newDiff.FileB = pickedB.Selected
-		newDiff.Format = diffFormat
 		diff = newDiff
 	}
+}
+
+func pickFile(title, startDir string) (string, error) {
+	pm := newPickerModel(startDir, title)
+	pp := tea.NewProgram(pm, tea.WithAltScreen())
+	pr, err := pp.Run()
+	if err != nil {
+		return "", fmt.Errorf("file picker: %w", err)
+	}
+	picked, ok := pr.(pickerModel)
+	if !ok || picked.Selected == "" {
+		return "", nil
+	}
+	return picked.Selected, nil
+}
+
+func reloadDiff(fileA, fileB string) (*node.Diff, error) {
+	dataA, err := os.ReadFile(fileA)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read %s: %w", fileA, err)
+	}
+	dataB, err := os.ReadFile(fileB)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read %s: %w", fileB, err)
+	}
+	diffFormat := format.Parse("", fileA, fileB)
+	var d *node.Diff
+	switch diffFormat {
+	case node.FormatJSON:
+		d, err = parse.JSON(dataA, dataB)
+	case node.FormatYAML:
+		d, err = parse.YAML(dataA, dataB)
+	case node.FormatTerraform:
+		d, err = parse.Terraform(dataA)
+	default:
+		d, err = parse.Text(dataA, dataB, 3)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("diff: %w", err)
+	}
+	d.FileA = fileA
+	d.FileB = fileB
+	d.Format = diffFormat
+	return d, nil
 }
 
 func applyTheme(theme string) {

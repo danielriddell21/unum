@@ -33,7 +33,7 @@ func Parse(data []byte) (*node.Node, error) {
 
 const errTokenFmt = "token: %w"
 
-func parseValue(dec *json.Decoder, key string, index int, parent *node.Node) (*node.Node, error) { //nolint:cyclop,gocognit // NOSONAR: recursive descent parser; branching on token type is the algorithm
+func parseValue(dec *json.Decoder, key string, index int, parent *node.Node) (*node.Node, error) {
 	tok, err := dec.Token()
 	if err != nil {
 		return nil, fmt.Errorf(errTokenFmt, err)
@@ -46,38 +46,14 @@ func parseValue(dec *json.Decoder, key string, index int, parent *node.Node) (*n
 		switch v {
 		case '{':
 			n.Kind = node.KindObject
-			for dec.More() {
-				keyTok, err := dec.Token()
-				if err != nil {
-					return nil, fmt.Errorf(errTokenFmt, err)
-				}
-				childKey, ok := keyTok.(string)
-				if !ok {
-					return nil, fmt.Errorf("expected object key, got %T", keyTok)
-				}
-				child, err := parseValue(dec, childKey, -1, n)
-				if err != nil {
-					return nil, err
-				}
-				n.Children = append(n.Children, child)
+			if err := parseObject(dec, n); err != nil {
+				return nil, err
 			}
-			if _, err := dec.Token(); err != nil { // consume '}'
-				return nil, fmt.Errorf(errTokenFmt, err)
-			}
-
 		case '[':
 			n.Kind = node.KindArray
-			for i := 0; dec.More(); i++ {
-				child, err := parseValue(dec, "", i, n)
-				if err != nil {
-					return nil, err
-				}
-				n.Children = append(n.Children, child)
+			if err := parseArray(dec, n); err != nil {
+				return nil, err
 			}
-			if _, err := dec.Token(); err != nil { // consume ']'
-				return nil, fmt.Errorf(errTokenFmt, err)
-			}
-
 		default:
 			return nil, fmt.Errorf("unexpected delimiter: %s", v)
 		}
@@ -108,6 +84,42 @@ func parseValue(dec *json.Decoder, key string, index int, parent *node.Node) (*n
 	}
 
 	return n, nil
+}
+
+func parseObject(dec *json.Decoder, n *node.Node) error {
+	for dec.More() {
+		keyTok, err := dec.Token()
+		if err != nil {
+			return fmt.Errorf(errTokenFmt, err)
+		}
+		childKey, ok := keyTok.(string)
+		if !ok {
+			return fmt.Errorf("expected object key, got %T", keyTok)
+		}
+		child, err := parseValue(dec, childKey, -1, n)
+		if err != nil {
+			return err
+		}
+		n.Children = append(n.Children, child)
+	}
+	if _, err := dec.Token(); err != nil { // consume '}'
+		return fmt.Errorf(errTokenFmt, err)
+	}
+	return nil
+}
+
+func parseArray(dec *json.Decoder, n *node.Node) error {
+	for i := 0; dec.More(); i++ {
+		child, err := parseValue(dec, "", i, n)
+		if err != nil {
+			return err
+		}
+		n.Children = append(n.Children, child)
+	}
+	if _, err := dec.Token(); err != nil { // consume ']'
+		return fmt.Errorf(errTokenFmt, err)
+	}
+	return nil
 }
 
 func offsetToLineCol(data []byte, offset int64) (line, col int) {

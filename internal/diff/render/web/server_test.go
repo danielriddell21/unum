@@ -11,8 +11,6 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/node"
 )
 
-const apiDiffPath = "/api/diff"
-
 func textDiff() *node.Diff {
 	return &node.Diff{
 		Format:  node.FormatText,
