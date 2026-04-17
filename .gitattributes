@@ -1,0 +1,5 @@
+# Enforce LF in the repo; let git handle checkout normalisation per-OS.
+* text=auto eol=lf
+
+# Testdata fixtures must always be LF so embedded bytes are predictable.
+testdata/** text eol=lf

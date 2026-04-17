@@ -5,6 +5,7 @@
 * [Go](https://go.dev) (stable — version from `go.mod`)
 * [just](https://github.com/casey/just)
 * [golangci-lint](https://golangci-lint.run/welcome/install/) (for `just lint`)
+* [gremlins](https://github.com/go-gremlins/gremlins) (for `just mutate`)
 
 ## Development workflow
 
@@ -15,9 +16,12 @@ just test -v    # verbose unit test output
 just yeet       # run CLI functional tests (tests/)
 just lint       # golangci-lint
 just ci         # full gate: lint + test + yeet + build
+just mutate     # mutation testing via gremlins
 ```
 
 Run `just ci` before every commit — all four stages must pass. CI runs the same gate on every push to `trunk` and on every pull request targeting `trunk`.
+
+Mutation testing (`just mutate`) runs automatically in CI on pushes to `trunk` via `go-gremlins/gremlins-action`. Thresholds and enabled mutation types are configured in `.gremlins.yaml`. The gate requires ≥60% efficacy (killed/tested mutants) with a coverage floor of 60% — only mutants in covered code are tested.
 
 Run `just --list` to see all available recipes, including per-tool smoke-testing shortcuts.
 

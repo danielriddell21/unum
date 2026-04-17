@@ -24,7 +24,7 @@ yeet:
 # golangci-lint
 [group('core')]
 lint *args:
-    golangci-lint run ./... {{args}}
+    golangci-lint run ./... {{ args }}
 
 # install to GOPATH/bin
 [group('core')]
@@ -39,6 +39,11 @@ clean:
 # full gate: lint + test + yeet + build
 [group('core')]
 ci: lint test yeet build
+
+# mutation testing
+[group('core')]
+mutate *args:
+    gremlins unleash {{ args }}
 
 # tag and push a release
 [group('core')]
