@@ -201,3 +201,24 @@ func TestEnsureClientID_Idempotent(t *testing.T) {
 		t.Errorf("ClientID=%q, want \"existing-id\" (should not overwrite)", cfg.ClientID)
 	}
 }
+
+func TestLoad_MalformedJSON(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("APPDATA", dir)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	// Write corrupt JSON to the config file.
+	cfgDir := filepath.Join(dir, "unum")
+	if err := os.MkdirAll(cfgDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte("{bad"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Should silently return defaults.
+	cfg := Load()
+	if cfg.DarkTheme != "cyber" {
+		t.Errorf("malformed JSON: DarkTheme=%q, want 'cyber' (default)", cfg.DarkTheme)
+	}
+}
