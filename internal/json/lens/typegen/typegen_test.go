@@ -181,3 +181,113 @@ func TestGenerateUnknownTarget(t *testing.T) {
 		t.Error("expected error for unknown target")
 	}
 }
+
+// ─── goTypeName / tsTypeName path coverage ───────────────────────────────────
+
+func TestGenerateGo_NullableField(t *testing.T) {
+	// A nested array with sometimes-null field → typeinfo marks it nullable → *float64.
+	out := generate(t, `{"users": [{"age": 30}, {"age": null}]}`, typegen.Options{
+		Target:   typegen.TargetGo,
+		TypeName: "Root",
+	})
+	if !strings.Contains(out, "*float64") {
+		t.Errorf("nullable number field should be '*float64', got:\n%s", out)
+	}
+}
+
+func TestGenerateTS_NullableField(t *testing.T) {
+	out := generate(t, `{"users": [{"age": 30}, {"age": null}]}`, typegen.Options{
+		Target:   typegen.TargetTypeScript,
+		TypeName: "Root",
+	})
+	// Nullable field should have "?" marker and/or "| null" suffix.
+	if !strings.Contains(out, "null") {
+		t.Errorf("nullable field should mention 'null' in TS, got:\n%s", out)
+	}
+}
+
+func TestGenerateJSONSchema_NullableField(t *testing.T) {
+	out := generate(t, `{"users": [{"age": 30}, {"age": null}]}`, typegen.Options{
+		Target:   typegen.TargetJSONSchema,
+		TypeName: "Root",
+	})
+	// Nullable fields get anyOf in JSON Schema 2020-12.
+	if !strings.Contains(out, "anyOf") {
+		t.Errorf("nullable field should use anyOf in JSONSchema, got:\n%s", out)
+	}
+}
+
+func TestGenerateGo_AlwaysNull(t *testing.T) {
+	out := generate(t, `{"x": null}`, typegen.Options{
+		Target:   typegen.TargetGo,
+		TypeName: "Root",
+	})
+	// TypeNull maps to "any" in Go.
+	if !strings.Contains(out, "any") {
+		t.Errorf("null field should be 'any' in Go, got:\n%s", out)
+	}
+}
+
+func TestGenerateTS_AlwaysNull(t *testing.T) {
+	out := generate(t, `{"x": null}`, typegen.Options{
+		Target:   typegen.TargetTypeScript,
+		TypeName: "Root",
+	})
+	if out == "" {
+		t.Error("TS generation returned empty for always-null field")
+	}
+}
+
+func TestGenerateGo_ArrayField(t *testing.T) {
+	out := generate(t, `{"nums": [1, 2, 3]}`, typegen.Options{
+		Target:   typegen.TargetGo,
+		TypeName: "Root",
+	})
+	if !strings.Contains(out, "[]float64") {
+		t.Errorf("expected '[]float64' for number array, got:\n%s", out)
+	}
+}
+
+func TestGenerateTS_ArrayField(t *testing.T) {
+	out := generate(t, `{"nums": [1, 2, 3]}`, typegen.Options{
+		Target:   typegen.TargetTypeScript,
+		TypeName: "Root",
+	})
+	if !strings.Contains(out, "number[]") {
+		t.Errorf("expected 'number[]' for number array, got:\n%s", out)
+	}
+}
+
+func TestGenerateJSONSchema_ArrayField(t *testing.T) {
+	out := generate(t, `{"nums": [1, 2]}`, typegen.Options{
+		Target:   typegen.TargetJSONSchema,
+		TypeName: "Root",
+	})
+	if !strings.Contains(out, `"array"`) {
+		t.Errorf("expected '\"array\"' in JSON Schema, got:\n%s", out)
+	}
+	if !strings.Contains(out, `"items"`) {
+		t.Errorf("expected '\"items\"' in JSON Schema for typed array, got:\n%s", out)
+	}
+}
+
+func TestGenerateGo_MixedTypeField(t *testing.T) {
+	// A field with both number and string values → TypeMixed → "any"
+	out := generate(t, `{"items": [{"x": 1}, {"x": "str"}]}`, typegen.Options{
+		Target:   typegen.TargetGo,
+		TypeName: "Root",
+	})
+	if !strings.Contains(out, "any") {
+		t.Errorf("mixed-type field should be 'any' in Go, got:\n%s", out)
+	}
+}
+
+func TestGenerateTS_MixedTypeField(t *testing.T) {
+	out := generate(t, `{"items": [{"x": 1}, {"x": "str"}]}`, typegen.Options{
+		Target:   typegen.TargetTypeScript,
+		TypeName: "Root",
+	})
+	if !strings.Contains(out, "unknown") {
+		t.Errorf("mixed-type field should be 'unknown' in TS, got:\n%s", out)
+	}
+}

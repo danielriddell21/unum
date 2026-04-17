@@ -88,3 +88,34 @@ func TestToYAMLNested(t *testing.T) {
 		t.Errorf("expected 'name: bob' in:\n%s", out)
 	}
 }
+
+func TestToYAMLExponentNotation(t *testing.T) {
+	// Numbers with 'e' or 'E' should get !!float tag, not !!int.
+	for _, n := range []string{"1e10", "1E10", "2.5e-3"} {
+		out := yamlOf(t, `{"v": `+n+`}`)
+		if !strings.Contains(out, "v:") {
+			t.Errorf("exponent %q: missing key in:\n%s", n, out)
+		}
+	}
+}
+
+func TestToYAMLEmptyObject(t *testing.T) {
+	out := yamlOf(t, `{}`)
+	if out == "" {
+		t.Error("empty object ToYAML returned empty string")
+	}
+}
+
+func TestToYAMLEmptyArray(t *testing.T) {
+	out := yamlOf(t, `[]`)
+	if out == "" {
+		t.Error("empty array ToYAML returned empty string")
+	}
+}
+
+func TestToYAMLBool(t *testing.T) {
+	out := yamlOf(t, `{"ok": false}`)
+	if !strings.Contains(out, "ok: false") {
+		t.Errorf("expected 'ok: false' in:\n%s", out)
+	}
+}
