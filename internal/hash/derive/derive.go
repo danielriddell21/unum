@@ -79,21 +79,19 @@ var (
 )
 
 // effWords returns the EFF large wordlist as a flat []string, built once.
+// Enumerates every 5-digit dice code (11111..66666) in lexicographic order.
 func effWords() []string {
 	effOnce.Do(func() {
 		wl := diceware.WordListEffLarge()
 		effSlice = make([]string, 0, 7776)
-		for d1 := 1; d1 <= 6; d1++ {
-			for d2 := 1; d2 <= 6; d2++ {
-				for d3 := 1; d3 <= 6; d3++ {
-					for d4 := 1; d4 <= 6; d4++ {
-						for d5 := 1; d5 <= 6; d5++ {
-							code := d1*10000 + d2*1000 + d3*100 + d4*10 + d5
-							effSlice = append(effSlice, wl.WordAt(code))
-						}
-					}
-				}
-			}
+		for i := 0; i < 7776; i++ {
+			d1 := i/1296 + 1
+			d2 := (i/216)%6 + 1
+			d3 := (i/36)%6 + 1
+			d4 := (i/6)%6 + 1
+			d5 := i%6 + 1
+			code := d1*10000 + d2*1000 + d3*100 + d4*10 + d5
+			effSlice = append(effSlice, wl.WordAt(code))
 		}
 	})
 	return effSlice

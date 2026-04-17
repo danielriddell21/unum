@@ -14,7 +14,7 @@ import (
 )
 
 // Start launches the diff TUI.
-func Start(d *node.Diff, theme string, version string) error { //nolint:cyclop,gocognit // file-picker reload loop branches on multiple picker/parse outcomes; each case is necessary
+func Start(d *node.Diff, theme string, version string) error { //nolint:cyclop,gocognit // NOSONAR: file-picker reload loop branches on multiple picker/parse outcomes; each case is necessary
 	applyTheme(theme)
 	diff := d
 	for {
@@ -64,9 +64,9 @@ func Start(d *node.Diff, theme string, version string) error { //nolint:cyclop,g
 			return fmt.Errorf("cannot read %s: %w", pickedB.Selected, err)
 		}
 
-		fmt_ := format.Parse("", pickedA.Selected, pickedB.Selected)
+		diffFormat := format.Parse("", pickedA.Selected, pickedB.Selected)
 		var newDiff *node.Diff
-		switch fmt_ {
+		switch diffFormat {
 		case node.FormatJSON:
 			newDiff, err = parse.JSON(dataA, dataB)
 		case node.FormatYAML:
@@ -81,7 +81,7 @@ func Start(d *node.Diff, theme string, version string) error { //nolint:cyclop,g
 		}
 		newDiff.FileA = pickedA.Selected
 		newDiff.FileB = pickedB.Selected
-		newDiff.Format = fmt_
+		newDiff.Format = diffFormat
 		diff = newDiff
 	}
 }
