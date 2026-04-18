@@ -32,6 +32,7 @@ type flags struct {
 	lightTheme string
 	context    int
 	stat       bool
+	noStat     bool
 	port       int
 	quiet      bool
 	noColor    bool
@@ -93,6 +94,7 @@ Output modes:
 	cmd.Flags().StringVar(&f.format, "format", "", "force format: text, json, yaml, terraform (default: auto)")
 	cmd.Flags().IntVar(&f.context, "context", 3, "lines of context around each change")
 	cmd.Flags().BoolVar(&f.stat, "stat", false, "show summary only (no diff body)")
+	cmd.Flags().BoolVar(&f.noStat, "no-stat", false, "suppress the stat line from output")
 	cmd.Flags().BoolVar(&f.quiet, "quiet", false, "suppress the boot line")
 
 	return cmd
@@ -144,6 +146,7 @@ func runDiff(f *flags, fileA, fileB string) error {
 		Theme:   theme,
 		Context: f.context,
 		Stat:    f.stat,
+		NoStat:  f.noStat,
 		NoColor: f.noColor,
 		Quiet:   f.quiet,
 	}

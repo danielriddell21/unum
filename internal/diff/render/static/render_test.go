@@ -168,7 +168,7 @@ func TestRender_TextNoColor(t *testing.T) {
 	}
 }
 
-func TestRender_StatLine_NoColor_StartsWithSpace(t *testing.T) {
+func TestRender_StatLine_NoColor_StartsWithPlus(t *testing.T) {
 	d, err := parse.JSON(
 		[]byte(`{"a": 1}`),
 		[]byte(`{"a": 2}`),
@@ -179,8 +179,24 @@ func TestRender_StatLine_NoColor_StartsWithSpace(t *testing.T) {
 	var buf bytes.Buffer
 	_ = Render(&buf, d, Options{Theme: Cyber, NoColor: true})
 	firstLine := strings.SplitN(buf.String(), "\n", 2)[0]
-	if len(firstLine) == 0 || firstLine[0] != ' ' {
-		t.Errorf("stat line must start with a space for diff block compat, got: %q", firstLine)
+	if len(firstLine) == 0 || firstLine[0] != '+' {
+		t.Errorf("stat line must start with '+', got: %q", firstLine)
+	}
+}
+
+func TestRender_NoStat_SuppressesStatLine(t *testing.T) {
+	d, err := parse.JSON(
+		[]byte(`{"a": 1}`),
+		[]byte(`{"a": 2}`),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	_ = Render(&buf, d, Options{Theme: Cyber, NoColor: true, NoStat: true})
+	out := buf.String()
+	if strings.Contains(out, "+1") || strings.Contains(out, "-1") {
+		t.Errorf("NoStat should suppress stat line, got:\n%s", out)
 	}
 }
 

@@ -59,6 +59,7 @@ type Options struct {
 	Theme   Theme
 	Context int  // lines of context per hunk (default 3)
 	Stat    bool // print summary only, no diff body
+	NoStat  bool // suppress the stat line entirely
 	NoColor bool
 	Quiet   bool
 }
@@ -101,13 +102,15 @@ func renderHunks(w io.Writer, d *node.Diff, opts Options) error {
 	t := opts.Theme
 
 	// Summary line
-	addedStr := fmt.Sprintf("+%d", d.Added)
-	removedStr := fmt.Sprintf("-%d", d.Removed)
-	if !opts.NoColor {
-		addedStr = t.StatAdded.Render(addedStr)
-		removedStr = t.StatRemoved.Render(removedStr)
+	if !opts.NoStat {
+		addedStr := fmt.Sprintf("+%d", d.Added)
+		removedStr := fmt.Sprintf("-%d", d.Removed)
+		if !opts.NoColor {
+			addedStr = t.StatAdded.Render(addedStr)
+			removedStr = t.StatRemoved.Render(removedStr)
+		}
+		_, _ = fmt.Fprintf(w, "%s  %s\n", addedStr, removedStr)
 	}
-	_, _ = fmt.Fprintf(w, "  %s  %s\n", addedStr, removedStr)
 
 	if opts.Stat || len(d.Hunks) == 0 {
 		return nil
@@ -141,15 +144,17 @@ func renderTree(w io.Writer, d *node.Diff, opts Options) error {
 	t := opts.Theme
 
 	// Summary line
-	addedStr := fmt.Sprintf("+%d", d.Added)
-	removedStr := fmt.Sprintf("-%d", d.Removed)
-	modifiedStr := fmt.Sprintf("~%d", d.Modified)
-	if !opts.NoColor {
-		addedStr = t.StatAdded.Render(addedStr)
-		removedStr = t.StatRemoved.Render(removedStr)
-		modifiedStr = t.Modified.Render(modifiedStr)
+	if !opts.NoStat {
+		addedStr := fmt.Sprintf("+%d", d.Added)
+		removedStr := fmt.Sprintf("-%d", d.Removed)
+		modifiedStr := fmt.Sprintf("~%d", d.Modified)
+		if !opts.NoColor {
+			addedStr = t.StatAdded.Render(addedStr)
+			removedStr = t.StatRemoved.Render(removedStr)
+			modifiedStr = t.Modified.Render(modifiedStr)
+		}
+		_, _ = fmt.Fprintf(w, "%s  %s  %s\n", addedStr, removedStr, modifiedStr)
 	}
-	_, _ = fmt.Fprintf(w, "  %s  %s  %s\n", addedStr, removedStr, modifiedStr)
 
 	if opts.Stat {
 		return nil
