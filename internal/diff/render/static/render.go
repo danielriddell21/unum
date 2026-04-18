@@ -107,7 +107,7 @@ func renderHunks(w io.Writer, d *node.Diff, opts Options) error {
 		addedStr = t.StatAdded.Render(addedStr)
 		removedStr = t.StatRemoved.Render(removedStr)
 	}
-	_, _ = fmt.Fprintf(w, "%s  %s\n", addedStr, removedStr)
+	_, _ = fmt.Fprintf(w, "  %s  %s\n", addedStr, removedStr)
 
 	if opts.Stat || len(d.Hunks) == 0 {
 		return nil
@@ -149,7 +149,7 @@ func renderTree(w io.Writer, d *node.Diff, opts Options) error {
 		removedStr = t.StatRemoved.Render(removedStr)
 		modifiedStr = t.Modified.Render(modifiedStr)
 	}
-	_, _ = fmt.Fprintf(w, "%s  %s  %s\n", addedStr, removedStr, modifiedStr)
+	_, _ = fmt.Fprintf(w, "  %s  %s  %s\n", addedStr, removedStr, modifiedStr)
 
 	if opts.Stat {
 		return nil
@@ -186,7 +186,7 @@ func walkTreeStatic(w io.Writer, dn *node.DiffNode, t Theme, noColor bool) {
 			_, _ = fmt.Fprintln(w, t.Removed.Render(line))
 		}
 	case node.Modified:
-		line := fmt.Sprintf("~ %-40s  %s → %s", dn.Path, dn.OldValue, dn.NewValue)
+		line := fmt.Sprintf("! %-40s  %s → %s", dn.Path, dn.OldValue, dn.NewValue)
 		if noColor {
 			_, _ = fmt.Fprintln(w, line)
 		} else {

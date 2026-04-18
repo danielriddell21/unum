@@ -167,3 +167,38 @@ func TestRender_TextNoColor(t *testing.T) {
 		t.Errorf("text diff NoColor: missing 'world' in:\n%s", out)
 	}
 }
+
+func TestRender_StatLine_NoColor_StartsWithSpace(t *testing.T) {
+	d, err := parse.JSON(
+		[]byte(`{"a": 1}`),
+		[]byte(`{"a": 2}`),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	_ = Render(&buf, d, Options{Theme: Cyber, NoColor: true})
+	firstLine := strings.SplitN(buf.String(), "\n", 2)[0]
+	if len(firstLine) == 0 || firstLine[0] != ' ' {
+		t.Errorf("stat line must start with a space for diff block compat, got: %q", firstLine)
+	}
+}
+
+func TestRender_ModifiedNoColor_ExclamationMark(t *testing.T) {
+	d, err := parse.JSON(
+		[]byte(`{"enabled": false}`),
+		[]byte(`{"enabled": true}`),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	_ = Render(&buf, d, Options{Theme: Cyber, NoColor: true})
+	out := buf.String()
+	if !strings.Contains(out, "! ") {
+		t.Errorf("modified no-color: expected '! ' prefix for GitHub diff compat, got:\n%s", out)
+	}
+	if !strings.Contains(out, "→") {
+		t.Errorf("modified no-color: expected '→' to show old→new, got:\n%s", out)
+	}
+}
