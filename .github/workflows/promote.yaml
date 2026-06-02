@@ -25,7 +25,7 @@ jobs:
           docker push ghcr.io/danielriddell21/unum:latest
 
   update-manifests:
-    name: Pin version in k8s-unum
+    name: Pin version in riddellious-dev
     needs: retag
     runs-on: ubuntu-latest
     permissions:
@@ -33,9 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          repository: danielriddell21/k8s-unum
+          repository: danielriddell21/riddellious-dev
           ref: trunk
-          token: ${{ secrets.K8S_UNUM_TOKEN }}
+          token: ${{ secrets.RIDDELLIOUS_DEV_TOKEN }}
 
       - name: Update image tag in deployments
         run: |

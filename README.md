@@ -28,7 +28,7 @@ Full documentation → [Wiki](https://github.com/danielriddell21/unum/wiki)
 
 ### Homebrew
 ```bash
-brew install danielriddell21/unum/unum
+brew install danielriddell21/tap/unum
 ```
 
 ### Go install

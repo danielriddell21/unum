@@ -63,14 +63,13 @@ release:
   github:
     owner: danielriddell21
     name: unum
-  prerelease: true
   name_template: "v{{ .Version }}"
 
 brews:
   - name: unum
     repository:
       owner: danielriddell21
-      name: homebrew-unum
+      name: homebrew-tap
       branch: trunk
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
