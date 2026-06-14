@@ -30,12 +30,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: actions/create-github-app-token@v2
+        id: tap-token
+        with:
+          app-id: ${{ vars.TAP_APP_ID }}
+          private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
+          owner: danielriddell21
+          repositories: homebrew-tap
+
       - uses: goreleaser/goreleaser-action@v7
         with:
           version: latest
           args: release --clean --config .goreleaser.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ steps.tap-token.outputs.token }}
           OTEL_AUTH_TOKEN: ${{ secrets.OTEL_AUTH_TOKEN }}
           OTEL_ENDPOINT: ${{ vars.OTEL_ENDPOINT }}
