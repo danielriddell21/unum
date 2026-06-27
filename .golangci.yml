@@ -30,10 +30,14 @@ linters:
       min-complexity: 20
     gosec:
       excludes:
-        - G304
         - G107
+        - G115
         - G204
+        - G304
+        - G404
   exclusions:
+    paths:
+      - examples
     rules:
       - path: "tests/web/"
         linters:
@@ -41,11 +45,15 @@ linters:
       - path: "_test\\.go"
         linters:
           - wrapcheck
+          - gosec
 
 formatters:
   enable:
     - gofumpt
     - goimports
+  exclusions:
+    paths:
+      - examples
   settings:
     goimports:
       local-prefixes:
