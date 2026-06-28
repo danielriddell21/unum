@@ -45,6 +45,10 @@ just install
 
 ---
 
+## Documentation
+
+Full documentation lives in the [unum wiki](https://github.com/danielriddell21/unum/wiki).
+
 ## Acknowledgements
 
 - The initial architecture and design of this project was conceived with the assistance of [Claude](https://claude.ai) (Anthropic), which was also used throughout development for identifying and fixing bugs.
