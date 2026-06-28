@@ -2,15 +2,13 @@
 
 > *unum* — omnia in uno.
 
-A unified developer tool suite, built in Go.
-
 [![CI](https://github.com/danielriddell21/unum/actions/workflows/ci.yaml/badge.svg)](https://github.com/danielriddell21/unum/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/danielriddell21/unum/graph/badge.svg?token=ICL8H52H58)](https://codecov.io/gh/danielriddell21/unum)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=danielriddell21_unum&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=danielriddell21_unum)
 [![Go 1.26](https://img.shields.io/badge/go-1.26-blue)](https://go.dev)
 [![MIT License](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 
----
+A unified developer tool suite, built in Go.
 
 ## Tools
 
@@ -19,10 +17,6 @@ A unified developer tool suite, built in Go.
 | `unum json` | JSON viewer, validator, and analyzer — three output modes, six analysis lenses |
 | `unum diff` | Diff visualizer — text, JSON, YAML, and Terraform plans; static, TUI, and web output |
 | `unum hash` | Deterministic deriver — maps any string to a stable port, UUID, color, short ID, emoji, and passphrase |
-
-Full documentation → [Wiki](https://github.com/danielriddell21/unum/wiki)
-
----
 
 ## Install
 
@@ -42,8 +36,6 @@ git clone https://github.com/danielriddell21/unum
 cd unum
 just install
 ```
-
----
 
 ## Documentation
 
