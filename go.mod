@@ -1,6 +1,6 @@
 module github.com/danielriddell21/unum
 
-go 1.26.1
+go 1.26.3
 
 require (
 	github.com/atotto/clipboard v0.1.4
