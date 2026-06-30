@@ -1,4 +1,3 @@
-// Package panels contains Bubble Tea sub-models for the diff TUI.
 package panels
 
 import (
@@ -8,7 +7,6 @@ import (
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
-// StatusBar renders the bottom status bar for the diff TUI.
 func StatusBar(d *node.Diff, view string, width int, searchMode bool, searchQuery string, matchCount int, version string) string {
 	if searchMode {
 		var matchHint string

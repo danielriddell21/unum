@@ -11,8 +11,6 @@ import (
 	"github.com/danielriddell21/unum/internal/web/shared"
 )
 
-// ─── NewIndexData ─────────────────────────────────────────────────────────────
-
 func TestNewIndexData_BasicFields(t *testing.T) {
 	d := shared.NewIndexData("cyber", "clean", "1.2.3")
 	if d.DarkTheme != "cyber" {
@@ -63,8 +61,6 @@ func TestNewIndexData_UmamiDisabledWhenOnlyURLSet(t *testing.T) {
 	}
 }
 
-// ─── FreePort ─────────────────────────────────────────────────────────────────
-
 func TestFreePort_ReturnsPositivePort(t *testing.T) {
 	port, err := shared.FreePort()
 	if err != nil {
@@ -85,8 +81,6 @@ func TestFreePort_ReturnsDifferentPortsEachTime(t *testing.T) {
 	_ = p1
 	_ = p2
 }
-
-// ─── ServeAsset ───────────────────────────────────────────────────────────────
 
 //go:embed testdata
 var testFS embed.FS
@@ -119,8 +113,6 @@ func TestServeAsset_NotFound(t *testing.T) {
 		t.Errorf("status %d, want 404", w.Code)
 	}
 }
-
-// ─── RegisterUmamiProxy ───────────────────────────────────────────────────────
 
 func TestRegisterUmamiProxy_NoURL(t *testing.T) {
 	t.Setenv("UMAMI_URL", "")

@@ -1,5 +1,3 @@
-// Package web provides the HTTP server for the unum JSON web UI.
-// All static assets are embedded at build time — the binary is fully self-contained.
 package web
 
 import (
@@ -44,19 +42,16 @@ const (
 	apiUploadPath   = "/api/upload"
 )
 
-// Options configures the web server.
 type Options struct {
-	Port       int    // 0 = find a free port
-	Filename   string // original filename for display
+	Port       int
+	Filename   string
 	Quiet      bool
-	DarkTheme  string // cyber | matrix | dracula | nord
-	LightTheme string // clean | solarized
+	DarkTheme  string
+	LightTheme string
 	Version    string
 	Tel        *telemetry.Telemetry
 }
 
-// Start launches the web server, auto-opens the browser, and blocks until the
-// user presses Ctrl+C.
 func Start(root *node.Node, opts Options) error {
 	host := "localhost"
 	autoOpen := true
@@ -125,9 +120,6 @@ func Start(root *node.Node, opts Options) error {
 	return nil
 }
 
-// ─── Payload ──────────────────────────────────────────────────────────────────
-
-// treePayload is the full JSON object served at /api/tree.
 type treePayload struct {
 	Filename   string         `json:"filename"`
 	NodeCount  int            `json:"nodeCount"`
@@ -139,7 +131,6 @@ type treePayload struct {
 	MerkleRoot string         `json:"merkleRoot,omitempty"`
 }
 
-// webNode is a serializable tree node for the frontend.
 type webNode struct {
 	Kind         string     `json:"kind"`
 	Key          string     `json:"key,omitempty"`
@@ -277,17 +268,10 @@ func maxDepth(n *node.Node) int {
 	return max + 1
 }
 
-// ─── Input mode (no pre-selected file) ───────────────────────────────────────
+var rootCache sync.Map
 
-// rootCache stores parsed roots keyed by upload key.
-var rootCache sync.Map // map[string]*node.Node
+var payloadCache sync.Map
 
-// payloadCache stores pre-marshalled payloads keyed by upload key.
-var payloadCache sync.Map // map[string][]byte
-
-// StartServer launches the json web server with no pre-loaded file.
-// GET /api/tree returns 204; the frontend shows a drop/paste zone.
-// POST /api/upload accepts JSON content and returns a key for later retrieval.
 func StartServer(opts Options) error {
 	host := "localhost"
 	autoOpen := true
@@ -337,9 +321,6 @@ func StartServer(opts Options) error {
 	return nil
 }
 
-// handleTree serves /api/tree — either the pre-built payload for the file
-// passed on the command line, or the per-session payload stored under the
-// key returned from /api/upload.
 func handleTree(payloadBytes []byte) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if key := r.URL.Query().Get("key"); key != "" {
@@ -357,9 +338,6 @@ func handleTree(payloadBytes []byte) http.HandlerFunc {
 	}
 }
 
-// handleKeyedTree serves GET /api/tree — returns 204 when no key is given
-// (signals the frontend to show the upload panel), or the pre-built payload
-// for a key returned by /api/upload.
 func handleKeyedTree() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		key := r.URL.Query().Get("key")
@@ -377,7 +355,6 @@ func handleKeyedTree() http.HandlerFunc {
 	}
 }
 
-// handleKeyedQuery serves POST /api/query — requires a key from /api/upload.
 func handleKeyedQuery() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		key := r.URL.Query().Get("key")
@@ -394,7 +371,6 @@ func handleKeyedQuery() http.HandlerFunc {
 	}
 }
 
-// uploadRequest is the body accepted by POST /api/upload.
 type uploadRequest struct {
 	Filename string `json:"filename"`
 	Content  string `json:"content"`

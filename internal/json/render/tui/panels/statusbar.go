@@ -8,7 +8,6 @@ import (
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
-// StatusBar renders the bottom status bar for the JSON TUI.
 func StatusBar(n *node.Node, width int, searchMode bool, searchQuery string, yankFeedback string, version string) string {
 	if searchMode {
 		hint := styleMuted.Render("  type to filter · enter:confirm · esc:clear")

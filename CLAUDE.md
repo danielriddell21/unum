@@ -21,7 +21,8 @@ unum is a unified CLI dev-tool suite built in Go. Correctness and simplicity ove
 * Run `just lint` before proposing a diff. Fix all lint errors before committing.
 * Prefer early returns over nesting.
 * Do not add error handling or fallbacks for scenarios that cannot happen.
-* Do not add comments unless the logic is non-obvious.
+* Comments in `internal/` and `cmd/`: only *inside* functions, and only for non-obvious logic — never a doc comment on a declaration, a file or package header, or a `doc.go`. (`//go:build`, `//go:generate`, and `//nolint` are directives, not comments, and stay.)
+* Public library code (module root or `pkg/…`, where present) keeps full godoc — a doc comment on every exported symbol and the package, enforced by the revive `exported` rule.
 
 ## Conventions
 

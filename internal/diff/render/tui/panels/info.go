@@ -9,17 +9,15 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/node"
 )
 
-// InfoPanel shows diff summary and hunk navigation.
 type InfoPanel struct {
 	diff     *node.Diff
 	viewport viewport.Model
 	width    int
 	height   int
 	focused  bool
-	hunkIdx  int // index of visible hunk (for display)
+	hunkIdx  int
 }
 
-// NewInfoPanel creates an info panel.
 func NewInfoPanel(d *node.Diff, w, h int) InfoPanel {
 	p := InfoPanel{
 		diff:   d,
@@ -40,7 +38,6 @@ func (p *InfoPanel) Resize(w, h int) {
 	p.viewport.Height = h
 }
 
-// SetHunkIdx updates which hunk is highlighted in the info panel.
 func (p *InfoPanel) SetHunkIdx(i int) {
 	p.hunkIdx = i
 	p.refresh()

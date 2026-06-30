@@ -6,7 +6,6 @@ import (
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
-// ApplyPalette updates all panel style variables to match the given palette.
 func ApplyPalette(p tuipanels.Palette) {
 	styleLabel = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary))
 	styleValue = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Text))

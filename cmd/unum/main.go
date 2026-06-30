@@ -8,7 +8,6 @@ import (
 	"github.com/danielriddell21/unum/internal/cli"
 )
 
-// version is set at build time via -ldflags "-X main.version=vX.Y.Z"
 var version = "dev"
 
 func main() {

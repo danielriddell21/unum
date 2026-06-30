@@ -12,7 +12,6 @@ import (
 
 const Max = 50
 
-// HistoryEntry is an alias for types.HistoryEntry so callers can use hash.HistoryEntry directly.
 type HistoryEntry = types.HistoryEntry
 
 func historyPath() (string, error) {
@@ -23,8 +22,6 @@ func historyPath() (string, error) {
 	return filepath.Join(dir, "unum", "hash-history.json"), nil
 }
 
-// Load reads the history file and returns entries newest-first.
-// Returns an empty slice if the file is absent or malformed.
 func Load() []HistoryEntry {
 	path, err := historyPath()
 	if err != nil {
@@ -41,7 +38,6 @@ func Load() []HistoryEntry {
 	return entries
 }
 
-// Append adds input to the history file, capping at maxHistory entries.
 func Append(input string) error {
 	path, err := historyPath()
 	if err != nil {

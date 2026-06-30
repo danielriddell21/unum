@@ -1,4 +1,3 @@
-// Package panels contains JSON TUI panel components.
 package panels
 
 import (
@@ -13,16 +12,13 @@ import (
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
-// TreeNode is a flattened representation of a node for the tree panel.
-// The flat list is pre-computed on expand/collapse; View() just slices it.
 type TreeNode struct {
 	Node      *node.Node
 	Depth     int
 	IsLast    bool
-	Collapsed bool // only valid for KindObject and KindArray
+	Collapsed bool
 }
 
-// TreePanel is the left panel — a navigable, collapsible JSON tree.
 type TreePanel struct {
 	root      *node.Node
 	flat      []TreeNode
@@ -32,10 +28,9 @@ type TreePanel struct {
 	width     int
 	height    int
 	focused   bool
-	search    string // active search filter (empty = no filter)
+	search    string
 }
 
-// NewTreePanel creates a tree panel from the root node.
 func NewTreePanel(root *node.Node, w, h int) TreePanel {
 	p := TreePanel{
 		root:      root,
@@ -48,7 +43,6 @@ func NewTreePanel(root *node.Node, w, h int) TreePanel {
 	return p
 }
 
-// CursorNode returns the currently highlighted node.
 func (p *TreePanel) CursorNode() *node.Node {
 	if p.cursor >= 0 && p.cursor < len(p.flat) {
 		return p.flat[p.cursor].Node
@@ -72,7 +66,6 @@ func (p *TreePanel) Resize(w, h int) {
 	p.viewport.Height = h
 }
 
-// Update handles keystrokes when the tree panel is focused.
 func (p *TreePanel) Update(msg tea.KeyMsg) (changed bool) { //nolint:cyclop,gocognit // NOSONAR: tree navigation covers many keys; each case is a distinct cursor/expand/collapse action
 	switch msg.String() {
 	case "j", "down":
@@ -122,7 +115,6 @@ func (p *TreePanel) Update(msg tea.KeyMsg) (changed bool) { //nolint:cyclop,goco
 	return changed
 }
 
-// View renders the tree panel content.
 func (p *TreePanel) View() string {
 	if len(p.flat) == 0 {
 		return styleMuted.Render("  (empty)")
@@ -240,7 +232,6 @@ func (p *TreePanel) renderTreeNode(tn TreeNode, selected bool) string { //nolint
 	return line
 }
 
-// reflatten recomputes the flat list from the root, applying collapse state and search.
 func (p *TreePanel) reflatten() {
 	p.flat = p.flat[:0]
 	p.flatten(p.root, 0, true)

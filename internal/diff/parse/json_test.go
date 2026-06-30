@@ -189,7 +189,6 @@ func TestJSON_InvalidInput(t *testing.T) {
 	}
 }
 
-// findChild returns the first direct child of n with the given key, or nil.
 func findChild(n *node.DiffNode, key string) *node.DiffNode {
 	if n == nil {
 		return nil

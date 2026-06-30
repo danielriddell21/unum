@@ -9,8 +9,6 @@ import (
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
-// pickerModel is a Bubble Tea model that wraps a filepicker.
-// Once a .json file is selected it quits and exposes the path via Selected.
 type pickerModel struct {
 	fp       filepicker.Model
 	Selected string

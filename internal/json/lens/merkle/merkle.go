@@ -11,13 +11,8 @@ import (
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
-// Lens is the name of the merkle lens annotations.
 const Lens = "merkle"
 
-// Analyzer stamps every node with a SHA256 hash.
-// Leaf hashes are derived from their raw value.
-// Container hashes are derived from their children's hashes (like git trees).
-// Uses WalkPost so children are always hashed before their parent.
 type Analyzer struct{}
 
 func (a Analyzer) Name() string { return Lens }
@@ -39,7 +34,6 @@ func (a Analyzer) Run(ctx context.Context, root *node.Node, _ analyze.Options) e
 	return nil
 }
 
-// RootHash returns the merkle hash of the root node after Run has been called.
 func RootHash(root *node.Node) string {
 	if v, ok := root.GetAnnotation(Lens, "hash"); ok {
 		if s, ok := v.(string); ok {
@@ -88,7 +82,6 @@ func hashNode(n *node.Node) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// Short returns the first 8 hex characters of a hash for display.
 func Short(hash string) string {
 	if len(hash) > 8 {
 		return hash[:8]

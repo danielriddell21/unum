@@ -6,7 +6,6 @@ import (
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
-// ApplyPalette updates all panel style variables to match the given palette.
 func ApplyPalette(p tuipanels.Palette) {
 	diffAdded = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Added))
 	diffRemoved = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Removed))
@@ -20,8 +19,6 @@ func ApplyPalette(p tuipanels.Palette) {
 	sbAccent = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary))
 }
 
-// Package-level style variables — initialized with the cyber palette defaults.
-// ApplyPalette() reassigns all of these; do not set them elsewhere.
 var (
 	diffAdded     = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Added))
 	diffRemoved   = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Removed))

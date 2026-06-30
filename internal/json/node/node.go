@@ -7,7 +7,6 @@ import (
 	"sync"
 )
 
-// Kind represents the JSON value type of a node.
 type Kind uint8
 
 const (
@@ -38,25 +37,21 @@ func (k Kind) String() string {
 	}
 }
 
-// AnnotationKey namespaces annotations to prevent collisions between lenses.
 type AnnotationKey struct {
-	Lens string // e.g. "stats", "merkle", "decode"
-	Name string // e.g. "mean", "hash", "type"
+	Lens string
+	Name string
 }
 
-// Annotation is a single piece of derived data attached to a node by a lens.
 type Annotation struct {
 	Key   AnnotationKey
 	Value any
 }
 
-// Node is the core data structure. Parse once, annotate many times.
-// All lenses read from the same tree and write their own annotation keys.
 type Node struct {
 	Kind  Kind
-	Key   string // object key if this is an object value; "" otherwise
-	Index int    // array index if this is an array element; -1 otherwise
-	Raw   string // raw JSON token for leaf nodes (e.g. `"hello"`, `42`, `true`, `null`)
+	Key   string
+	Index int
+	Raw   string
 
 	Children []*Node
 	Parent   *Node
@@ -65,14 +60,12 @@ type Node struct {
 	annotations []Annotation
 }
 
-// Annotate stamps an annotation onto this node. Safe for concurrent use.
 func (n *Node) Annotate(a Annotation) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.annotations = append(n.annotations, a)
 }
 
-// GetAnnotation returns the value for a specific lens+name key.
 func (n *Node) GetAnnotation(lens, name string) (any, bool) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -85,7 +78,6 @@ func (n *Node) GetAnnotation(lens, name string) (any, bool) {
 	return nil, false
 }
 
-// GetAnnotations returns all annotations for a given lens.
 func (n *Node) GetAnnotations(lens string) []Annotation {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -98,8 +90,6 @@ func (n *Node) GetAnnotations(lens string) []Annotation {
 	return out
 }
 
-// Walk visits every node depth-first pre-order (parent before children).
-// Return false from fn to skip the subtree rooted at that node.
 func (n *Node) Walk(fn func(*Node) bool) {
 	if !fn(n) {
 		return
@@ -109,8 +99,6 @@ func (n *Node) Walk(fn func(*Node) bool) {
 	}
 }
 
-// WalkPost visits every node depth-first post-order (children before parent).
-// Required by merkle hashing, where children must be hashed before their parent.
 func (n *Node) WalkPost(fn func(*Node)) {
 	for _, c := range n.Children {
 		c.WalkPost(fn)
@@ -118,7 +106,6 @@ func (n *Node) WalkPost(fn func(*Node)) {
 	fn(n)
 }
 
-// Path returns the dot-notation path from root to this node (e.g. ".users[0].name").
 func (n *Node) Path() string {
 	if n.Parent == nil {
 		return "."
@@ -144,7 +131,6 @@ func (n *Node) Path() string {
 	return p
 }
 
-// CountNodes returns the total number of nodes in this subtree (including self).
 func (n *Node) CountNodes() int {
 	count := 1
 	for _, c := range n.Children {
@@ -153,7 +139,6 @@ func (n *Node) CountNodes() int {
 	return count
 }
 
-// ToAny converts the node back to a Go any value suitable for json.Marshal.
 func (n *Node) ToAny() any {
 	switch n.Kind {
 	case KindNull:
@@ -194,7 +179,6 @@ func (n *Node) ToAny() any {
 	return nil
 }
 
-// MarshalJSON produces compact JSON for this node, preserving key order.
 func (n *Node) MarshalJSON() ([]byte, error) { //nolint:gocognit // NOSONAR: serialises every node kind with different JSON shapes; the branches reflect the type system
 	switch n.Kind {
 	case KindNull, KindBool, KindNumber:

@@ -241,8 +241,6 @@ func TestRenderError_WithColor(t *testing.T) {
 	}
 }
 
-// ─── appendMerkleTag ─────────────────────────────────────────────────────────
-
 func TestRender_ShowMerkle(t *testing.T) {
 	// Merkle hash is shown via renderInline on nested children.
 	root, err := parse.Parse([]byte(`{"nested": {"k": 1}}`))
@@ -261,8 +259,6 @@ func TestRender_ShowMerkle(t *testing.T) {
 		t.Errorf("ShowMerkle render should include '#' hash tag, got:\n%s", buf.String())
 	}
 }
-
-// ─── appendStatsTag ──────────────────────────────────────────────────────────
 
 func TestRender_ShowStats(t *testing.T) {
 	root, err := parse.Parse([]byte(`{"nums": [1, 2, 3]}`))

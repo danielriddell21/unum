@@ -1,4 +1,3 @@
-// Package panels contains TUI panel components for the hash tool.
 package panels
 
 import (
@@ -8,13 +7,11 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/types"
 )
 
-// HashPanel renders the hash input field and results table.
 type HashPanel struct {
 	width  int
 	height int
 }
 
-// NewHashPanel creates a hash panel.
 func NewHashPanel(w, h int) HashPanel {
 	return HashPanel{width: w, height: h}
 }
@@ -24,8 +21,6 @@ func (p *HashPanel) Resize(w, h int) {
 	p.height = h
 }
 
-// View renders the panel content (no border, no title).
-// inputView is the pre-rendered textinput widget.
 func (p *HashPanel) View(inputView string, result *types.Result) string {
 	innerW := p.width
 	if innerW < 1 {

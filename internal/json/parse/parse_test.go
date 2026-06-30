@@ -109,8 +109,6 @@ func TestParseNested(t *testing.T) {
 	}
 }
 
-// offsetToLineCol is exercised indirectly through Validate when a SyntaxError
-// occurs at an offset past a newline — verifying line/col accounting.
 func TestValidate_MultilineSyntaxError_ReportsLine(t *testing.T) {
 	// Error is on line 3 (the "broken" token).
 	data := "{\n  \"a\": 1,\n  broken\n}"

@@ -7,7 +7,6 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/types"
 )
 
-// HistoryPanel renders the hash history list.
 type HistoryPanel struct {
 	history []types.HistoryEntry
 	cursor  int
@@ -16,7 +15,6 @@ type HistoryPanel struct {
 	focused bool
 }
 
-// NewHistoryPanel creates a history panel.
 func NewHistoryPanel(w, h int) HistoryPanel {
 	return HistoryPanel{width: w, height: h}
 }
@@ -28,7 +26,6 @@ func (p *HistoryPanel) Resize(w, h int) {
 
 func (p *HistoryPanel) SetFocused(f bool) { p.focused = f }
 
-// SetHistory updates the history entries and clamps the cursor.
 func (p *HistoryPanel) SetHistory(h []types.HistoryEntry) {
 	p.history = h
 	if p.cursor >= len(p.history) {
@@ -36,7 +33,6 @@ func (p *HistoryPanel) SetHistory(h []types.HistoryEntry) {
 	}
 }
 
-// ResetCursor moves the cursor to the top of the list.
 func (p *HistoryPanel) ResetCursor() { p.cursor = 0 }
 
 func (p *HistoryPanel) ScrollUp() {
@@ -51,8 +47,6 @@ func (p *HistoryPanel) ScrollDown() {
 	}
 }
 
-// SelectedInput returns the input string of the currently highlighted entry,
-// or "" if history is empty.
 func (p *HistoryPanel) SelectedInput() string {
 	if len(p.history) == 0 {
 		return ""
@@ -60,7 +54,6 @@ func (p *HistoryPanel) SelectedInput() string {
 	return p.history[p.cursor].Input
 }
 
-// View renders the panel content (no border, no title).
 func (p *HistoryPanel) View() string {
 	visible, cursorInView := p.viewport()
 	innerW := p.width

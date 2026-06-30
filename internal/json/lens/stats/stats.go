@@ -11,10 +11,8 @@ import (
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
-// Stats is the name of the stats lens annotations.
 const Lens = "stats"
 
-// Analyzer annotates numeric array nodes with statistical summaries.
 type Analyzer struct{}
 
 func (a Analyzer) Name() string { return Lens }

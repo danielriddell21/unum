@@ -14,7 +14,6 @@ import (
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
-// focusedPanel identifies which panel is active.
 type focusedPanel int
 
 const (
@@ -23,7 +22,6 @@ const (
 	focusLens
 )
 
-// mode is the current interaction mode.
 type mode int
 
 const (
@@ -32,36 +30,28 @@ const (
 	modeHelp
 )
 
-// yankFeedbackMsg clears the yank toast after a delay.
 type yankFeedbackMsg struct{}
 
-// Model is the root Bubble Tea model. It owns all three panels and dispatches
-// keystrokes to the focused sub-panel.
 type Model struct {
 	root     *node.Node
 	filename string
 
-	// Panels
 	tree    jsonpanels.TreePanel
 	preview jsonpanels.PreviewPanel
 	lens    jsonpanels.LensPanel
 
-	// State
 	focused      focusedPanel
 	currentMode  mode
 	searchInput  textinput.Model
 	yankFeedback string
 
-	// Set to true when the user wants to pick a new file (causes clean quit).
 	ReloadRequest bool
 
-	// Layout
 	width   int
 	height  int
 	version string
 }
 
-// NewModel creates the root model with the parsed tree.
 func NewModel(root *node.Node, filename string, version string) Model {
 	si := textinput.New()
 	si.Placeholder = "filter..."
@@ -89,9 +79,6 @@ func (m *Model) initPanels() {
 	m.syncPanels()
 }
 
-// panelDimensions returns (treeW, treeH, previewW, previewH, lensW, lensH).
-// Layout: left column = tree, right column top = preview, right column bottom = lens.
-// Right column split: preview ≈ 35%, lens ≈ 65%.
 func (m *Model) panelDimensions() (tw, th, pw, ph, lw, lh int) {
 	statusH := 1
 	usable := m.height - statusH

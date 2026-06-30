@@ -1,5 +1,3 @@
-// Package web provides the HTTP server for the unum hash web UI.
-// All static assets are embedded at build time — the binary is fully self-contained.
 package web
 
 import (
@@ -22,26 +20,21 @@ import (
 //go:embed assets/*
 var assets embed.FS
 
-// Options configures the hash web server.
 type Options struct {
 	Port       int
 	Quiet      bool
-	DarkTheme  string // cyber | matrix | dracula | nord
-	LightTheme string // clean | solarized
+	DarkTheme  string
+	LightTheme string
 	Version    string
 	Tel        *telemetry.Telemetry
 }
 
-// deriveFn is injected to avoid import cycles.
 var deriveFn func(input string) types.Result
 
-// SetFuncs wires in the derivation function.
 func SetFuncs(derive func(string) types.Result) {
 	deriveFn = derive
 }
 
-// Start launches the hash web server, auto-opens the browser, and blocks until
-// Ctrl+C.
 func Start(opts Options) error {
 	host := "localhost"
 	autoOpen := true

@@ -1,18 +1,16 @@
-// Package theme holds the colour palette shared by all render modes (TUI, static, web).
 package theme
 
-// Palette holds all themeable hex color strings.
 type Palette struct {
-	AccentPrimary   string // active border, tab active, status type
-	AccentSecondary string // path, hash
-	AccentTertiary  string // stats, search highlight
-	BG              string // terminal background
-	BGPanel         string // panel/sidebar background (slightly different from BG)
-	BGSelected      string // cursor row background (web: --bg-hover)
-	BGAdded         string // faint added-row background (web diff)
-	BGRemoved       string // faint removed-row background (web diff)
-	BorderActive    string // focused panel border
-	BorderDim       string // unfocused panel border and dim connectors
+	AccentPrimary   string
+	AccentSecondary string
+	AccentTertiary  string
+	BG              string
+	BGPanel         string
+	BGSelected      string
+	BGAdded         string
+	BGRemoved       string
+	BorderActive    string
+	BorderDim       string
 	ObjectKey       string
 	ArrayIndex      string
 	StringVal       string
@@ -20,19 +18,17 @@ type Palette struct {
 	BoolTrue        string
 	BoolFalse       string
 	NullVal         string
-	Text            string // primary text colour
-	Muted           string // muted / inactive text
+	Text            string
+	Muted           string
 	Error           string
 	Path            string
 	Hash            string
 	Stats           string
 	Search          string
-	Added           string // diff line added
-	Removed         string // diff line removed
+	Added           string
+	Removed         string
 }
 
-// ToCSSVars returns the palette as a map of CSS custom property names to values.
-// The map covers every variable used by shared.js and the web tool stylesheets.
 func (p Palette) ToCSSVars() map[string]string {
 	return map[string]string{
 		"--bg":            p.BG,
@@ -61,13 +57,12 @@ func (p Palette) ToCSSVars() map[string]string {
 }
 
 const (
-	cyberCyan   = "#00D4FF" // accent + border + object-key
-	cyberPurple = "#C678DD" // accent + path + hash
-	cyberGold   = "#FFD700" // accent + stats + search
-	cyberRed    = "#E06C75" // bool-false + error + removed
+	cyberCyan   = "#00D4FF"
+	cyberPurple = "#C678DD"
+	cyberGold   = "#FFD700"
+	cyberRed    = "#E06C75"
 )
 
-// PaletteCyber is the default cyber/neural-interface theme.
 var PaletteCyber = Palette{
 	AccentPrimary:   cyberCyan,
 	AccentSecondary: cyberPurple,
@@ -98,13 +93,12 @@ var PaletteCyber = Palette{
 }
 
 const (
-	matrixGreen     = "#00FF41" // accent + border + object-key + bool-true + added
-	matrixLime      = "#39FF14" // accent + path + hash
-	matrixPaleGreen = "#88FF44" // accent + number + stats
-	matrixRed       = "#FF3300" // bool-false + error + removed
+	matrixGreen     = "#00FF41"
+	matrixLime      = "#39FF14"
+	matrixPaleGreen = "#88FF44"
+	matrixRed       = "#FF3300"
 )
 
-// PaletteMatrix is the matrix green theme.
 var PaletteMatrix = Palette{
 	AccentPrimary:   matrixGreen,
 	AccentSecondary: matrixLime,
@@ -135,13 +129,12 @@ var PaletteMatrix = Palette{
 }
 
 const (
-	draculaPurple = "#BD93F9" // accent + border + object-key
-	draculaPink   = "#FF79C6" // accent + path + hash
-	draculaYellow = "#F1FA8C" // accent + number + stats + search
-	draculaRed    = "#FF5555" // array-idx + bool-false + error + removed
+	draculaPurple = "#BD93F9"
+	draculaPink   = "#FF79C6"
+	draculaYellow = "#F1FA8C"
+	draculaRed    = "#FF5555"
 )
 
-// PaletteDracula is the Dracula theme.
 var PaletteDracula = Palette{
 	AccentPrimary:   draculaPurple,
 	AccentSecondary: draculaPink,
@@ -172,13 +165,12 @@ var PaletteDracula = Palette{
 }
 
 const (
-	nordFrost  = "#88C0D0" // accent + border + object-key
-	nordMauve  = "#B48EAD" // accent + path + hash
-	nordYellow = "#EBCB8B" // accent + number + stats + search
-	nordRed    = "#BF616A" // array-idx + bool-false + error + removed
+	nordFrost  = "#88C0D0"
+	nordMauve  = "#B48EAD"
+	nordYellow = "#EBCB8B"
+	nordRed    = "#BF616A"
 )
 
-// PaletteNord is the Nord theme.
 var PaletteNord = Palette{
 	AccentPrimary:   nordFrost,
 	AccentSecondary: nordMauve,
@@ -209,13 +201,12 @@ var PaletteNord = Palette{
 }
 
 const (
-	cleanBlue   = "#007ACC" // accent + border + object-key
-	cleanPurple = "#8E44AD" // accent + path + hash
-	cleanOrange = "#E67E22" // accent + stats + search
-	cleanRed    = "#C0392B" // array-idx + bool-false + error + removed
+	cleanBlue   = "#007ACC"
+	cleanPurple = "#8E44AD"
+	cleanOrange = "#E67E22"
+	cleanRed    = "#C0392B"
 )
 
-// PaletteClean is the default light theme.
 var PaletteClean = Palette{
 	AccentPrimary:   cleanBlue,
 	AccentSecondary: cleanPurple,
@@ -246,13 +237,12 @@ var PaletteClean = Palette{
 }
 
 const (
-	solarBlue    = "#268BD2" // accent + border + object-key
-	solarMagenta = "#D33682" // accent + path + hash
-	solarOrange  = "#CB4B16" // accent + stats + search
-	solarRed     = "#DC322F" // array-idx + bool-false + error + removed
+	solarBlue    = "#268BD2"
+	solarMagenta = "#D33682"
+	solarOrange  = "#CB4B16"
+	solarRed     = "#DC322F"
 )
 
-// PaletteSolarized is the Solarized light theme.
 var PaletteSolarized = Palette{
 	AccentPrimary:   solarBlue,
 	AccentSecondary: solarMagenta,
@@ -282,7 +272,6 @@ var PaletteSolarized = Palette{
 	Removed:         solarRed,
 }
 
-// ResolvePalette returns the named dark palette, defaulting to Cyber.
 func ResolvePalette(name string) Palette {
 	switch name {
 	case "matrix":
@@ -296,7 +285,6 @@ func ResolvePalette(name string) Palette {
 	}
 }
 
-// ResolveLightPalette returns the named light palette, defaulting to Clean.
 func ResolveLightPalette(name string) Palette {
 	switch name {
 	case "solarized":

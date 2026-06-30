@@ -13,7 +13,6 @@ import (
 	"github.com/danielriddell21/unum/internal/tui/panels"
 )
 
-// Start launches the diff TUI.
 func Start(d *node.Diff, theme string, version string) error {
 	applyTheme(theme)
 	diff := d

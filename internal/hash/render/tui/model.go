@@ -1,4 +1,3 @@
-// Package tui provides a Bubble Tea TUI for the hash derivation tool.
 package tui
 
 import (
@@ -14,14 +13,12 @@ import (
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
-// deriveFunc and historyFuncs are injected at startup to avoid import cycles.
 var (
 	deriveFn        func(input string) types.Result
 	appendHistoryFn func(input string) error
 	loadHistoryFn   func() []types.HistoryEntry
 )
 
-// SetFuncs wires in the derivation and history functions.
 func SetFuncs(
 	derive func(string) types.Result,
 	append func(string) error,
@@ -39,7 +36,6 @@ const (
 	focusHistory
 )
 
-// Model is the root Bubble Tea model for the hash TUI.
 type Model struct {
 	input        textinput.Model
 	result       *types.Result
@@ -52,7 +48,6 @@ type Model struct {
 	version      string
 }
 
-// NewModel creates the root model, loading existing history.
 func NewModel(version string) Model {
 	ti := textinput.New()
 	ti.Placeholder = "enter text to hash..."

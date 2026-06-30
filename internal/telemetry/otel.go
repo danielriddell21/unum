@@ -1,10 +1,3 @@
-// Package telemetry provides opt-out anonymous usage telemetry for unum.
-//
-// Telemetry is sent via OpenTelemetry (OTLP HTTP) and is disabled when:
-//   - OTEL_EXPORTER_OTLP_ENDPOINT is empty (dev builds)
-//   - DO_NOT_TRACK=1 or UNUM_NO_TELEMETRY=1 is set
-//   - "telemetry": false in config.json
-//   - --no-telemetry CLI flag is used
 package telemetry
 
 import (
@@ -27,16 +20,8 @@ import (
 	"github.com/danielriddell21/unum/internal/config"
 )
 
-// otelAuthToken is set at build time via:
-//
-//	-ldflags "-X github.com/danielriddell21/unum/internal/telemetry.otelAuthToken=..."
 var otelAuthToken string //nolint:gochecknoglobals // build-time injection
 
-// otelEndpoint is the default OTLP endpoint baked into release builds.
-// Overridden at runtime by OTEL_EXPORTER_OTLP_ENDPOINT. Empty in dev builds
-// so telemetry is auto-disabled unless the env var is explicitly set.
-//
-//	-ldflags "-X github.com/danielriddell21/unum/internal/telemetry.otelEndpoint=..."
 var otelEndpoint string //nolint:gochecknoglobals // build-time injection
 
 const shutdownTimeout = 2 * time.Second
@@ -47,10 +32,6 @@ func debugf(format string, args ...any) {
 	}
 }
 
-// initOTel sets up the OpenTelemetry TracerProvider and MeterProvider.
-// Returns a shutdown function that flushes pending data.
-// If telemetry is disabled or the endpoint is empty, sets no-op providers
-// and returns a no-op shutdown.
 func initOTel(cfg config.Config, serviceName, version string) (func(context.Context) error, error) {
 	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	if endpoint == "" {

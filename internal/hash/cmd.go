@@ -1,5 +1,3 @@
-// Package hash implements the `unum hash` subcommand — a deterministic deriver
-// that maps any string to a stable set of useful values.
 package hash
 
 import (
@@ -36,7 +34,6 @@ type flags struct {
 	version string
 	tel     *telemetry.Telemetry
 
-	// Single-field output flags
 	portOnly   bool
 	uuidOnly   bool
 	colorOnly  bool
@@ -45,7 +42,6 @@ type flags struct {
 	phraseOnly bool
 }
 
-// Command returns the cobra command for `unum hash`.
 func Command(globalNoColor *bool, globalQuiet *bool, version string, tel *telemetry.Telemetry) *cobra.Command {
 	f := &flags{}
 	f.version = version

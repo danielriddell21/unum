@@ -16,7 +16,6 @@ import (
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
-// LensID identifies an active lens.
 type LensID int
 
 const (
@@ -37,7 +36,6 @@ var lensNames = map[LensID]string{
 	LensQuery:   "Query",
 }
 
-// TypeGenSubMode selects the typegen output language.
 type TypeGenSubMode int
 
 const (
@@ -52,22 +50,20 @@ var typegenLabels = map[TypeGenSubMode]string{
 	TypeGenJSONSchema: "JSON Schema",
 }
 
-// LensPanel is the bottom-right panel — shows output from the active analysis lens.
 type LensPanel struct {
 	root         *node.Node
 	cursorNode   *node.Node
 	active       LensID
 	typegenMode  TypeGenSubMode
 	queryInput   string
-	content      string // cached rendered output
+	content      string
 	viewport     viewport.Model
 	width        int
 	height       int
 	focused      bool
-	autoSwitched bool // true if current lens was auto-selected by cursor movement
+	autoSwitched bool
 }
 
-// NewLensPanel creates a lens panel.
 func NewLensPanel(root *node.Node, w, h int) LensPanel {
 	p := LensPanel{
 		root:   root,
@@ -107,8 +103,6 @@ func (p *LensPanel) Resize(w, h int) {
 	p.viewport.Height = max(1, h-3)
 }
 
-// HandleKey processes keypresses when the lens panel is focused.
-// Returns true if a key was consumed.
 func (p *LensPanel) HandleKey(key string) bool { //nolint:cyclop // key dispatch for every lens action; each case handles a distinct user intent
 	// Lens switching via digits
 	switch key {
@@ -204,10 +198,8 @@ func (p *LensPanel) HandleKey(key string) bool { //nolint:cyclop // key dispatch
 	return false
 }
 
-// ActiveLens returns the current lens ID.
 func (p *LensPanel) ActiveLens() LensID { return p.active }
 
-// View renders the lens panel.
 func (p *LensPanel) View() string {
 	tabs := p.renderTabs()
 	p.viewport.SetContent(p.content)
@@ -362,7 +354,6 @@ func fmtF(f float64) string {
 	return fmt.Sprintf("%.4g", f)
 }
 
-// PrettyNode pretty-prints a node's value for the preview panel.
 func PrettyNode(n *node.Node) string {
 	b, err := n.MarshalJSON()
 	if err != nil {

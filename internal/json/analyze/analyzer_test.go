@@ -10,8 +10,6 @@ import (
 	"github.com/danielriddell21/unum/internal/json/parse"
 )
 
-// ─── mock analyzers ───────────────────────────────────────────────────────────
-
 type okAnalyzer struct{ name string }
 
 func (a *okAnalyzer) Name() string { return a.name }
@@ -37,8 +35,6 @@ func mustParse(t *testing.T, src string) *node.Node {
 	}
 	return n
 }
-
-// ─── Suite.Run ────────────────────────────────────────────────────────────────
 
 func TestSuiteRun_Empty(t *testing.T) {
 	s := analyze.NewSuite()
@@ -95,8 +91,6 @@ func TestSuiteRun_Concurrent(t *testing.T) {
 		t.Errorf("concurrent run: %v", err)
 	}
 }
-
-// ─── Build ────────────────────────────────────────────────────────────────────
 
 func TestBuild_EnabledByOption(t *testing.T) {
 	all := []analyze.Analyzer{

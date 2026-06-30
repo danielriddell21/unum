@@ -1,5 +1,3 @@
-// Package typegen generates Go structs, TypeScript interfaces, and JSON Schema
-// from an inferred TypeInfo derived from the parsed node tree.
 package typegen
 
 import (
@@ -11,7 +9,6 @@ import (
 	"github.com/danielriddell21/unum/internal/json/typeinfo"
 )
 
-// Target selects the output language.
 type Target string
 
 const (
@@ -20,14 +17,12 @@ const (
 	TargetJSONSchema Target = "jsonschema"
 )
 
-// Options controls code generation.
 type Options struct {
 	Target      Target
-	PackageName string // Go only; defaults to "main"
-	TypeName    string // root type name; defaults to "Root"
+	PackageName string
+	TypeName    string
 }
 
-// Generate produces source code or a JSON Schema from the node tree.
 func Generate(root *node.Node, opts Options) (string, error) {
 	if opts.PackageName == "" {
 		opts.PackageName = "main"
@@ -49,8 +44,6 @@ func Generate(root *node.Node, opts Options) (string, error) {
 		return "", fmt.Errorf("unknown typegen target: %s", opts.Target)
 	}
 }
-
-// ─── Go ──────────────────────────────────────────────────────────────────────
 
 func generateGo(ti *typeinfo.TypeInfo, opts Options) (string, error) {
 	var sb strings.Builder
@@ -119,8 +112,6 @@ func goTypeName(fullName string, ti *typeinfo.TypeInfo, nullable bool) string {
 	return "any"
 }
 
-// ─── TypeScript ───────────────────────────────────────────────────────────────
-
 func generateTS(ti *typeinfo.TypeInfo, opts Options) (string, error) {
 	var sb strings.Builder
 	collectTSInterfaces(&sb, opts.TypeName, ti, make(map[string]bool))
@@ -185,8 +176,6 @@ func tsTypeName(fullName string, ti *typeinfo.TypeInfo) string {
 	}
 	return "unknown"
 }
-
-// ─── JSON Schema ──────────────────────────────────────────────────────────────
 
 func generateJSONSchema(ti *typeinfo.TypeInfo, opts Options) (string, error) {
 	schema := buildSchema(ti)

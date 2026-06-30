@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
 func leaf(kind Kind, raw string) *Node {
 	return &Node{Kind: kind, Raw: raw, Index: -1}
 }
@@ -36,8 +34,6 @@ func keyedLeaf(key string, kind Kind, raw string) *Node {
 	return &Node{Kind: kind, Raw: raw, Key: key, Index: -1}
 }
 
-// ─── Kind.String ─────────────────────────────────────────────────────────────
-
 func TestKind_String(t *testing.T) {
 	tests := []struct {
 		k    Kind
@@ -57,8 +53,6 @@ func TestKind_String(t *testing.T) {
 		}
 	}
 }
-
-// ─── Annotate / GetAnnotation / GetAnnotations ────────────────────────────────
 
 func TestAnnotate_HitAndMiss(t *testing.T) {
 	n := &Node{}
@@ -116,8 +110,6 @@ func TestAnnotate_Concurrent(t *testing.T) {
 	}
 }
 
-// ─── Walk ─────────────────────────────────────────────────────────────────────
-
 func TestWalk_PreOrder(t *testing.T) {
 	root := objectNode(
 		keyedLeaf("a", KindNumber, "1"),
@@ -150,8 +142,6 @@ func TestWalk_EarlyReturn(t *testing.T) {
 	}
 }
 
-// ─── WalkPost ─────────────────────────────────────────────────────────────────
-
 func TestWalkPost_ChildrenBeforeParent(t *testing.T) {
 	child1 := keyedLeaf("c1", KindNumber, "1")
 	child2 := keyedLeaf("c2", KindNumber, "2")
@@ -169,8 +159,6 @@ func TestWalkPost_ChildrenBeforeParent(t *testing.T) {
 		t.Errorf("WalkPost order: %v", order)
 	}
 }
-
-// ─── Path ─────────────────────────────────────────────────────────────────────
 
 func TestPath_Root(t *testing.T) {
 	n := &Node{}
@@ -208,8 +196,6 @@ func TestPath_Nested(t *testing.T) {
 	}
 }
 
-// ─── CountNodes ───────────────────────────────────────────────────────────────
-
 func TestCountNodes(t *testing.T) {
 	root := objectNode(
 		keyedLeaf("a", KindNumber, "1"),
@@ -220,8 +206,6 @@ func TestCountNodes(t *testing.T) {
 		t.Errorf("CountNodes=%d, want 5", got)
 	}
 }
-
-// ─── ToAny ───────────────────────────────────────────────────────────────────
 
 func TestToAny_Null(t *testing.T) {
 	n := leaf(KindNull, "null")
@@ -282,8 +266,6 @@ func TestToAny_Object(t *testing.T) {
 		t.Error("ToAny(object): missing key \"k\"")
 	}
 }
-
-// ─── MarshalJSON ──────────────────────────────────────────────────────────────
 
 func TestMarshalJSON_Primitives(t *testing.T) {
 	tests := []struct {

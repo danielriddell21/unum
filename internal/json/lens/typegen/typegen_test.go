@@ -21,8 +21,6 @@ func generate(t *testing.T, src string, opts typegen.Options) string {
 	return out
 }
 
-// ─── Go ──────────────────────────────────────────────────────────────────────
-
 func TestGenerateGoPackageDeclaration(t *testing.T) {
 	out := generate(t, `{"name": "alice"}`, typegen.Options{
 		Target:      typegen.TargetGo,
@@ -84,8 +82,6 @@ func TestGenerateGoNullableField(t *testing.T) {
 	}
 }
 
-// ─── TypeScript ───────────────────────────────────────────────────────────────
-
 func TestGenerateTSInterface(t *testing.T) {
 	out := generate(t, `{"name": "alice", "age": 30}`, typegen.Options{
 		Target:   typegen.TargetTypeScript,
@@ -125,8 +121,6 @@ func TestGenerateTSNestedInterface(t *testing.T) {
 		t.Errorf("expected 'interface RootMeta', got:\n%s", out)
 	}
 }
-
-// ─── JSON Schema ──────────────────────────────────────────────────────────────
 
 func TestGenerateJSONSchemaHeader(t *testing.T) {
 	out := generate(t, `{"name": "alice"}`, typegen.Options{
@@ -181,8 +175,6 @@ func TestGenerateUnknownTarget(t *testing.T) {
 		t.Error("expected error for unknown target")
 	}
 }
-
-// ─── goTypeName / tsTypeName path coverage ───────────────────────────────────
 
 func TestGenerateGo_NullableField(t *testing.T) {
 	// A nested array with sometimes-null field → typeinfo marks it nullable → *float64.

@@ -1,7 +1,3 @@
-// Package typeinfo provides shared type inference from a Node tree.
-// It is used by the typegen lens to generate Go structs, TypeScript interfaces,
-// and JSON Schema. The inference handles nullable fields and merges shapes across
-// array elements.
 package typeinfo
 
 import (
@@ -10,7 +6,6 @@ import (
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
-// TypeKind classifies inferred types.
 type TypeKind uint8
 
 const (
@@ -20,30 +15,25 @@ const (
 	TypeString
 	TypeArray
 	TypeObject
-	TypeMixed // multiple incompatible types observed
+	TypeMixed
 )
 
-// FieldInfo describes a single field in an inferred object type.
 type FieldInfo struct {
 	Name     string
-	GoName   string // PascalCase
+	GoName   string
 	Type     *TypeInfo
-	Nullable bool // true if the field was null in any observed sample
+	Nullable bool
 }
 
-// TypeInfo is the inferred type for a node or set of nodes.
 type TypeInfo struct {
 	Kind     TypeKind
 	Nullable bool
 
-	// For TypeObject
-	Fields []*FieldInfo // ordered by first observed key
+	Fields []*FieldInfo
 
-	// For TypeArray
-	Elem *TypeInfo // unified element type
+	Elem *TypeInfo
 }
 
-// Infer derives a TypeInfo from a node, merging across all array elements.
 func Infer(n *node.Node) *TypeInfo {
 	return inferNode(n)
 }
@@ -95,7 +85,6 @@ func inferNode(n *node.Node) *TypeInfo {
 	return &TypeInfo{Kind: TypeMixed}
 }
 
-// merge combines two TypeInfos for the same logical field/element observed multiple times.
 func merge(a, b *TypeInfo) *TypeInfo {
 	if a.Kind == b.Kind {
 		result := &TypeInfo{Kind: a.Kind, Nullable: a.Nullable || b.Nullable}
@@ -150,7 +139,6 @@ func mergeFields(a, b []*FieldInfo) []*FieldInfo {
 	return result
 }
 
-// toPascalCase converts a JSON key to a Go-style PascalCase identifier.
 func toPascalCase(s string) string {
 	if s == "" {
 		return "Field"
@@ -173,7 +161,6 @@ func toPascalCase(s string) string {
 	return result
 }
 
-// splitWords splits on underscores, hyphens, and camelCase boundaries.
 func splitWords(s string) []string {
 	var words []string
 	var cur strings.Builder

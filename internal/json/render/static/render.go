@@ -1,5 +1,3 @@
-// Package static renders JSON node trees to the terminal with syntax highlighting
-// and optional annotation overlays (stats, merkle hashes).
 package static
 
 import (
@@ -17,7 +15,6 @@ import (
 	"github.com/danielriddell21/unum/internal/theme"
 )
 
-// Theme holds the color palette for static rendering.
 type Theme struct {
 	ObjectKey   lipgloss.Style
 	ArrayIndex  lipgloss.Style
@@ -59,7 +56,6 @@ var (
 	Nord    = themeFromPalette(theme.PaletteNord)
 )
 
-// Options controls rendering behaviour.
 type Options struct {
 	Theme        Theme
 	ShowStats    bool
@@ -71,12 +67,10 @@ type Options struct {
 	Filename     string
 }
 
-// ResolveTheme returns the named theme, defaulting to Cyber.
 func ResolveTheme(name string) Theme {
 	return themeFromPalette(theme.ResolvePalette(name))
 }
 
-// DefaultOptions returns sensible defaults.
 func DefaultOptions() Options {
 	return Options{
 		Theme:        Cyber,
@@ -84,8 +78,6 @@ func DefaultOptions() Options {
 	}
 }
 
-// Boot prints the neural-interface boot sequence to stderr.
-// Call before Render. Suppressed when opts.Quiet is true.
 func Boot(w io.Writer, filename string, opts Options) func(nodeCount int, elapsed time.Duration) {
 	if opts.Quiet || opts.NoColor {
 		return func(nodeCount int, elapsed time.Duration) {
@@ -110,7 +102,6 @@ func Boot(w io.Writer, filename string, opts Options) func(nodeCount int, elapse
 	}
 }
 
-// Render writes a colorized JSON tree to w.
 func Render(w io.Writer, root *node.Node, opts Options) error {
 	r := &renderer{w: w, opts: opts, lineNum: 1}
 
@@ -128,7 +119,6 @@ func Render(w io.Writer, root *node.Node, opts Options) error {
 	return nil
 }
 
-// RenderError prints a formatted error to w.
 func RenderError(w io.Writer, err error, opts Options) {
 	if opts.NoColor {
 		_, _ = fmt.Fprintf(w, "error: %s\n", err)
@@ -243,7 +233,6 @@ func (r *renderer) renderLeaf(n *node.Node, indent string) {
 	r.writeLine(indent + r.leafColor(n))
 }
 
-// renderInline renders an object or array opening + children inline from the current position.
 func (r *renderer) renderInline(n *node.Node, depth int) { //nolint:gocognit // NOSONAR: renders every value kind inline; branching on kind is the algorithm
 	t := r.opts.Theme
 	indent := strings.Repeat("  ", depth)
@@ -339,7 +328,6 @@ func (r *renderer) leafColor(n *node.Node) string {
 	return n.Raw
 }
 
-// appendMerkleTag appends a merkle hash tag to the current buffered line.
 func (r *renderer) appendMerkleTag(n *node.Node) {
 	if !r.opts.ShowMerkle {
 		return
@@ -351,7 +339,6 @@ func (r *renderer) appendMerkleTag(n *node.Node) {
 	}
 }
 
-// appendStatsTag appends a stats summary to the current buffered line.
 func (r *renderer) appendStatsTag(n *node.Node) {
 	if !r.opts.ShowStats || n.Kind != node.KindArray {
 		return
@@ -385,18 +372,14 @@ func fmtFloat(f float64) string {
 	return s
 }
 
-// line buffer helpers
-
 func (r *renderer) startLine() {
 	r.buf.Reset()
 }
 
-// writes appends a pre-formatted string to the current line buffer.
 func (r *renderer) writes(s string) {
 	r.buf.WriteString(s)
 }
 
-// writef appends a formatted string to the current line buffer.
 func (r *renderer) writef(format string, args ...any) {
 	fmt.Fprintf(&r.buf, format, args...)
 }

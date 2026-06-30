@@ -8,8 +8,6 @@ import (
 	diffnode "github.com/danielriddell21/unum/internal/diff/node"
 )
 
-// YAML computes a semantic diff between two YAML byte slices.
-// It walks both yaml.Node trees simultaneously and produces a DiffNode tree.
 func YAML(a, b []byte) (*diffnode.Diff, error) {
 	nodeA, err := parseYAMLDoc(a)
 	if err != nil {

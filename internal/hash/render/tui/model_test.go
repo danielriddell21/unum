@@ -13,7 +13,6 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/types"
 )
 
-// testDerive is a minimal derive function that doesn't import hash (avoids cycle in test).
 func testDerive(input string) types.Result {
 	h := sha256.Sum256([]byte(input))
 	n := binary.BigEndian.Uint16(h[0:2])
