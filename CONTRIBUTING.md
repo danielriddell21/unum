@@ -44,6 +44,11 @@ testdata/           fixture files used by justfile recipes and tests
 tests/              CLI functional tests (go test ./tests/...)
 ```
 
+## Conventions
+
+unum is the reference for the CLI entrypoint layout shared across the tool
+family. See [CONVENTIONS.md](CONVENTIONS.md) before adding an entrypoint.
+
 ## Adding a new tool
 
 1. Create `internal/<toolname>/` mirroring the structure of `internal/json/` or `internal/diff/`

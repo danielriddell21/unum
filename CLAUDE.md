@@ -22,3 +22,7 @@ unum is a unified CLI dev-tool suite built in Go. Correctness and simplicity ove
 * Prefer early returns over nesting.
 * Do not add error handling or fallbacks for scenarios that cannot happen.
 * Do not add comments unless the logic is non-obvious.
+
+## Conventions
+
+* The CLI entrypoint structure is shared across the tool family and documented in [CONVENTIONS.md](CONVENTIONS.md). unum is the reference — keep new code consistent with it.
