@@ -25,15 +25,10 @@ test *args:
 lint *args:
     golangci-lint run ./... {{ args }}
 
-# vet the code
-[group('dev')]
-vet:
-    go vet ./...
-
 # format the code
 [group('dev')]
 fmt:
-    gofmt -w .
+    golangci-lint fmt
 
 # tidy module dependencies
 [group('dev')]
