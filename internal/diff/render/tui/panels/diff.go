@@ -314,7 +314,8 @@ func (p *SplitPanel) build() {
 	q := strings.ToLower(p.search)
 	p.matches = nil
 
-	var leftLines, rightLines []string
+	leftLines := make([]string, 0, len(p.diff.Hunks))
+	rightLines := make([]string, 0, len(p.diff.Hunks))
 
 	for _, h := range p.diff.Hunks {
 		hdr := diffHunkHdr.Render(fmt.Sprintf("@@ -%d,%d +%d,%d @@", h.OldStart, h.OldCount, h.NewStart, h.NewCount))

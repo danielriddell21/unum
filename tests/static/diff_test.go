@@ -76,9 +76,39 @@ func TestDiffYAMLSemantic(t *testing.T) {
 }
 
 func TestDiffTerraform(t *testing.T) {
-	_, _, code := run("diff", diffATF, diffATF, "--format", "terraform", flagNoColor)
+	stdout, _, code := run("diff", diffATF, diffATF, "--format", "terraform", flagNoColor)
 	if code != 0 {
 		t.Fatalf("terraform diff: exit %d, want 0", code)
+	}
+	// The CLI prints just the diff body — no preamble, no footer.
+	wants := []string{
+		"# aws_instance.web will be updated in-place",
+		`resource "aws_instance" "web" {`,
+		`instance_type = "t2.micro" -> "t3.small"`,
+		"# aws_s3_bucket.logs will be created",
+		"# aws_security_group.legacy will be destroyed",
+		"unchanged attribute hidden)",
+	}
+	for _, w := range wants {
+		if !strings.Contains(stdout, w) {
+			t.Errorf("terraform diff output missing %q\n%s", w, stdout)
+		}
+	}
+	if strings.Contains(stdout, "Terraform will perform") || strings.Contains(stdout, "Plan:") {
+		t.Errorf("CLI diff should be body-only (no preamble/footer)\n%s", stdout)
+	}
+}
+
+func TestDiffTerraformStat(t *testing.T) {
+	stdout, _, code := run("diff", diffATF, diffATF, "--format", "terraform", "--stat", flagNoColor)
+	if code != 0 {
+		t.Fatalf("terraform diff --stat: exit %d, want 0", code)
+	}
+	if !strings.Contains(stdout, "Plan: 1 to add, 1 to change, 1 to destroy, 0 to replace.") {
+		t.Errorf("--stat should print the Plan summary line\n%s", stdout)
+	}
+	if strings.Contains(stdout, "resource \"aws_instance\"") {
+		t.Errorf("--stat should not print the full diff body\n%s", stdout)
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -21,6 +22,7 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/render/tui"
 	diffweb "github.com/danielriddell21/unum/internal/diff/render/web"
 	"github.com/danielriddell21/unum/internal/telemetry"
+	"github.com/danielriddell21/unum/pkg/terraform"
 )
 
 type flags struct {
@@ -205,6 +207,10 @@ func runDiff(f *flags, fileA, fileB string) error {
 	f.tel.M.DiffChanges.Add(ctx, int64(diff.Removed), ometric.WithAttributes(attribute.String("kind", "removed")))
 	f.tel.M.DiffChanges.Add(ctx, int64(diff.Modified), ometric.WithAttributes(attribute.String("kind", "modified")))
 
+	return renderDiff(ctx, span, f, diff, dataA, diffFormat, opts)
+}
+
+func renderDiff(ctx context.Context, span trace.Span, f *flags, diff *node.Diff, dataA []byte, diffFormat node.Format, opts static.Options) error {
 	if f.ui {
 		if err := tui.Start(diff, f.theme, f.version); err != nil {
 			return fmt.Errorf("diff TUI: %w", err)
@@ -218,6 +224,11 @@ func runDiff(f *flags, fileA, fileB string) error {
 		return nil
 	}
 
+	if diffFormat == node.FormatTerraform {
+		printTerraformDiff(f, dataA)
+		return nil
+	}
+
 	if err := static.Render(os.Stdout, diff, opts); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "render")
@@ -228,6 +239,46 @@ func runDiff(f *flags, fileA, fileB string) error {
 		return fmt.Errorf("diff render: %w", err)
 	}
 	return nil
+}
+
+func printTerraformDiff(f *flags, data []byte) {
+	// data already parsed successfully upstream, so this cannot fail.
+	plan, _ := terraform.Parse(data)
+	if f.stat {
+		fmt.Fprintf(os.Stdout, "Plan: %d to add, %d to change, %d to destroy, %d to replace.\n",
+			plan.AddCount(), plan.ChangeCount(), plan.DestroyCount(), plan.ReplaceCount())
+		return
+	}
+	body := plan.RenderDiff(terraform.RenderOptions{})
+	if body == "" {
+		fmt.Fprintln(os.Stdout, "No changes.")
+		return
+	}
+	if !f.noColor {
+		body = colorizeTerraform(body, static.ResolveTheme(f.theme))
+	}
+	fmt.Fprint(os.Stdout, body)
+}
+
+func colorizeTerraform(body string, t static.Theme) string {
+	lines := strings.Split(body, "\n")
+	for i, ln := range lines {
+		trimmed := strings.TrimLeft(ln, " ")
+		if trimmed == "" {
+			continue
+		}
+		switch trimmed[0] {
+		case '+':
+			lines[i] = t.Added.Render(ln)
+		case '-':
+			lines[i] = t.Removed.Render(ln)
+		case '~':
+			lines[i] = t.Modified.Render(ln)
+		case '#':
+			lines[i] = t.Unchanged.Render(ln)
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func activeDiffFlags(f *flags) []string {

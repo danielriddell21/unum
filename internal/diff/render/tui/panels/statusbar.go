@@ -21,11 +21,12 @@ func StatusBar(d *node.Diff, view string, width int, searchMode bool, searchQuer
 		return tuipanels.SearchBar("SEARCH", searchQuery, matchHint+hint, width, sbAccent)
 	}
 
-	added := sbAdded.Render(fmt.Sprintf("+%d", d.Added))
-	removed := sbRemoved.Render(fmt.Sprintf("-%d", d.Removed))
+	added := sbAdded.Render(fmt.Sprintf("Add: %d", d.Added))
+	changed := sbModified.Render(fmt.Sprintf("Change: %d", d.Modified))
+	removed := sbRemoved.Render(fmt.Sprintf("Delete: %d", d.Removed))
 	viewLabel := sbMuted.Render("[" + view + "]")
 
-	left := " " + added + "  " + removed + "  " + viewLabel
+	left := " " + added + "  " + changed + "  " + removed + "  " + viewLabel
 	right := sbMuted.Render("v:toggle  j/k:scroll  /:search  n/N:match  ?:help  q:quit") + "  " + sbMuted.Render(version) + " "
 	return tuipanels.Bar(left, right, width)
 }
