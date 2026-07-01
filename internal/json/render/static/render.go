@@ -343,26 +343,15 @@ func (r *renderer) appendStatsTag(n *node.Node) {
 	if !r.opts.ShowStats || n.Kind != node.KindArray {
 		return
 	}
-	nc, ok := n.GetAnnotation(stats.Lens, "numeric_count")
-	if !ok {
+	s, ok := stats.Get(n)
+	if !ok || s.NumericCount == 0 {
 		return
 	}
-	numCount := nc.(int)
-	if numCount == 0 {
-		return
-	}
-	parts := []string{}
-	if v, ok := n.GetAnnotation(stats.Lens, "count"); ok {
-		parts = append(parts, fmt.Sprintf("n=%d", v.(int)))
-	}
-	if v, ok := n.GetAnnotation(stats.Lens, "min"); ok {
-		parts = append(parts, fmt.Sprintf("min=%s", fmtFloat(v.(float64))))
-	}
-	if v, ok := n.GetAnnotation(stats.Lens, "max"); ok {
-		parts = append(parts, fmt.Sprintf("max=%s", fmtFloat(v.(float64))))
-	}
-	if v, ok := n.GetAnnotation(stats.Lens, "mean"); ok {
-		parts = append(parts, fmt.Sprintf("mean=%s", fmtFloat(v.(float64))))
+	parts := []string{
+		fmt.Sprintf("n=%d", s.Count),
+		fmt.Sprintf("min=%s", fmtFloat(s.Min)),
+		fmt.Sprintf("max=%s", fmtFloat(s.Max)),
+		fmt.Sprintf("mean=%s", fmtFloat(s.Mean)),
 	}
 	r.writes("  " + r.opts.Theme.StatTag.Render("// "+strings.Join(parts, " ")))
 }

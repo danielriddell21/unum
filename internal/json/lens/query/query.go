@@ -21,7 +21,7 @@ func Execute(root *node.Node, expr string) (string, error) {
 	}
 
 	// Convert node tree to Go any (gojq operates on any)
-	input := nodeToAny(root)
+	input := root.ToAny()
 
 	iter := q.Run(input)
 
@@ -42,34 +42,4 @@ func Execute(root *node.Node, expr string) (string, error) {
 	}
 
 	return strings.Join(results, "\n"), nil
-}
-
-func nodeToAny(n *node.Node) any {
-	switch n.Kind {
-	case node.KindNull:
-		return nil
-	case node.KindBool:
-		return n.Raw == "true"
-	case node.KindNumber:
-		f := json.Number(n.Raw)
-		// gojq handles json.Number
-		return f
-	case node.KindString:
-		var s string
-		_ = json.Unmarshal([]byte(n.Raw), &s)
-		return s
-	case node.KindArray:
-		arr := make([]any, len(n.Children))
-		for i, c := range n.Children {
-			arr[i] = nodeToAny(c)
-		}
-		return arr
-	case node.KindObject:
-		m := make(map[string]any, len(n.Children))
-		for _, c := range n.Children {
-			m[c.Key] = nodeToAny(c)
-		}
-		return m
-	}
-	return nil
 }

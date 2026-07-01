@@ -27,12 +27,7 @@ type Options struct {
 	LightTheme string
 	Version    string
 	Tel        *telemetry.Telemetry
-}
-
-var deriveFn func(input string) types.Result
-
-func SetFuncs(derive func(string) types.Result) {
-	deriveFn = derive
+	Derive     func(input string) types.Result
 }
 
 func Start(opts Options) error {
@@ -64,7 +59,7 @@ func Start(opts Options) error {
 	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
 	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
-	mux.HandleFunc("/api/derive", handleDerive(opts.Tel))
+	mux.HandleFunc("/api/derive", handleDerive(opts.Tel, opts.Derive))
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 	shared.RegisterMetrics(mux)
 	shared.RegisterUmamiProxy(mux)
@@ -83,22 +78,18 @@ func Start(opts Options) error {
 	return nil
 }
 
-func handleDerive(tel *telemetry.Telemetry) http.HandlerFunc {
+func handleDerive(tel *telemetry.Telemetry, derive func(input string) types.Result) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		input := r.URL.Query().Get("input")
 		if input == "" {
 			http.Error(w, "missing input param", http.StatusBadRequest)
 			return
 		}
-		if deriveFn == nil {
-			http.Error(w, "derive not configured", http.StatusInternalServerError)
-			return
-		}
 
 		ctx, span := tel.Tracer().Start(r.Context(), "hash.derive")
 		defer span.End()
 
-		result := deriveFn(input)
+		result := derive(input)
 		span.SetAttributes(attribute.String("hash.input_length", strconv.Itoa(len(input))))
 		tel.TrackEvent("hash-derive", "/api/derive", map[string]string{
 			"input_length": strconv.Itoa(len(input)),

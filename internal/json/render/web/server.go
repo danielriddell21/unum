@@ -222,36 +222,21 @@ func toWebNode(n *node.Node) *webNode {
 }
 
 func buildWebStats(n *node.Node) *webStats {
-	nc, ok := n.GetAnnotation(stats.Lens, "numeric_count")
+	s, ok := stats.Get(n)
 	if !ok {
 		return nil
 	}
-	ws := &webStats{NumericCount: nc.(int)}
-	if v, ok := n.GetAnnotation(stats.Lens, "count"); ok {
-		ws.Count = v.(int)
+	return &webStats{
+		Count:        s.Count,
+		NumericCount: s.NumericCount,
+		Min:          s.Min,
+		Max:          s.Max,
+		Mean:         s.Mean,
+		Stddev:       s.Stddev,
+		P50:          s.P50,
+		P95:          s.P95,
+		P99:          s.P99,
 	}
-	if v, ok := n.GetAnnotation(stats.Lens, "min"); ok {
-		ws.Min = v.(float64)
-	}
-	if v, ok := n.GetAnnotation(stats.Lens, "max"); ok {
-		ws.Max = v.(float64)
-	}
-	if v, ok := n.GetAnnotation(stats.Lens, "mean"); ok {
-		ws.Mean = v.(float64)
-	}
-	if v, ok := n.GetAnnotation(stats.Lens, "stddev"); ok {
-		ws.Stddev = v.(float64)
-	}
-	if v, ok := n.GetAnnotation(stats.Lens, "p50"); ok {
-		ws.P50 = v.(float64)
-	}
-	if v, ok := n.GetAnnotation(stats.Lens, "p95"); ok {
-		ws.P95 = v.(float64)
-	}
-	if v, ok := n.GetAnnotation(stats.Lens, "p99"); ok {
-		ws.P99 = v.(float64)
-	}
-	return ws
 }
 
 func maxDepth(n *node.Node) int {

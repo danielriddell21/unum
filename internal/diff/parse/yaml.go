@@ -111,7 +111,7 @@ func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]i
 		if bLen > maxLen {
 			maxLen = bLen
 		}
-		for i := 0; i < maxLen; i++ {
+		for i := range maxLen {
 			childPath := fmt.Sprintf("%s[%d]", path, i)
 			switch {
 			case i < aLen && i < bLen:

@@ -19,16 +19,18 @@ func ApplyPalette(p tuipanels.Palette) {
 	sbAccent = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary))
 }
 
-var (
-	diffAdded     = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Added))
-	diffRemoved   = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Removed))
-	diffUnchanged = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted))
-	diffHunkHdr   = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.AccentPrimary))
-	diffLineNum   = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted))
-	diffSearchHL  = lipgloss.NewStyle().Background(lipgloss.Color(tuipanels.PaletteCyber.Search)).Foreground(lipgloss.Color("#000000"))
+func init() { ApplyPalette(tuipanels.PaletteCyber) }
 
-	sbAdded   = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Added)).Bold(true)
-	sbRemoved = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Removed)).Bold(true)
-	sbMuted   = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted))
-	sbAccent  = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.AccentPrimary))
+var (
+	diffAdded     lipgloss.Style
+	diffRemoved   lipgloss.Style
+	diffUnchanged lipgloss.Style
+	diffHunkHdr   lipgloss.Style
+	diffLineNum   lipgloss.Style
+	diffSearchHL  lipgloss.Style
+
+	sbAdded   lipgloss.Style
+	sbRemoved lipgloss.Style
+	sbMuted   lipgloss.Style
+	sbAccent  lipgloss.Style
 )

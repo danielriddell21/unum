@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -26,9 +27,13 @@ var otelEndpoint string //nolint:gochecknoglobals // build-time injection
 
 const shutdownTimeout = 2 * time.Second
 
+var debugLogger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{ //nolint:gochecknoglobals // package-level debug logger
+	Level: slog.LevelDebug,
+})).With("component", "telemetry")
+
 func debugf(format string, args ...any) {
 	if os.Getenv("UNUM_TELEMETRY_DEBUG") == "1" {
-		fmt.Fprintf(os.Stderr, "[telemetry] "+format+"\n", args...) //nolint:errcheck // debug output
+		debugLogger.Debug(fmt.Sprintf(format, args...))
 	}
 }
 

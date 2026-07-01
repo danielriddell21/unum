@@ -31,15 +31,11 @@ func testDerive(input string) types.Result {
 	}
 }
 
-func init() {
-	SetFuncs(testDerive)
-}
-
 func TestHandleDerive_ReturnsResult(t *testing.T) {
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/derive?input=my-service", nil)
 	w := httptest.NewRecorder()
 
-	handleDerive(nil)(w, req)
+	handleDerive(nil, testDerive)(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status %d, want 200", w.Code)
@@ -61,7 +57,7 @@ func TestHandleDerive_MissingInput(t *testing.T) {
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/derive", nil)
 	w := httptest.NewRecorder()
 
-	handleDerive(nil)(w, req)
+	handleDerive(nil, testDerive)(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("status %d, want 400", w.Code)
@@ -72,7 +68,7 @@ func TestHandleDerive_Deterministic(t *testing.T) {
 	makeReq := func() types.Result {
 		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/derive?input=test-svc", nil)
 		w := httptest.NewRecorder()
-		handleDerive(nil)(w, req)
+		handleDerive(nil, testDerive)(w, req)
 		var r types.Result
 		_ = json.NewDecoder(w.Body).Decode(&r)
 		return r
@@ -83,19 +79,5 @@ func TestHandleDerive_Deterministic(t *testing.T) {
 
 	if r1.Port != r2.Port || r1.Color != r2.Color {
 		t.Error("derive endpoint is not deterministic")
-	}
-}
-
-func TestHandleDerive_NilDeriveFn(t *testing.T) {
-	old := deriveFn
-	deriveFn = nil
-	defer func() { deriveFn = old }()
-
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/derive?input=test", nil)
-	w := httptest.NewRecorder()
-	handleDerive(nil)(w, req)
-
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("nil deriveFn: status %d, want 500", w.Code)
 	}
 }

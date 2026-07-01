@@ -311,41 +311,23 @@ func renderStats(n *node.Node) string {
 		return styleMuted.Render("No array node at or above cursor.\n\nNavigate to an array with numeric values.")
 	}
 
-	nc, ok := target.GetAnnotation(stats.Lens, "numeric_count")
-	if !ok || nc.(int) == 0 {
+	s, ok := stats.Get(target)
+	if !ok || s.NumericCount == 0 {
 		return styleMuted.Render(fmt.Sprintf("Array at %s has no numeric values.", target.Path()))
 	}
 
 	var sb strings.Builder
 	path := styleHash.Render(target.Path())
 	fmt.Fprintf(&sb, "Array: %s\n", path)
-
-	count, _ := target.GetAnnotation(stats.Lens, "count")
-	numCount, _ := target.GetAnnotation(stats.Lens, "numeric_count")
-	fmt.Fprintf(&sb, "\nItems:   %v  (numeric: %v)\n", count, numCount)
-
-	if v, ok := target.GetAnnotation(stats.Lens, "min"); ok {
-		fmt.Fprintf(&sb, "Min:     %s\n", styleStats.Render(fmtF(v.(float64))))
-	}
-	if v, ok := target.GetAnnotation(stats.Lens, "max"); ok {
-		fmt.Fprintf(&sb, "Max:     %s\n", styleStats.Render(fmtF(v.(float64))))
-	}
-	if v, ok := target.GetAnnotation(stats.Lens, "mean"); ok {
-		fmt.Fprintf(&sb, "Mean:    %s\n", styleStats.Render(fmtF(v.(float64))))
-	}
-	if v, ok := target.GetAnnotation(stats.Lens, "stddev"); ok {
-		fmt.Fprintf(&sb, "Std Dev: %s\n", styleStats.Render(fmtF(v.(float64))))
-	}
+	fmt.Fprintf(&sb, "\nItems:   %d  (numeric: %d)\n", s.Count, s.NumericCount)
+	fmt.Fprintf(&sb, "Min:     %s\n", styleStats.Render(fmtF(s.Min)))
+	fmt.Fprintf(&sb, "Max:     %s\n", styleStats.Render(fmtF(s.Max)))
+	fmt.Fprintf(&sb, "Mean:    %s\n", styleStats.Render(fmtF(s.Mean)))
+	fmt.Fprintf(&sb, "Std Dev: %s\n", styleStats.Render(fmtF(s.Stddev)))
 	fmt.Fprintln(&sb)
-	if v, ok := target.GetAnnotation(stats.Lens, "p50"); ok {
-		fmt.Fprintf(&sb, "p50:     %s\n", styleMuted.Render(fmtF(v.(float64))))
-	}
-	if v, ok := target.GetAnnotation(stats.Lens, "p95"); ok {
-		fmt.Fprintf(&sb, "p95:     %s\n", styleMuted.Render(fmtF(v.(float64))))
-	}
-	if v, ok := target.GetAnnotation(stats.Lens, "p99"); ok {
-		fmt.Fprintf(&sb, "p99:     %s\n", styleMuted.Render(fmtF(v.(float64))))
-	}
+	fmt.Fprintf(&sb, "p50:     %s\n", styleMuted.Render(fmtF(s.P50)))
+	fmt.Fprintf(&sb, "p95:     %s\n", styleMuted.Render(fmtF(s.P95)))
+	fmt.Fprintf(&sb, "p99:     %s\n", styleMuted.Render(fmtF(s.P99)))
 
 	return sb.String()
 }

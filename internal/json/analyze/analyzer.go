@@ -11,13 +11,13 @@ import (
 
 type Analyzer interface {
 	Name() string
+	Enabled(opts Options) bool
 	Run(ctx context.Context, root *node.Node, opts Options) error
 }
 
 type Options struct {
 	RunStats  bool
 	RunMerkle bool
-	RunDecode bool
 }
 
 type Suite struct {
@@ -40,7 +40,6 @@ func (s *Suite) Run(ctx context.Context, root *node.Node, opts Options) error {
 	)
 
 	for _, a := range s.analyzers {
-		a := a
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -59,19 +58,8 @@ func (s *Suite) Run(ctx context.Context, root *node.Node, opts Options) error {
 func Build(opts Options, all []Analyzer) *Suite {
 	var enabled []Analyzer
 	for _, a := range all {
-		switch a.Name() {
-		case "stats":
-			if opts.RunStats {
-				enabled = append(enabled, a)
-			}
-		case "merkle":
-			if opts.RunMerkle {
-				enabled = append(enabled, a)
-			}
-		case "decode":
-			if opts.RunDecode {
-				enabled = append(enabled, a)
-			}
+		if a.Enabled(opts) {
+			enabled = append(enabled, a)
 		}
 	}
 	return NewSuite(enabled...)

@@ -117,8 +117,8 @@ func runHash(f *flags, args []string) error {
 		))
 		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
 		hashTUI.ApplyPalette(panels.ResolvePalette(f.theme))
-		hashTUI.SetFuncs(derive.Derive, history.Append, history.Load)
-		p := tea.NewProgram(hashTUI.NewModel(f.version), tea.WithAltScreen())
+		deps := hashTUI.Deps{Derive: derive.Derive, AppendHistory: history.Append, LoadHistory: history.Load}
+		p := tea.NewProgram(hashTUI.NewModel(f.version, deps), tea.WithAltScreen())
 		_, err := p.Run()
 		if err != nil {
 			return fmt.Errorf("hash TUI: %w", err)
@@ -135,8 +135,7 @@ func runHash(f *flags, args []string) error {
 			attribute.String("version", f.version),
 		))
 		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
-		hashWeb.SetFuncs(derive.Derive)
-		if err := hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version, Tel: f.tel}); err != nil {
+		if err := hashWeb.Start(hashWeb.Options{Port: f.webPort, Quiet: f.quiet, DarkTheme: f.theme, LightTheme: f.lightTheme, Version: f.version, Tel: f.tel, Derive: derive.Derive}); err != nil {
 			return fmt.Errorf("hash web: %w", err)
 		}
 		return nil

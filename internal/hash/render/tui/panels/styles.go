@@ -13,17 +13,11 @@ func ApplyPalette(p tuipanels.Palette) {
 	styleHistorySelected = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary)).Bold(true)
 }
 
+func init() { ApplyPalette(tuipanels.PaletteCyber) }
+
 var (
-	styleLabel = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(tuipanels.PaletteCyber.AccentPrimary))
-
-	styleValue = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(tuipanels.PaletteCyber.Text))
-
-	styleHint = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted))
-
-	styleHistorySelected = lipgloss.NewStyle().
-				Foreground(lipgloss.Color(tuipanels.PaletteCyber.AccentPrimary)).
-				Bold(true)
+	styleLabel           lipgloss.Style
+	styleValue           lipgloss.Style
+	styleHint            lipgloss.Style
+	styleHistorySelected lipgloss.Style
 )

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/danielriddell21/unum/internal/hash/types"
@@ -47,12 +48,7 @@ func Append(input string) error {
 	entries := Load()
 
 	// Deduplicate: remove existing entry for this input so it moves to front.
-	filtered := entries[:0]
-	for _, e := range entries {
-		if e.Input != input {
-			filtered = append(filtered, e)
-		}
-	}
+	filtered := slices.DeleteFunc(entries, func(e HistoryEntry) bool { return e.Input == input })
 
 	// Prepend new entry.
 	entries = append([]HistoryEntry{{Input: input, Time: time.Now()}}, filtered...)

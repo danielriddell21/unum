@@ -352,7 +352,7 @@ func (p *SplitPanel) flushHunk(removed, added, unchanged []node.Line, leftLines,
 	if len(added) > maxPairs {
 		maxPairs = len(added)
 	}
-	for i := 0; i < maxPairs; i++ {
+	for i := range maxPairs {
 		lineIdx := len(*leftLines)
 		var lLine, rLine string
 		if i < len(removed) {

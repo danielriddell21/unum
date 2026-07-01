@@ -13,19 +13,19 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/types"
 )
 
-func init() {
-	// Wire up real derive + no-op history so the TUI doesn't need disk access.
-	hashtui.SetFuncs(
-		derive.Derive,
-		func(_ string) error { return nil },
-		func() []types.HistoryEntry { return nil },
-	)
+// testDeps wires up real derive + no-op history so the TUI doesn't need disk access.
+func testDeps() hashtui.Deps {
+	return hashtui.Deps{
+		Derive:        derive.Derive,
+		AppendHistory: func(_ string) error { return nil },
+		LoadHistory:   func() []types.HistoryEntry { return nil },
+	}
 }
 
 // TestTUIHash_RendersInputPlaceholder checks the initial render shows the
 // input field placeholder text.
 func TestTUIHash_RendersInputPlaceholder(t *testing.T) {
-	m := hashtui.NewModel("dev")
+	m := hashtui.NewModel("dev", testDeps())
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
@@ -39,7 +39,7 @@ func TestTUIHash_RendersInputPlaceholder(t *testing.T) {
 // TestTUIHash_TypeAndDerive types text and presses enter, then checks that
 // derived values (port label) appear in the render.
 func TestTUIHash_TypeAndDerive(t *testing.T) {
-	m := hashtui.NewModel("dev")
+	m := hashtui.NewModel("dev", testDeps())
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
@@ -62,7 +62,7 @@ func TestTUIHash_TypeAndDerive(t *testing.T) {
 // panel. The status bar changes text when history is focused — we check for
 // "tab:back" which only appears in the history-focused status bar.
 func TestTUIHash_TabSwitchesFocus(t *testing.T) {
-	m := hashtui.NewModel("dev")
+	m := hashtui.NewModel("dev", testDeps())
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
@@ -83,7 +83,7 @@ func TestTUIHash_TabSwitchesFocus(t *testing.T) {
 
 // TestTUIHash_HelpOverlay checks '?' shows the help overlay.
 func TestTUIHash_HelpOverlay(t *testing.T) {
-	m := hashtui.NewModel("dev")
+	m := hashtui.NewModel("dev", testDeps())
 	tm := teatest.NewTestModel(t, m, teatest.WithInitialTermSize(200, 50))
 
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {

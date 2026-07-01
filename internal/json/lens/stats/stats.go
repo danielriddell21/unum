@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"sort"
+	"slices"
 	"strconv"
 
 	"github.com/danielriddell21/unum/internal/json/analyze"
@@ -13,9 +13,48 @@ import (
 
 const Lens = "stats"
 
+type Stats struct {
+	Count        int
+	NumericCount int
+	Min          float64
+	Max          float64
+	Mean         float64
+	Stddev       float64
+	P50          float64
+	P95          float64
+	P99          float64
+}
+
+func Get(n *node.Node) (Stats, bool) {
+	nc, ok := n.GetAnnotation(Lens, "numeric_count")
+	if !ok {
+		return Stats{}, false
+	}
+	s := Stats{NumericCount: nc.(int)}
+	if v, ok := n.GetAnnotation(Lens, "count"); ok {
+		s.Count = v.(int)
+	}
+	getF := func(name string) float64 {
+		if v, ok := n.GetAnnotation(Lens, name); ok {
+			return v.(float64)
+		}
+		return 0
+	}
+	s.Min = getF("min")
+	s.Max = getF("max")
+	s.Mean = getF("mean")
+	s.Stddev = getF("stddev")
+	s.P50 = getF("p50")
+	s.P95 = getF("p95")
+	s.P99 = getF("p99")
+	return s, true
+}
+
 type Analyzer struct{}
 
 func (a Analyzer) Name() string { return Lens }
+
+func (a Analyzer) Enabled(opts analyze.Options) bool { return opts.RunStats }
 
 func (a Analyzer) Run(ctx context.Context, root *node.Node, _ analyze.Options) error {
 	root.Walk(func(n *node.Node) bool {
@@ -61,10 +100,10 @@ func annotateArray(n *node.Node) {
 		return
 	}
 
-	sort.Float64s(nums)
+	slices.Sort(nums)
 
-	min := nums[0]
-	max := nums[numCount-1]
+	minV := nums[0]
+	maxV := nums[numCount-1]
 	sum := 0.0
 	for _, v := range nums {
 		sum += v
@@ -79,8 +118,8 @@ func annotateArray(n *node.Node) {
 	variance /= float64(numCount)
 	stddev := math.Sqrt(variance)
 
-	ann("min", min)
-	ann("max", max)
+	ann("min", minV)
+	ann("max", maxV)
 	ann("mean", mean)
 	ann("stddev", stddev)
 	ann("p50", percentile(nums, 50))

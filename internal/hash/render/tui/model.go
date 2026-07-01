@@ -13,20 +13,10 @@ import (
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
-var (
-	deriveFn        func(input string) types.Result
-	appendHistoryFn func(input string) error
-	loadHistoryFn   func() []types.HistoryEntry
-)
-
-func SetFuncs(
-	derive func(string) types.Result,
-	append func(string) error,
-	load func() []types.HistoryEntry,
-) {
-	deriveFn = derive
-	appendHistoryFn = append
-	loadHistoryFn = load
+type Deps struct {
+	Derive        func(input string) types.Result
+	AppendHistory func(input string) error
+	LoadHistory   func() []types.HistoryEntry
 }
 
 type focus int
@@ -46,17 +36,18 @@ type Model struct {
 	width        int
 	height       int
 	version      string
+	deps         Deps
 }
 
-func NewModel(version string) Model {
+func NewModel(version string, deps Deps) Model {
 	ti := textinput.New()
 	ti.Placeholder = "enter text to hash..."
 	ti.CharLimit = 200
 	ti.Focus()
 
 	hp := hashpanels.NewHistoryPanel(0, 0)
-	if loadHistoryFn != nil {
-		hp.SetHistory(loadHistoryFn())
+	if deps.LoadHistory != nil {
+		hp.SetHistory(deps.LoadHistory())
 	}
 
 	return Model{
@@ -65,6 +56,7 @@ func NewModel(version string) Model {
 		historyPanel: hp,
 		focused:      focusInput,
 		version:      version,
+		deps:         deps,
 	}
 }
 
@@ -190,15 +182,15 @@ func (m *Model) switchFocus() Model {
 }
 
 func (m *Model) deriveAndSave(text string) {
-	if deriveFn != nil {
-		r := deriveFn(text)
+	if m.deps.Derive != nil {
+		r := m.deps.Derive(text)
 		m.result = &r
 	}
-	if appendHistoryFn != nil {
-		_ = appendHistoryFn(text)
+	if m.deps.AppendHistory != nil {
+		_ = m.deps.AppendHistory(text)
 	}
-	if loadHistoryFn != nil {
-		m.historyPanel.SetHistory(loadHistoryFn())
+	if m.deps.LoadHistory != nil {
+		m.historyPanel.SetHistory(m.deps.LoadHistory())
 	}
 	m.historyPanel.ResetCursor()
 }

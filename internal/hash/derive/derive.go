@@ -69,7 +69,7 @@ func effWords() []string {
 	effOnce.Do(func() {
 		wl := diceware.WordListEffLarge()
 		effSlice = make([]string, 0, 7776)
-		for i := 0; i < 7776; i++ {
+		for i := range 7776 {
 			d1 := i/1296 + 1
 			d2 := (i/216)%6 + 1
 			d3 := (i/36)%6 + 1

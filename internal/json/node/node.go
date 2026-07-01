@@ -159,20 +159,9 @@ func (n *Node) ToAny() any {
 		}
 		return arr
 	case KindObject:
-		// Use ordered pairs to produce consistent output
-		type kv struct {
-			k string
-			v any
-		}
-		pairs := make([]kv, len(n.Children))
-		for i, c := range n.Children {
-			pairs[i] = kv{c.Key, c.ToAny()}
-		}
-		// Marshal to ordered JSON then unmarshal to map (loses order in map,
-		// but ToAny is used for YAML/query interop where order matters less)
 		m := make(map[string]any, len(n.Children))
-		for _, p := range pairs {
-			m[p.k] = p.v
+		for _, c := range n.Children {
+			m[c.Key] = c.ToAny()
 		}
 		return m
 	}

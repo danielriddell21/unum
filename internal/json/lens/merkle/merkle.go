@@ -1,11 +1,12 @@
 package merkle
 
 import (
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/danielriddell21/unum/internal/json/analyze"
 	"github.com/danielriddell21/unum/internal/json/node"
@@ -16,6 +17,8 @@ const Lens = "merkle"
 type Analyzer struct{}
 
 func (a Analyzer) Name() string { return Lens }
+
+func (a Analyzer) Enabled(opts analyze.Options) bool { return opts.RunMerkle }
 
 func (a Analyzer) Run(ctx context.Context, root *node.Node, _ analyze.Options) error {
 	root.WalkPost(func(n *node.Node) {
@@ -72,7 +75,7 @@ func hashNode(n *node.Node) string {
 				pairs = append(pairs, kh{c.Key, ch.(string)})
 			}
 		}
-		sort.Slice(pairs, func(i, j int) bool { return pairs[i].key < pairs[j].key })
+		slices.SortFunc(pairs, func(a, b kh) int { return cmp.Compare(a.key, b.key) })
 		_, _ = fmt.Fprintf(h, "object:")
 		for _, p := range pairs {
 			_, _ = fmt.Fprintf(h, "%s=%s,", p.key, p.hash)
