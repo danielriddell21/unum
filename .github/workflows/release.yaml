@@ -32,3 +32,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ steps.tap-token.outputs.token }}
+          OTEL_AUTH_TOKEN: ${{ secrets.OTEL_AUTH_TOKEN }}
+          OTEL_ENDPOINT: ${{ vars.OTEL_ENDPOINT }}
