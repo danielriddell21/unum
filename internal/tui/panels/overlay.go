@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// HelpOverlay centers helpContent over base as a rounded-border modal.
 func HelpOverlay(base, helpContent, borderColor string, width int) string {
 	help := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).

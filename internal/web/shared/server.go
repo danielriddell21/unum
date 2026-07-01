@@ -20,17 +20,15 @@ import (
 	"github.com/danielriddell21/unum/internal/theme"
 )
 
-// IndexData holds the theme config injected into HTML templates.
 type IndexData struct {
 	DarkTheme      string
 	LightTheme     string
 	Version        string
-	ThemeData      template.JS // JSON: {dark:{cyber:{...},...}, light:{clean:{...},...}}
-	UmamiEnabled   bool        // true if UMAMI_URL is set — enables JS tracking snippet
-	UmamiWebsiteID string      // Umami website ID for the tracking snippet
+	ThemeData      template.JS
+	UmamiEnabled   bool
+	UmamiWebsiteID string
 }
 
-// NewIndexData builds IndexData with all palette CSS vars pre-serialised.
 func NewIndexData(dark, light, version string) IndexData {
 	type themeSet struct {
 		Dark  map[string]map[string]string `json:"dark"`
@@ -60,7 +58,6 @@ func NewIndexData(dark, light, version string) IndexData {
 	}
 }
 
-// ServeTemplate parses the named template from fs and serves it with data d.
 func ServeTemplate(fs embed.FS, path string) func(d IndexData) http.HandlerFunc {
 	return func(d IndexData) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
@@ -80,7 +77,6 @@ func ServeTemplate(fs embed.FS, path string) func(d IndexData) http.HandlerFunc 
 	}
 }
 
-// FreePort returns a random free TCP port on localhost.
 func FreePort() (int, error) {
 	l, err := net.Listen("tcp", "localhost:0") //nolint:noctx // net.Listen has no context-aware variant; localhost-only binding, not user-controlled
 	if err != nil {
@@ -90,7 +86,6 @@ func FreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-// OpenBrowser opens url in the default browser after a short delay.
 func OpenBrowser(url string) {
 	time.Sleep(300 * time.Millisecond)
 	var cmd *exec.Cmd
@@ -105,7 +100,6 @@ func OpenBrowser(url string) {
 	_ = cmd.Start()
 }
 
-// PrintStartupBanner writes the tool startup lines to stderr.
 func PrintStartupBanner(toolName, url string) {
 	accent := lipgloss.NewStyle().Foreground(lipgloss.Color("#00D4FF"))
 	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A"))
@@ -116,7 +110,6 @@ func PrintStartupBanner(toolName, url string) {
 	_, _ = fmt.Fprintf(os.Stderr, "%s\n", muted.Render("Press Ctrl+C to stop"))
 }
 
-// ServeAsset serves a file from fs at path with the given Content-Type.
 func ServeAsset(fs embed.FS, path, contentType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, err := fs.ReadFile(path)
@@ -129,13 +122,10 @@ func ServeAsset(fs embed.FS, path, contentType string) http.HandlerFunc {
 	}
 }
 
-// ServeSharedAsset serves a file from the shared Assets embed.
 func ServeSharedAsset(path, contentType string) http.HandlerFunc {
 	return ServeAsset(Assets, path, contentType)
 }
 
-// RegisterUmamiProxy registers /umami/* routes that reverse-proxy to the
-// internal Umami instance. No-op if UMAMI_URL is empty.
 func RegisterUmamiProxy(mux *http.ServeMux) {
 	umamiURL := os.Getenv("UMAMI_URL")
 	if umamiURL == "" {
@@ -149,7 +139,6 @@ func RegisterUmamiProxy(mux *http.ServeMux) {
 	mux.Handle("/umami/", http.StripPrefix("/umami", proxy))
 }
 
-// RegisterMetrics registers the /metrics endpoint for Prometheus scraping.
 func RegisterMetrics(mux *http.ServeMux) {
 	mux.Handle("/metrics", promhttp.Handler())
 }

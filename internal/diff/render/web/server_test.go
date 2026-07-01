@@ -77,8 +77,6 @@ func terraformDiff() *node.Diff {
 	}
 }
 
-// ─── handleServerDiff ────────────────────────────────────────────────────────
-
 func TestHandleServerDiff_GET_Returns204(t *testing.T) {
 	handler := handleServerDiff(nil)
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, apiDiffPath, nil)
@@ -173,8 +171,6 @@ func TestHandleServerDiff_MethodNotAllowed(t *testing.T) {
 		t.Errorf("DELETE: status %d, want 405", w.Code)
 	}
 }
-
-// ─── buildPayload ─────────────────────────────────────────────────────────────
 
 func TestBuildPayload_TextDiff(t *testing.T) {
 	d := textDiff()

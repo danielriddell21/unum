@@ -1,4 +1,3 @@
-// Package jsontool implements the `unum json` subcommand.
 package jsontool
 
 import (
@@ -30,41 +29,33 @@ import (
 	"github.com/danielriddell21/unum/internal/telemetry"
 )
 
-// flags holds all flag values for the json subcommand.
 type flags struct {
-	// Output modes
 	ui  bool
 	web bool
 
-	// Static output options
 	validateOnly bool
 	compact      bool
 	theme        string
 	lightTheme   string
 
-	// Annotation lenses
 	showStats  bool
 	showMerkle bool
 	hashOnly   bool
 
-	// Output-mode lenses (mutually exclusive with each other)
 	transformYAML bool
 	typegenTarget string
 	typegenPkg    string
 	typegenType   string
 	jqExpr        string
 
-	// Web options
 	port int
 
-	// Global
 	quiet   bool
 	noColor bool
 	version string
 	tel     *telemetry.Telemetry
 }
 
-// Command returns the cobra command for `unum json`.
 func Command(globalNoColor *bool, globalQuiet *bool, version string, tel *telemetry.Telemetry) *cobra.Command {
 	f := &flags{}
 	f.version = version

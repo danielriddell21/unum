@@ -1,17 +1,14 @@
-// Package node defines the core data types for diff results.
 package node
 
-// ChangeKind classifies a line or structural element.
 type ChangeKind int
 
 const (
 	Unchanged ChangeKind = iota
 	Added
 	Removed
-	Modified // structured diffs only (phases 4–6)
+	Modified
 )
 
-// Format identifies the detected file format.
 type Format int
 
 const (
@@ -34,15 +31,13 @@ func (f Format) String() string {
 	}
 }
 
-// Line is a single line in a text diff hunk.
 type Line struct {
 	Kind    ChangeKind
-	OldNum  int    // 0 when Added
-	NewNum  int    // 0 when Removed
-	Content string // raw line content, no leading +/-
+	OldNum  int
+	NewNum  int
+	Content string
 }
 
-// Hunk is a contiguous group of changes plus surrounding context.
 type Hunk struct {
 	OldStart int
 	OldCount int
@@ -51,25 +46,23 @@ type Hunk struct {
 	Lines    []Line
 }
 
-// DiffNode represents a single node in a structured diff tree (phases 4–6).
 type DiffNode struct {
 	Kind     ChangeKind
-	Path     string // e.g. ".users[0].name"
+	Path     string
 	Key      string
-	Index    int    // -1 if not an array element
-	OldValue string // raw leaf value
+	Index    int
+	OldValue string
 	NewValue string
 	Children []*DiffNode
 }
 
-// Diff is the top-level result returned by all parse functions.
 type Diff struct {
 	Format   Format
 	FileA    string
 	FileB    string
-	Hunks    []Hunk    // populated for text diffs
-	Root     *DiffNode // populated for structured diffs (phases 4–6)
+	Hunks    []Hunk
+	Root     *DiffNode
 	Added    int
 	Removed  int
-	Modified int // structured diffs only
+	Modified int
 }

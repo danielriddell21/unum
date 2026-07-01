@@ -1,4 +1,3 @@
-// Package parse implements diff parsers for each supported format.
 package parse
 
 import (
@@ -9,8 +8,6 @@ import (
 	"github.com/danielriddell21/unum/internal/diff/node"
 )
 
-// Text computes a line-by-line diff between a and b using the Myers algorithm.
-// contextLines controls how many unchanged lines surround each changed block.
 func Text(a, b []byte, contextLines int) (*node.Diff, error) {
 	dmp := diffmatchpatch.New()
 
@@ -31,7 +28,6 @@ func Text(a, b []byte, contextLines int) (*node.Diff, error) {
 	}, nil
 }
 
-// buildHunks converts go-diff output into Hunk slices with context lines.
 func buildHunks(diffs []diffmatchpatch.Diff, ctx int) ([]node.Hunk, int, int) { //nolint:cyclop,gocognit // NOSONAR: processes every diff operation type in a single pass; branching on op kind is the algorithm
 	// Expand diffs into a flat line list with change kind
 	type rawLine struct {
@@ -171,18 +167,4 @@ func splitLines(s string) []string {
 		lines[i] = strings.TrimRight(l, "\r")
 	}
 	return lines
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

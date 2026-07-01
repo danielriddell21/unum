@@ -4,22 +4,19 @@ import (
 	ometric "go.opentelemetry.io/otel/metric"
 )
 
-// Metrics holds pre-created OTel instruments for recording usage data.
-// All instruments are initialised from a real or noop meter — never nil.
 type Metrics struct {
-	// Invocations counts tool executions. Attributes: tool, mode, os, arch, version.
 	Invocations ometric.Int64Counter
-	// InputBytes records input file sizes in bytes. Attributes: tool.
+
 	InputBytes ometric.Int64Histogram
-	// Duration records processing time in seconds. Attributes: tool, mode.
+
 	Duration ometric.Float64Histogram
-	// Errors counts failed executions. Attributes: tool, error_type.
+
 	Errors ometric.Int64Counter
-	// JSONNodes records JSON node count per parse.
+
 	JSONNodes ometric.Int64Histogram
-	// DiffChanges counts added/removed/modified lines. Attributes: kind.
+
 	DiffChanges ometric.Int64Counter
-	// WebUploads counts file uploads to the hosted web UI. Attributes: tool.
+
 	WebUploads ometric.Int64Counter
 }
 

@@ -9,7 +9,6 @@ import (
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
-// Validate reports whether data is valid JSON. Returns a descriptive error on failure.
 func Validate(data []byte) error {
 	if json.Valid(data) {
 		return nil
@@ -23,8 +22,6 @@ func Validate(data []byte) error {
 	return fmt.Errorf("invalid JSON")
 }
 
-// Parse builds a Node tree from JSON bytes.
-// The document is expected to be valid JSON; call Validate first.
 func Parse(data []byte) (*node.Node, error) {
 	dec := json.NewDecoder(strings.NewReader(string(data)))
 	dec.UseNumber() // preserve number formatting (e.g. "1.0" stays "1.0")

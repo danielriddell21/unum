@@ -13,7 +13,6 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/types"
 )
 
-// testDerive is a minimal derive function that doesn't import hash (avoids cycle in test).
 func testDerive(input string) types.Result {
 	h := sha256.Sum256([]byte(input))
 	n := binary.BigEndian.Uint16(h[0:2])
@@ -36,8 +35,12 @@ func testLoadHistory() []types.HistoryEntry {
 	return []types.HistoryEntry{{Input: "prev", Time: time.Now()}}
 }
 
-func init() {
-	SetFuncs(testDerive, testAppendHistory, testLoadHistory)
+func testDeps() Deps {
+	return Deps{
+		Derive:        testDerive,
+		AppendHistory: testAppendHistory,
+		LoadHistory:   testLoadHistory,
+	}
 }
 
 func windowMsg(w, h int) tea.WindowSizeMsg {
@@ -45,7 +48,7 @@ func windowMsg(w, h int) tea.WindowSizeMsg {
 }
 
 func TestHashTUI_InitNoPanic(t *testing.T) {
-	m := NewModel("dev")
+	m := NewModel("dev", testDeps())
 	next, _ := m.Update(windowMsg(120, 40))
 	if next == nil {
 		t.Fatal("Update returned nil model")
@@ -53,7 +56,7 @@ func TestHashTUI_InitNoPanic(t *testing.T) {
 }
 
 func TestHashTUI_SecondWindowSizeResizes(t *testing.T) {
-	m := NewModel("dev")
+	m := NewModel("dev", testDeps())
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 	next2, _ := nm.Update(windowMsg(160, 50))
@@ -64,7 +67,7 @@ func TestHashTUI_SecondWindowSizeResizes(t *testing.T) {
 }
 
 func TestHashTUI_ViewNoPanic(t *testing.T) {
-	m := NewModel("dev")
+	m := NewModel("dev", testDeps())
 	next, _ := m.Update(windowMsg(120, 40))
 	defer func() {
 		if r := recover(); r != nil {
@@ -75,7 +78,7 @@ func TestHashTUI_ViewNoPanic(t *testing.T) {
 }
 
 func TestHashTUI_EnterKeyDerives(t *testing.T) {
-	m := NewModel("dev")
+	m := NewModel("dev", testDeps())
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -98,7 +101,7 @@ func TestHashTUI_EnterKeyDerives(t *testing.T) {
 }
 
 func TestHashTUI_EmptyEnterNoResult(t *testing.T) {
-	m := NewModel("dev")
+	m := NewModel("dev", testDeps())
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -111,7 +114,7 @@ func TestHashTUI_EmptyEnterNoResult(t *testing.T) {
 }
 
 func TestHashTUI_TabSwitchesFocus(t *testing.T) {
-	m := NewModel("dev")
+	m := NewModel("dev", testDeps())
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -135,7 +138,7 @@ func TestHashTUI_TabSwitchesFocus(t *testing.T) {
 }
 
 func TestHashTUI_QTypesInInputMode(t *testing.T) {
-	m := NewModel("dev")
+	m := NewModel("dev", testDeps())
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -149,7 +152,7 @@ func TestHashTUI_QTypesInInputMode(t *testing.T) {
 }
 
 func TestHashTUI_HelpToggle(t *testing.T) {
-	m := NewModel("dev")
+	m := NewModel("dev", testDeps())
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 
@@ -171,7 +174,7 @@ func TestHashTUI_HelpToggle(t *testing.T) {
 }
 
 func TestHashTUI_HistoryNavigation(t *testing.T) {
-	m := NewModel("dev")
+	m := NewModel("dev", testDeps())
 	next, _ := m.Update(windowMsg(120, 40))
 	nm := next.(Model)
 

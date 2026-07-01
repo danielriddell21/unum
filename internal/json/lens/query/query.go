@@ -1,4 +1,3 @@
-// Package query executes jq expressions against a node tree using gojq.
 package query
 
 import (
@@ -11,8 +10,6 @@ import (
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
-// Execute runs a jq expression against the node tree and returns the result
-// as pretty-printed JSON. Multiple outputs are newline-separated.
 func Execute(root *node.Node, expr string) (string, error) {
 	if strings.TrimSpace(expr) == "" {
 		return "", fmt.Errorf("empty jq expression")
@@ -24,7 +21,7 @@ func Execute(root *node.Node, expr string) (string, error) {
 	}
 
 	// Convert node tree to Go any (gojq operates on any)
-	input := nodeToAny(root)
+	input := root.ToAny()
 
 	iter := q.Run(input)
 
@@ -45,37 +42,4 @@ func Execute(root *node.Node, expr string) (string, error) {
 	}
 
 	return strings.Join(results, "\n"), nil
-}
-
-// nodeToAny converts a node tree to a Go any for gojq consumption.
-// Objects are converted to map[string]any using ordered keys where possible,
-// but gojq works on map[string]any so key order in objects is not guaranteed in output.
-func nodeToAny(n *node.Node) any {
-	switch n.Kind {
-	case node.KindNull:
-		return nil
-	case node.KindBool:
-		return n.Raw == "true"
-	case node.KindNumber:
-		f := json.Number(n.Raw)
-		// gojq handles json.Number
-		return f
-	case node.KindString:
-		var s string
-		_ = json.Unmarshal([]byte(n.Raw), &s)
-		return s
-	case node.KindArray:
-		arr := make([]any, len(n.Children))
-		for i, c := range n.Children {
-			arr[i] = nodeToAny(c)
-		}
-		return arr
-	case node.KindObject:
-		m := make(map[string]any, len(n.Children))
-		for _, c := range n.Children {
-			m[c.Key] = nodeToAny(c)
-		}
-		return m
-	}
-	return nil
 }

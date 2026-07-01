@@ -1,5 +1,3 @@
-// Package web provides the HTTP server for the unum diff web UI.
-// All static assets are embedded at build time — the binary is fully self-contained.
 package web
 
 import (
@@ -32,18 +30,15 @@ const (
 	apiDiffPath    = "/api/diff"
 )
 
-// Options configures the diff web server.
 type Options struct {
 	Port       int
 	Quiet      bool
-	DarkTheme  string // cyber | matrix | dracula | nord
-	LightTheme string // clean | solarized
+	DarkTheme  string
+	LightTheme string
 	Version    string
 	Tel        *telemetry.Telemetry
 }
 
-// Start launches the diff web server, auto-opens the browser, and blocks until
-// Ctrl+C.
 func Start(d *node.Diff, opts Options) error {
 	host := "localhost"
 	autoOpen := true
@@ -104,8 +99,6 @@ func Start(d *node.Diff, opts Options) error {
 	}
 	return nil
 }
-
-// ─── Payload ──────────────────────────────────────────────────────────────────
 
 type diffPayload struct {
 	FileA    string       `json:"fileA"`
@@ -217,19 +210,14 @@ func kindString(k node.ChangeKind) string {
 	}
 }
 
-// ─── Server mode (no pre-loaded diff) ────────────────────────────────────────
-
-// postDiffRequest is the body accepted by POST /api/diff in server mode.
 type postDiffRequest struct {
 	NameA    string `json:"nameA"`
 	ContentA string `json:"contentA"`
 	NameB    string `json:"nameB"`
 	ContentB string `json:"contentB"`
-	Format   string `json:"format"` // "json", "yaml", "terraform", "text", or "" for auto-detect
+	Format   string `json:"format"`
 }
 
-// StartServer launches the diff web server in input mode with no pre-loaded diff.
-// GET /api/diff returns 204; POST /api/diff computes a diff from submitted content.
 func StartServer(opts Options) error {
 	host := "localhost"
 	autoOpen := true

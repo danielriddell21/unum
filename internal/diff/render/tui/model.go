@@ -28,7 +28,6 @@ const (
 	modeHelp
 )
 
-// Model is the root Bubble Tea model for the diff TUI.
 type Model struct {
 	diff *node.Diff
 
@@ -47,7 +46,6 @@ type Model struct {
 	version       string
 }
 
-// NewModel creates the diff TUI model.
 func NewModel(d *node.Diff, version string) Model {
 	si := textinput.New()
 	si.Placeholder = "search..."
@@ -71,8 +69,6 @@ func (m *Model) initPanels() {
 	}
 }
 
-// panelDimensions returns (diffW, diffH, infoW, infoH).
-// Layout: left 65% = diff, right 35% = info.
 func (m *Model) panelDimensions() (dw, dh, iw, ih int) {
 	statusH := 1
 	usable := m.height - statusH

@@ -8,12 +8,10 @@ import (
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
-// queryRequest is the payload for POST /api/query.
 type queryRequest struct {
 	Expr string `json:"expr"`
 }
 
-// queryResponse is the response for POST /api/query.
 type queryResponse struct {
 	Result string `json:"result,omitempty"`
 	Error  string `json:"error,omitempty"`

@@ -1,4 +1,3 @@
-// Package difftool implements the `unum diff` subcommand.
 package difftool
 
 import (
@@ -40,7 +39,6 @@ type flags struct {
 	tel        *telemetry.Telemetry
 }
 
-// Command returns the cobra command for `unum diff`.
 func Command(globalNoColor *bool, globalQuiet *bool, version string, tel *telemetry.Telemetry) *cobra.Command {
 	f := &flags{}
 	f.version = version

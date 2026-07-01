@@ -1,4 +1,3 @@
-// Package shared provides static assets shared across all unum web UIs.
 package shared
 
 import "embed"

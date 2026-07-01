@@ -8,8 +8,6 @@ import (
 	jsonparse "github.com/danielriddell21/unum/internal/json/parse"
 )
 
-// Terraform parses a Terraform plan JSON (from `terraform show -json`) and
-// produces a DiffNode tree grouped by resource change.
 func Terraform(data []byte) (*diffnode.Diff, error) {
 	var plan tfPlan
 	if err := json.Unmarshal(data, &plan); err != nil {
@@ -83,7 +81,6 @@ func Terraform(data []byte) (*diffnode.Diff, error) {
 	}, nil
 }
 
-// diffTFChange compares before/after of a resource update.
 func diffTFChange(rc tfResourceChange, path string, counts *[3]int) (*diffnode.DiffNode, error) {
 	beforeBytes, err := json.Marshal(rc.Change.Before)
 	if err != nil {
@@ -121,8 +118,6 @@ func primaryAction(actions []string) string {
 	}
 	return "no-op"
 }
-
-// ─── Terraform plan schema ───────────────────────────────────────────────────
 
 type tfPlan struct {
 	ResourceChanges []tfResourceChange `json:"resource_changes"`

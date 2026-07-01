@@ -1,5 +1,3 @@
-// Package derive implements the unum hash subcommand — a deterministic deriver
-// that maps any string to a stable set of useful values via SHA256.
 package derive
 
 import (
@@ -15,10 +13,8 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/types"
 )
 
-// Result is an alias for types.Result so callers can use hash.Result directly.
 type Result = types.Result
 
-// Derive hashes input with SHA256 and derives all Result fields from the bytes.
 func Derive(input string) Result {
 	h := sha256.Sum256([]byte(input))
 
@@ -33,35 +29,28 @@ func Derive(input string) Result {
 	}
 }
 
-// derivePort maps bytes[0:2] to the range 1024–65535.
 func derivePort(h [32]byte) uint16 {
 	n := binary.BigEndian.Uint16(h[0:2])
 	const lo, hi = 1024, 65535
 	return lo + n%(hi-lo+1)
 }
 
-// deriveUUID returns a deterministic UUID v5 using the DNS namespace.
 func deriveUUID(input string) string {
 	return uuid.NewSHA1(uuid.NameSpaceDNS, []byte(input)).String()
 }
 
-// deriveColor formats bytes[0:3] as a CSS hex color.
 func deriveColor(h [32]byte) string {
 	return fmt.Sprintf("#%s", hex.EncodeToString(h[0:3]))
 }
 
-// deriveShort returns the first 8 hex characters of the hash.
 func deriveShort(h [32]byte) string {
 	return hex.EncodeToString(h[0:4])
 }
 
-// deriveEmoji indexes into a curated emoji slice using byte[0].
 func deriveEmoji(h [32]byte) string {
 	return emojis[int(h[0])%len(emojis)]
 }
 
-// derivePhrase picks 3 words from the EFF large wordlist using bytes[0:6],
-// 2 bytes per word, joined with hyphens.
 func derivePhrase(h [32]byte) string {
 	words := effWords()
 	n := len(words)
@@ -71,20 +60,16 @@ func derivePhrase(h [32]byte) string {
 	return w1 + "-" + w2 + "-" + w3
 }
 
-// ─── EFF wordlist ─────────────────────────────────────────────────────────────
-
 var (
 	effOnce  sync.Once
 	effSlice []string
 )
 
-// effWords returns the EFF large wordlist as a flat []string, built once.
-// Enumerates every 5-digit dice code (11111..66666) in lexicographic order.
 func effWords() []string {
 	effOnce.Do(func() {
 		wl := diceware.WordListEffLarge()
 		effSlice = make([]string, 0, 7776)
-		for i := 0; i < 7776; i++ {
+		for i := range 7776 {
 			d1 := i/1296 + 1
 			d2 := (i/216)%6 + 1
 			d3 := (i/36)%6 + 1
@@ -96,8 +81,6 @@ func effWords() []string {
 	})
 	return effSlice
 }
-
-// ─── Emoji list ───────────────────────────────────────────────────────────────
 
 var emojis = []string{
 	"🦊", "🐺", "🦁", "🐯", "🐻", "🐼", "🦝", "🦨",

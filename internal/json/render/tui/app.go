@@ -1,4 +1,3 @@
-// Package tui provides the Bubble Tea interactive TUI for JSON navigation.
 package tui
 
 import (
@@ -19,22 +18,15 @@ const (
 	msgInvalidJSON   = "invalid JSON: %v\n"
 )
 
-// applyTheme applies the named palette to all style vars.
 func applyTheme(theme string) {
 	ApplyPalette(tuipanels.ResolvePalette(theme))
 }
 
-// Start launches the TUI for the given node tree.
-// It takes over the terminal (AltScreen) and restores it cleanly on exit.
-// If the user presses 'o' to open a new file, the picker is shown and the
-// explorer restarts with the selected file.
 func Start(root *node.Node, filename, theme, version string) error {
 	applyTheme(theme)
 	return startLoop(root, filename, version)
 }
 
-// StartWithPicker launches a file picker TUI. Once a .json file is selected
-// it parses it and transitions directly into the main JSON explorer.
 func StartWithPicker(initialDir, theme, version string) error {
 	applyTheme(theme)
 
@@ -67,7 +59,6 @@ func StartWithPicker(initialDir, theme, version string) error {
 	return startLoop(root, picked.Selected, version)
 }
 
-// startLoop runs the main TUI loop. Theme must already have been applied.
 func startLoop(root *node.Node, filename, version string) error {
 	for {
 		m := NewModel(root, filename, version)
@@ -95,9 +86,6 @@ func startLoop(root *node.Node, filename, version string) error {
 	}
 }
 
-// promptAndReload shows the file picker and parses the selected JSON file.
-// Returns ok=false (with nil err) when the user cancels or validation fails —
-// the caller should stop the reload loop without surfacing an error.
 func promptAndReload() (*node.Node, string, bool, error) {
 	cwd, _ := os.Getwd()
 	pm := newPickerModel(cwd)

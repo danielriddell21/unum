@@ -1,4 +1,3 @@
-// Package config handles loading user configuration from disk.
 package config
 
 import (
@@ -10,16 +9,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// Config holds persistent user preferences for unum.
 type Config struct {
-	DarkTheme  string `json:"dark_theme"`          // cyber | matrix | dracula | nord
-	LightTheme string `json:"light_theme"`         // clean | solarized
-	Telemetry  *bool  `json:"telemetry,omitempty"` // nil = enabled (opt-out default), false = disabled
-	ClientID   string `json:"client_id,omitempty"` // random UUID for anonymous telemetry identity
+	DarkTheme  string `json:"dark_theme"`
+	LightTheme string `json:"light_theme"`
+	Telemetry  *bool  `json:"telemetry,omitempty"`
+	ClientID   string `json:"client_id,omitempty"`
 }
 
-// TelemetryEnabled reports whether telemetry should be active.
-// Priority: DO_NOT_TRACK=1 > UNUM_NO_TELEMETRY=1 > config file > default (true).
 func (c Config) TelemetryEnabled() bool {
 	if os.Getenv("DO_NOT_TRACK") == "1" {
 		return false
@@ -33,11 +29,6 @@ func (c Config) TelemetryEnabled() bool {
 	return true
 }
 
-// Load reads the config file from the OS config directory.
-// Returns defaults if the file is absent or malformed.
-// Location: $XDG_CONFIG_HOME/unum/config.json  (Linux/macOS)
-//
-//	%APPDATA%\unum\config.json             (Windows)
 func Load() Config {
 	cfg := Config{DarkTheme: "cyber", LightTheme: "clean"}
 
@@ -55,7 +46,6 @@ func Load() Config {
 	return cfg
 }
 
-// Save writes the config back to the OS config directory.
 func Save(cfg Config) error {
 	dir, err := os.UserConfigDir()
 	if err != nil {
@@ -78,9 +68,6 @@ func Save(cfg Config) error {
 	return nil
 }
 
-// EnsureClientID loads the config, generates a client ID if missing, saves,
-// and returns the config. If saving fails, the in-memory config is still
-// returned with the generated ID.
 func EnsureClientID() Config {
 	cfg := Load()
 	if cfg.ClientID != "" {

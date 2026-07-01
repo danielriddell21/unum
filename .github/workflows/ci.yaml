@@ -15,31 +15,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-
-      - name: Test
-        run: go test -coverprofile=coverage.txt ./...
-
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v6
+      - run: go test -coverprofile=coverage.txt ./...
+      - uses: codecov/codecov-action@v7
         with:
-         token: ${{ secrets.CODECOV_TOKEN }}
-      
+          token: ${{ secrets.CODECOV_TOKEN }}
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
+      - uses: golangci/golangci-lint-action@v9
         with:
           version: latest
           args: --config .golangci.yml
@@ -49,45 +41,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-
-      - name: Build
-        run: go build -o /dev/null ./cmd/unum
+      - run: go build ./...
 
   mutate:
     name: Mutation test
-    runs-on: ubuntu-latest
     needs: [test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/trunk'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-
       - uses: go-gremlins/gremlins-action@v1
         with:
-          version: latest
           args: --config .gremlins.yaml
 
   tag:
     name: Tag
-    runs-on: ubuntu-latest
     needs: [test, lint, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/trunk'
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
-      - name: Bump version and push tag
-        uses: mathieudutour/github-tag-action@v6.2
+      - uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.UNUM_TOKEN }}
           default_bump: false

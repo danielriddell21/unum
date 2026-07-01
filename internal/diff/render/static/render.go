@@ -1,4 +1,3 @@
-// Package static renders diffs to a terminal writer with ANSI colouring.
 package static
 
 import (
@@ -13,11 +12,10 @@ import (
 	"github.com/danielriddell21/unum/internal/theme"
 )
 
-// Theme holds lipgloss styles for static diff rendering.
 type Theme struct {
 	Added       lipgloss.Style
 	Removed     lipgloss.Style
-	Modified    lipgloss.Style // structured diffs: changed value
+	Modified    lipgloss.Style
 	Unchanged   lipgloss.Style
 	HunkHeader  lipgloss.Style
 	FileHeader  lipgloss.Style
@@ -49,23 +47,19 @@ var (
 	Nord    = themeFromPalette(theme.PaletteNord)
 )
 
-// ResolveTheme returns the named theme, defaulting to Cyber.
 func ResolveTheme(name string) Theme {
 	return themeFromPalette(theme.ResolvePalette(name))
 }
 
-// Options configures static rendering.
 type Options struct {
 	Theme   Theme
-	Context int  // lines of context per hunk (default 3)
-	Stat    bool // print summary only, no diff body
-	NoStat  bool // suppress the stat line entirely
+	Context int
+	Stat    bool
+	NoStat  bool
 	NoColor bool
 	Quiet   bool
 }
 
-// Boot prints the diff boot sequence to w.
-// Call before parsing; invoke the returned func after parsing to complete the line.
 func Boot(w io.Writer, fileA, fileB string, opts Options) func(added, removed, modified int, elapsed time.Duration) {
 	// noop is the quiet-mode completion callback — intentionally empty.
 	noop := func(int, int, int, time.Duration) { /* quiet mode: suppress all output */ }
@@ -90,7 +84,6 @@ func Boot(w io.Writer, fileA, fileB string, opts Options) func(added, removed, m
 	}
 }
 
-// Render writes the coloured diff to w.
 func Render(w io.Writer, d *node.Diff, opts Options) error {
 	if d.Root != nil {
 		return renderTree(w, d, opts)
@@ -169,7 +162,6 @@ func renderTree(w io.Writer, d *node.Diff, opts Options) error {
 	return nil
 }
 
-// walkTreeStatic prints only changed nodes (Added/Removed/Modified).
 func walkTreeStatic(w io.Writer, dn *node.DiffNode, t Theme, noColor bool) {
 	if dn == nil {
 		return

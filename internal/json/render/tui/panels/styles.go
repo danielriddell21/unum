@@ -6,7 +6,6 @@ import (
 	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
 )
 
-// ApplyPalette updates all panel style variables to match the given palette.
 func ApplyPalette(p tuipanels.Palette) {
 	styleMuted = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted))
 	styleObjectKey = lipgloss.NewStyle().Foreground(lipgloss.Color(p.ObjectKey))
@@ -34,30 +33,30 @@ func ApplyPalette(p tuipanels.Palette) {
 	styleSBSep = lipgloss.NewStyle().Foreground(lipgloss.Color(p.BorderDim)).Render(" · ")
 }
 
-// Package-level style variables — initialized with the cyber palette defaults.
-// ApplyPalette() reassigns all of these; do not set them elsewhere.
-var (
-	styleMuted      = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted))
-	styleObjectKey  = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.ObjectKey))
-	styleArrayIdx   = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.ArrayIndex))
-	styleString     = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.StringVal))
-	styleNumber     = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.NumberVal))
-	styleBoolTrue   = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.BoolTrue))
-	styleBoolFalse  = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.BoolFalse))
-	styleNull       = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.NullVal))
-	styleCursor     = lipgloss.NewStyle().Background(lipgloss.Color(tuipanels.PaletteCyber.BGSelected)).Foreground(lipgloss.Color(tuipanels.PaletteCyber.Text))
-	connectorMid    = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted)).Render("├─▶ ")
-	connectorLast   = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.BorderDim)).Render("└─▷ ")
-	connectorOpen   = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted)).Render("▼  ")
-	connectorClosed = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted)).Render("▶  ")
+func init() { ApplyPalette(tuipanels.PaletteCyber) }
 
-	styleTabActive    = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.AccentPrimary)).Bold(true)
-	styleTabInactive  = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Muted))
-	styleHash         = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Hash))
-	styleStats        = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Stats))
-	styleError        = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Error))
-	styleSearchPrompt = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Search)).Bold(true)
-	stylePath         = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.Path)).Bold(true)
-	styleSBType       = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.AccentPrimary))
-	styleSBSep        = lipgloss.NewStyle().Foreground(lipgloss.Color(tuipanels.PaletteCyber.BorderDim)).Render(" · ")
+var (
+	styleMuted      lipgloss.Style
+	styleObjectKey  lipgloss.Style
+	styleArrayIdx   lipgloss.Style
+	styleString     lipgloss.Style
+	styleNumber     lipgloss.Style
+	styleBoolTrue   lipgloss.Style
+	styleBoolFalse  lipgloss.Style
+	styleNull       lipgloss.Style
+	styleCursor     lipgloss.Style
+	connectorMid    string
+	connectorLast   string
+	connectorOpen   string
+	connectorClosed string
+
+	styleTabActive    lipgloss.Style
+	styleTabInactive  lipgloss.Style
+	styleHash         lipgloss.Style
+	styleStats        lipgloss.Style
+	styleError        lipgloss.Style
+	styleSearchPrompt lipgloss.Style
+	stylePath         lipgloss.Style
+	styleSBType       lipgloss.Style
+	styleSBSep        string
 )

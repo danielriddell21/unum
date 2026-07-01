@@ -1,4 +1,3 @@
-// Package static renders hash derivation results to a terminal writer.
 package static
 
 import (
@@ -11,7 +10,6 @@ import (
 	"github.com/danielriddell21/unum/internal/theme"
 )
 
-// Theme holds lipgloss styles for terminal output.
 type Theme struct {
 	Banner lipgloss.Style
 	Label  lipgloss.Style
@@ -35,19 +33,16 @@ var (
 	Nord    = themeFromPalette(theme.PaletteNord)
 )
 
-// ResolveTheme returns the named theme, defaulting to Cyber.
 func ResolveTheme(name string) Theme {
 	return themeFromPalette(theme.ResolvePalette(name))
 }
 
-// Options configures static rendering.
 type Options struct {
 	Theme   Theme
 	NoColor bool
 	Quiet   bool
 }
 
-// Boot prints the banner line to w.
 func Boot(w io.Writer, opts Options) {
 	if opts.Quiet {
 		return
@@ -64,7 +59,6 @@ func Boot(w io.Writer, opts Options) {
 	)
 }
 
-// RenderTable prints the full derivation table for r.
 func RenderTable(w io.Writer, r types.Result, opts Options) {
 	rows := []struct{ label, value string }{
 		{"input", r.Input},
@@ -99,7 +93,6 @@ func RenderTable(w io.Writer, r types.Result, opts Options) {
 	}
 }
 
-// RenderSingle prints just the requested field value — pipe-friendly.
 func RenderSingle(w io.Writer, value string) {
 	_, _ = fmt.Fprintln(w, value)
 }

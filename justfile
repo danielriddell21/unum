@@ -6,47 +6,61 @@ main := "./cmd/unum"
 
 # ── Core ──────────────────────────────────────────────────────────────────────
 
+# list available recipes
+default:
+    @just --list
+
 # build to bin/unum
-[group('core')]
+[group('build')]
 build:
     go build -ldflags "-X main.version=dev" -o {{ binary }} {{ main }}
 
 # run unit tests — pass extra flags e.g. `just test -v` or `just test -run TestParse`
-[group('core')]
+[group('test')]
 test *args:
     go test {{ args }} ./...
 
-# run CLI functional tests
-[group('core')]
-yeet:
-    go test -v ./tests/...
-
 # golangci-lint
-[group('core')]
+[group('dev')]
 lint *args:
     golangci-lint run ./... {{ args }}
 
+# format the code
+[group('dev')]
+fmt:
+    golangci-lint fmt
+
+# tidy module dependencies
+[group('dev')]
+tidy:
+    go mod tidy
+
+# full gate: lint + test + yeet + build. all must pass before committing
+[group('dev')]
+ci: lint test yeet build
+
+# run CLI functional tests
+[group('test')]
+yeet:
+    go test -v ./tests/...
+
 # install to GOPATH/bin
-[group('core')]
+[group('build')]
 install:
     go install {{ main }}
 
 # remove build artifacts
-[group('core')]
+[group('dev')]
 clean:
     rm -rf bin/
 
-# full gate: lint + test + yeet + build
-[group('core')]
-ci: lint test yeet build
-
 # mutation testing
-[group('core')]
+[group('dev')]
 mutate *args:
     gremlins unleash {{ args }}
 
 # tag and push a release
-[group('core')]
+[group('dev')]
 release tag:
     git tag {{ tag }}
     git push origin {{ tag }}

@@ -1,5 +1,3 @@
-// Package web provides the HTTP server for the unum hash web UI.
-// All static assets are embedded at build time — the binary is fully self-contained.
 package web
 
 import (
@@ -22,26 +20,16 @@ import (
 //go:embed assets/*
 var assets embed.FS
 
-// Options configures the hash web server.
 type Options struct {
 	Port       int
 	Quiet      bool
-	DarkTheme  string // cyber | matrix | dracula | nord
-	LightTheme string // clean | solarized
+	DarkTheme  string
+	LightTheme string
 	Version    string
 	Tel        *telemetry.Telemetry
+	Derive     func(input string) types.Result
 }
 
-// deriveFn is injected to avoid import cycles.
-var deriveFn func(input string) types.Result
-
-// SetFuncs wires in the derivation function.
-func SetFuncs(derive func(string) types.Result) {
-	deriveFn = derive
-}
-
-// Start launches the hash web server, auto-opens the browser, and blocks until
-// Ctrl+C.
 func Start(opts Options) error {
 	host := "localhost"
 	autoOpen := true
@@ -71,7 +59,7 @@ func Start(opts Options) error {
 	mux.HandleFunc("/shared.js", shared.ServeSharedAsset("assets/shared.js", "application/javascript"))
 	mux.HandleFunc("/style.css", shared.ServeAsset(assets, "assets/style.css", "text/css"))
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
-	mux.HandleFunc("/api/derive", handleDerive(opts.Tel))
+	mux.HandleFunc("/api/derive", handleDerive(opts.Tel, opts.Derive))
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 	shared.RegisterMetrics(mux)
 	shared.RegisterUmamiProxy(mux)
@@ -90,22 +78,18 @@ func Start(opts Options) error {
 	return nil
 }
 
-func handleDerive(tel *telemetry.Telemetry) http.HandlerFunc {
+func handleDerive(tel *telemetry.Telemetry, derive func(input string) types.Result) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		input := r.URL.Query().Get("input")
 		if input == "" {
 			http.Error(w, "missing input param", http.StatusBadRequest)
 			return
 		}
-		if deriveFn == nil {
-			http.Error(w, "derive not configured", http.StatusInternalServerError)
-			return
-		}
 
 		ctx, span := tel.Tracer().Start(r.Context(), "hash.derive")
 		defer span.End()
 
-		result := deriveFn(input)
+		result := derive(input)
 		span.SetAttributes(attribute.String("hash.input_length", strconv.Itoa(len(input))))
 		tel.TrackEvent("hash-derive", "/api/derive", map[string]string{
 			"input_length": strconv.Itoa(len(input)),

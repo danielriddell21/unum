@@ -54,8 +54,6 @@ func jsonDiff() *node.Diff {
 	}
 }
 
-// ─── UnifiedPanel ─────────────────────────────────────────────────────────────
-
 func TestUnifiedPanel_ViewNoPanic(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -139,8 +137,6 @@ func TestUnifiedPanel_EmptyDiff(t *testing.T) {
 		t.Logf("empty diff unified panel: %q", out)
 	}
 }
-
-// ─── SplitPanel ───────────────────────────────────────────────────────────────
 
 func TestSplitPanel_ViewNoPanic(t *testing.T) {
 	defer func() {

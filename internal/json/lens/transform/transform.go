@@ -11,7 +11,6 @@ import (
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
-// ToYAML converts a node tree to YAML bytes.
 func ToYAML(root *node.Node) ([]byte, error) {
 	// Round-trip through JSON → any → YAML.
 	// We marshal from the node tree to preserve key order as much as yaml.v3 allows.
@@ -48,7 +47,6 @@ func ToYAML(root *node.Node) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// toYAMLNode recursively converts a *node.Node to a *yaml.Node, preserving key order.
 func toYAMLNode(n *node.Node) (*yaml.Node, error) {
 	switch n.Kind {
 	case node.KindNull:

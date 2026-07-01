@@ -7,18 +7,14 @@ import (
 	"time"
 )
 
-// UmamiClient sends page-level analytics events to a self-hosted Umami
-// instance. Used only in web mode — CLI and TUI telemetry goes through OTel.
 type UmamiClient struct {
-	endpoint   string // e.g. "http://umami:3000"
+	endpoint   string
 	websiteID  string
-	hostname   string // e.g. "riddellious.dev" — from UMAMI_HOSTNAME env
+	hostname   string
 	enabled    bool
 	httpClient *http.Client
 }
 
-// NewUmami creates a client. If endpoint or websiteID is empty, the client
-// is disabled (all methods are no-ops).
 func NewUmami(endpoint, websiteID, hostname string) *UmamiClient {
 	if hostname == "" {
 		hostname = "localhost"
@@ -34,8 +30,6 @@ func NewUmami(endpoint, websiteID, hostname string) *UmamiClient {
 	}
 }
 
-// Track sends a named event to Umami. Non-blocking (fires a goroutine).
-// Safe to call on a disabled client.
 func (u *UmamiClient) Track(event, pageURL string, props map[string]string) {
 	if !u.enabled {
 		debugf("umami: disabled, skipping event=%s", event)

@@ -201,8 +201,6 @@ func TestPrimaryAction_KnownActions(t *testing.T) {
 	}
 }
 
-// TestTerraform_UpdateFallback verifies that when diffTFChange fails the
-// Terraform parser falls back to a Modified node rather than erroring.
 func TestTerraform_UpdateFallback(t *testing.T) {
 	// before contains a raw JSON fragment that cannot be parsed by jsonparse.Parse.
 	plan := []byte(`{

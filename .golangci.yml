@@ -13,6 +13,7 @@ linters:
     - nilerr
     - noctx
     - prealloc
+    - revive
     - thelper
     - unconvert
     - unparam
@@ -28,24 +29,55 @@ linters:
       max-complexity: 15
     gocognit:
       min-complexity: 20
+    revive:
+      rules:
+        - name: exported
+          arguments: [disableStutteringCheck]
+    errcheck:
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
     gosec:
       excludes:
-        - G304
         - G107
+        - G115
         - G204
+        - G304
+        - G404
+        - G602
+        - G703
   exclusions:
+    paths:
+      - examples
     rules:
       - path: "tests/web/"
         linters:
           - noctx
+      - path: (^|/)(internal|cmd)/
+        linters:
+          - revive
       - path: "_test\\.go"
         linters:
+          - revive
+          - dupl
           - wrapcheck
+          - gosec
+          - unparam
+          - gocognit
+          - cyclop
+          - prealloc
+          - errcheck
+          - gocritic
+          - noctx
 
 formatters:
   enable:
     - gofumpt
     - goimports
+  exclusions:
+    paths:
+      - examples
   settings:
     goimports:
       local-prefixes:

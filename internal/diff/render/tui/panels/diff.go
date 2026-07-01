@@ -12,7 +12,6 @@ import (
 
 const noDifferencesPadded = "  (no differences)"
 
-// UnifiedPanel renders the diff in classic unified format.
 type UnifiedPanel struct {
 	diff     *node.Diff
 	viewport viewport.Model
@@ -21,17 +20,16 @@ type UnifiedPanel struct {
 	focused  bool
 	search   string
 	matchIdx int
-	matches  []int // line indices with search matches
+	matches  []int
 	lines    []renderedLine
-	textOnly bool // force text hunk rendering even for semantic diffs
+	textOnly bool
 }
 
 type renderedLine struct {
-	raw     string // plain text for search
-	display string // styled
+	raw     string
+	display string
 }
 
-// NewUnifiedPanel creates a unified diff panel.
 func NewUnifiedPanel(d *node.Diff, w, h int) UnifiedPanel {
 	p := UnifiedPanel{diff: d, width: w, height: h}
 	p.viewport = viewport.New(w, h)
@@ -85,7 +83,6 @@ func (p *UnifiedPanel) scrollToMatch() {
 	}
 }
 
-// CurrentHunkIdx returns the hunk index based on viewport position.
 func (p *UnifiedPanel) CurrentHunkIdx() int {
 	return 0 // simplified — info panel shows hunk 1 by default for now
 }
@@ -194,12 +191,11 @@ func (p *UnifiedPanel) renderLine(l node.Line, searchQ string) (raw, display str
 	return raw, display
 }
 
-// SplitPanel renders old and new file side-by-side with synchronised scrolling.
 type SplitPanel struct {
 	diff     *node.Diff
-	left     viewport.Model // old file
-	right    viewport.Model // new file
-	focused  int            // 0=left, 1=right
+	left     viewport.Model
+	right    viewport.Model
+	focused  int
 	width    int
 	height   int
 	search   string
@@ -207,7 +203,6 @@ type SplitPanel struct {
 	matchIdx int
 }
 
-// NewSplitPanel creates a side-by-side diff panel.
 func NewSplitPanel(d *node.Diff, w, h int) SplitPanel {
 	hw := (w - 1) / 2 // -1 for the centre divider
 	p := SplitPanel{diff: d, width: w, height: h}
@@ -357,7 +352,7 @@ func (p *SplitPanel) flushHunk(removed, added, unchanged []node.Line, leftLines,
 	if len(added) > maxPairs {
 		maxPairs = len(added)
 	}
-	for i := 0; i < maxPairs; i++ {
+	for i := range maxPairs {
 		lineIdx := len(*leftLines)
 		var lLine, rLine string
 		if i < len(removed) {
@@ -424,7 +419,6 @@ func (p *SplitPanel) renderSide(l node.Line, kind node.ChangeKind, searchQ strin
 	return gutter + style.Render(prefix+content)
 }
 
-// buildJSON renders the DiffNode tree as a flat list of changed paths.
 func (p *UnifiedPanel) buildJSON() {
 	if p.diff.Root == nil {
 		p.viewport.SetContent(diffUnchanged.Render(noDifferencesPadded))

@@ -11,7 +11,6 @@ import (
 	"github.com/danielriddell21/unum/internal/json/node"
 )
 
-// PreviewPanel shows the value of the currently selected tree node.
 type PreviewPanel struct {
 	viewport viewport.Model
 	width    int
@@ -19,7 +18,6 @@ type PreviewPanel struct {
 	focused  bool
 }
 
-// NewPreviewPanel creates a preview panel.
 func NewPreviewPanel(w, h int) PreviewPanel {
 	return PreviewPanel{
 		viewport: viewport.New(w, h),
@@ -37,7 +35,6 @@ func (p *PreviewPanel) Resize(w, h int) {
 	p.viewport.Height = h
 }
 
-// SetNode updates the preview to show the given node's value.
 func (p *PreviewPanel) SetNode(n *node.Node) {
 	if n == nil {
 		p.viewport.SetContent(styleMuted.Render("(empty)"))
@@ -47,7 +44,6 @@ func (p *PreviewPanel) SetNode(n *node.Node) {
 	p.viewport.GotoTop()
 }
 
-// HandleKey handles scrolling when this panel is focused.
 func (p *PreviewPanel) HandleKey(key string) bool {
 	switch key {
 	case "j", "down":
@@ -60,7 +56,6 @@ func (p *PreviewPanel) HandleKey(key string) bool {
 	return false
 }
 
-// View returns the rendered preview content.
 func (p *PreviewPanel) View() string {
 	return p.viewport.View()
 }
@@ -115,8 +110,6 @@ func (p *PreviewPanel) renderLeaf(n *node.Node) string {
 	return fmt.Sprintf("%s\n\n%s\n\n%s", typeLabel, valueStr, path)
 }
 
-// colorizeJSON applies basic ANSI colors to a pretty-printed JSON string.
-// This is a lightweight line-by-line colorizer (not a full lexer).
 func colorizeJSON(s string) string {
 	lines := strings.Split(s, "\n")
 	colored := make([]string, 0, len(lines))

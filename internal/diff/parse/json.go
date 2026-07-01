@@ -8,8 +8,6 @@ import (
 	jsonparse "github.com/danielriddell21/unum/internal/json/parse"
 )
 
-// JSON computes a semantic diff between two JSON byte slices.
-// It walks both parse trees simultaneously and produces a DiffNode tree.
 func JSON(a, b []byte) (*diffnode.Diff, error) {
 	rootA, err := jsonparse.Parse(a)
 	if err != nil {
@@ -36,8 +34,6 @@ func JSON(a, b []byte) (*diffnode.Diff, error) {
 	return d, nil
 }
 
-// compareNodes recursively compares two JSON nodes and returns a DiffNode.
-// counts is [added, removed, modified].
 func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]int) *diffnode.DiffNode { //nolint:cyclop,gocognit,dupl // NOSONAR: recursive tree comparison; branching on node kind/array bounds is inherent to the diff algorithm
 	dn := &diffnode.DiffNode{Path: path, Key: key, Index: index}
 
@@ -98,7 +94,7 @@ func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]i
 		if bLen > maxLen {
 			maxLen = bLen
 		}
-		for i := 0; i < maxLen; i++ {
+		for i := range maxLen {
 			childPath := fmt.Sprintf("%s[%d]", path, i)
 			switch {
 			case i < aLen && i < bLen:
@@ -137,7 +133,6 @@ func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]i
 	return dn
 }
 
-// nodeRepr returns a compact display string for a JSON node.
 func nodeRepr(n *jsonnode.Node) string {
 	switch n.Kind {
 	case jsonnode.KindObject:
