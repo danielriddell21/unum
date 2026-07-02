@@ -54,11 +54,11 @@ func TestRender_UpdateMarkerToggle(t *testing.T) {
 	}
 	// MarkerFirst alone keeps '~'.
 	if tilde := p.RenderDiff(RenderOptions{MarkerFirst: true}); !strings.Contains(tilde, "~ ") || strings.Contains(tilde, "! ") {
-		t.Errorf("MarkerFirst without AmberUpdates should use '~'\n%s", tilde)
+		t.Errorf("MarkerFirst without BangUpdates should use '~'\n%s", tilde)
 	}
-	// AmberUpdates switches to '!' so GitHub colours the line.
-	if bang := p.RenderDiff(RenderOptions{MarkerFirst: true, AmberUpdates: true}); !strings.Contains(bang, "! ") || strings.Contains(bang, "~ ") {
-		t.Errorf("AmberUpdates should use '!'\n%s", bang)
+	// BangUpdates switches to '!' so diff highlighters colour the line.
+	if bang := p.RenderDiff(RenderOptions{MarkerFirst: true, BangUpdates: true}); !strings.Contains(bang, "! ") || strings.Contains(bang, "~ ") {
+		t.Errorf("BangUpdates should use '!'\n%s", bang)
 	}
 }
 
@@ -156,7 +156,7 @@ func TestRender_NoANSI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, opts := range []RenderOptions{{}, {MarkerFirst: true}, {MarkerFirst: true, AmberUpdates: true}} {
+	for _, opts := range []RenderOptions{{}, {MarkerFirst: true}, {MarkerFirst: true, BangUpdates: true}} {
 		if out := p.RenderDiff(opts); strings.Contains(out, "\x1b[") {
 			t.Errorf("RenderDiff(%+v) leaked ANSI escapes:\n%s", opts, out)
 		}

@@ -23,11 +23,11 @@ type RenderOptions struct {
 	// added and removed lines. The zero value keeps terraform's indentation.
 	MarkerFirst bool
 
-	// AmberUpdates, in [RenderOptions.MarkerFirst] mode, marks update-in-place
-	// lines with "!" instead of "~". GitHub's diff highlighter colours "!"
-	// lines amber but leaves "~" uncoloured, so set this to make updates stand
-	// out. It has no effect unless MarkerFirst is also set.
-	AmberUpdates bool
+	// BangUpdates, in [RenderOptions.MarkerFirst] mode, marks update-in-place
+	// lines with "!" instead of "~". A "!" prefix is the context-diff marker for
+	// a changed line, which diff highlighters (Pygments, Rouge, GitHub) colour
+	// while leaving "~" untouched. It has no effect unless MarkerFirst is set.
+	BangUpdates bool
 }
 
 // RenderDiff renders only the per-resource changes as plain, uncoloured
@@ -68,7 +68,7 @@ func formatLine(ln planLine, opts RenderOptions) string {
 			return ln.marker + " " + lead + ln.text
 		case "~":
 			marker := "~"
-			if opts.AmberUpdates {
+			if opts.BangUpdates {
 				marker = "!"
 			}
 			return marker + " " + lead + ln.text
