@@ -6,11 +6,12 @@ import (
 
 	diffnode "github.com/danielriddell21/unum/internal/diff/node"
 	jsonparse "github.com/danielriddell21/unum/internal/json/parse"
+	"github.com/danielriddell21/unum/pkg/terraform"
 )
 
 func Terraform(data []byte) (*diffnode.Diff, error) {
-	var plan tfPlan
-	if err := json.Unmarshal(data, &plan); err != nil {
+	plan, err := terraform.Parse(data)
+	if err != nil {
 		return nil, fmt.Errorf("parse terraform plan: %w", err)
 	}
 
@@ -22,12 +23,11 @@ func Terraform(data []byte) (*diffnode.Diff, error) {
 
 	var added, removed, modified int
 
-	for _, rc := range plan.ResourceChanges {
-		action := primaryAction(rc.Change.Actions)
+	for _, rc := range plan.Changes {
 		childPath := "." + rc.Address
 
-		switch action {
-		case "create":
+		switch rc.Action {
+		case terraform.ActionCreate:
 			added++
 			root.Children = append(root.Children, &diffnode.DiffNode{
 				Kind:     diffnode.Added,
@@ -37,7 +37,7 @@ func Terraform(data []byte) (*diffnode.Diff, error) {
 				NewValue: fmt.Sprintf("(%s) %s", rc.Type, rc.Name),
 			})
 
-		case "delete":
+		case terraform.ActionDelete:
 			removed++
 			root.Children = append(root.Children, &diffnode.DiffNode{
 				Kind:     diffnode.Removed,
@@ -47,28 +47,13 @@ func Terraform(data []byte) (*diffnode.Diff, error) {
 				OldValue: fmt.Sprintf("(%s) %s", rc.Type, rc.Name),
 			})
 
-		case "update":
+		case terraform.ActionUpdate, terraform.ActionReplace:
+			modified++
 			var counts [3]int
-			resourceNode, err := diffTFChange(rc, childPath, &counts)
-			if err != nil {
-				// Fall back to treating the whole resource as modified
-				counts[2]++
-				resourceNode = &diffnode.DiffNode{
-					Kind:     diffnode.Modified,
-					Path:     childPath,
-					Key:      rc.Address,
-					Index:    -1,
-					OldValue: fmt.Sprintf("(%s) before", rc.Type),
-					NewValue: fmt.Sprintf("(%s) after", rc.Type),
-				}
-			}
-			added += counts[0]
-			removed += counts[1]
-			modified += counts[2]
+			resourceNode := diffTFResource(rc, childPath, &counts)
 			root.Children = append(root.Children, resourceNode)
 
-		default: // no-op, read
-			// skip unchanged resources
+		default: // no-op, read — skip unchanged resources
 		}
 	}
 
@@ -81,57 +66,39 @@ func Terraform(data []byte) (*diffnode.Diff, error) {
 	}, nil
 }
 
-func diffTFChange(rc tfResourceChange, path string, counts *[3]int) (*diffnode.DiffNode, error) {
-	beforeBytes, err := json.Marshal(rc.Change.Before)
-	if err != nil {
-		return nil, fmt.Errorf("marshal before: %w", err)
+func diffTFResource(rc terraform.ResourceChange, path string, counts *[3]int) *diffnode.DiffNode {
+	fallback := func() *diffnode.DiffNode {
+		counts[2]++
+		return &diffnode.DiffNode{
+			Kind:     diffnode.Modified,
+			Path:     path,
+			Key:      rc.Address,
+			Index:    -1,
+			OldValue: fmt.Sprintf("(%s) before", rc.Type),
+			NewValue: fmt.Sprintf("(%s) after", rc.Type),
+		}
 	}
-	afterBytes, err := json.Marshal(rc.Change.After)
+
+	beforeBytes, err := json.Marshal(rc.Before)
 	if err != nil {
-		return nil, fmt.Errorf("marshal after: %w", err)
+		return fallback()
+	}
+	afterBytes, err := json.Marshal(rc.After)
+	if err != nil {
+		return fallback()
 	}
 
 	beforeNode, err := jsonparse.Parse(beforeBytes)
 	if err != nil {
-		return nil, fmt.Errorf("parse before: %w", err)
+		return fallback()
 	}
 	afterNode, err := jsonparse.Parse(afterBytes)
 	if err != nil {
-		return nil, fmt.Errorf("parse after: %w", err)
+		return fallback()
 	}
 
 	inner := compareNodes(beforeNode, afterNode, path, rc.Address, -1, counts)
 	inner.Path = path
 	inner.Key = rc.Address
-	return inner, nil
-}
-
-func primaryAction(actions []string) string {
-	for _, a := range actions {
-		switch a {
-		case "create", "delete", "update":
-			return a
-		}
-	}
-	if len(actions) > 0 {
-		return actions[0]
-	}
-	return "no-op"
-}
-
-type tfPlan struct {
-	ResourceChanges []tfResourceChange `json:"resource_changes"`
-}
-
-type tfResourceChange struct {
-	Address string   `json:"address"`
-	Type    string   `json:"type"`
-	Name    string   `json:"name"`
-	Change  tfChange `json:"change"`
-}
-
-type tfChange struct {
-	Actions []string        `json:"actions"`
-	Before  json.RawMessage `json:"before"`
-	After   json.RawMessage `json:"after"`
+	return inner
 }

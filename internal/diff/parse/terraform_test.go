@@ -176,28 +176,32 @@ func TestTerraform_Format(t *testing.T) {
 	}
 }
 
-func TestPrimaryAction_EmptySlice(t *testing.T) {
-	// Empty actions slice → no match, no fallback → "no-op"
-	got := primaryAction([]string{})
-	if got != "no-op" {
-		t.Errorf("primaryAction([])=%q, want \"no-op\"", got)
+func TestTerraform_Replace(t *testing.T) {
+	// A replace (delete,create) is diffed like an update: field changes show
+	// up as Modified children rather than a whole-resource add/remove.
+	plan := []byte(`{
+		"resource_changes": [{
+			"address": "aws_db.main", "type": "aws_db", "name": "main",
+			"change": {
+				"actions": ["delete","create"],
+				"before": {"engine": "postgres"},
+				"after":  {"engine": "mysql"}
+			}
+		}]
+	}`)
+	d, err := Terraform(plan)
+	if err != nil {
+		t.Fatal(err)
 	}
-}
-
-func TestPrimaryAction_UnknownActionFallsBackToFirst(t *testing.T) {
-	// A non-standard action should return the first element.
-	got := primaryAction([]string{"replace", "read"})
-	if got != "replace" {
-		t.Errorf("primaryAction([replace,read])=%q, want \"replace\"", got)
+	if d.Modified != 1 {
+		t.Errorf("modified=%d, want 1", d.Modified)
 	}
-}
-
-func TestPrimaryAction_KnownActions(t *testing.T) {
-	for _, action := range []string{"create", "delete", "update"} {
-		got := primaryAction([]string{action})
-		if got != action {
-			t.Errorf("primaryAction([%s])=%q, want %q", action, got, action)
-		}
+	if len(d.Root.Children) != 1 {
+		t.Fatalf("got %d children, want 1", len(d.Root.Children))
+	}
+	engine := findChild(d.Root.Children[0], "engine")
+	if engine == nil || engine.Kind != node.Modified {
+		t.Errorf("engine child = %v, want Modified", engine)
 	}
 }
 

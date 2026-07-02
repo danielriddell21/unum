@@ -15,6 +15,7 @@ func ApplyPalette(p tuipanels.Palette) {
 	diffSearchHL = lipgloss.NewStyle().Background(lipgloss.Color(p.Search)).Foreground(lipgloss.Color("#000000"))
 	sbAdded = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Added)).Bold(true)
 	sbRemoved = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Removed)).Bold(true)
+	sbModified = lipgloss.NewStyle().Foreground(lipgloss.Color(p.NumberVal)).Bold(true)
 	sbMuted = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted))
 	sbAccent = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary))
 }
@@ -29,8 +30,9 @@ var (
 	diffLineNum   lipgloss.Style
 	diffSearchHL  lipgloss.Style
 
-	sbAdded   lipgloss.Style
-	sbRemoved lipgloss.Style
-	sbMuted   lipgloss.Style
-	sbAccent  lipgloss.Style
+	sbAdded    lipgloss.Style
+	sbRemoved  lipgloss.Style
+	sbModified lipgloss.Style
+	sbMuted    lipgloss.Style
+	sbAccent   lipgloss.Style
 )

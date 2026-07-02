@@ -113,7 +113,7 @@ func buildHunks(diffs []diffmatchpatch.Diff, ctx int) ([]node.Hunk, int, int) { 
 	ranges = append(ranges, cur)
 
 	// Build Hunks
-	var hunks []node.Hunk
+	hunks := make([]node.Hunk, 0, len(ranges))
 	for _, r := range ranges {
 		slice := numbered[r.start : r.end+1]
 		h := node.Hunk{}
