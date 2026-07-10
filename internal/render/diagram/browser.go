@@ -9,6 +9,8 @@ import (
 	"github.com/go-rod/rod/lib/proto"
 )
 
+const pngScale = 2
+
 type Browser struct {
 	browser  *rod.Browser
 	launcher *launcher.Launcher
@@ -80,6 +82,30 @@ func (b *Browser) SVGToPNG(svg []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("locate svg: %w", err)
 	}
+
+	// A d2 SVG carries only a viewBox (no width/height), so the browser would
+	// stretch it to the viewport. Pin the element to its intrinsic size and
+	// match the viewport so the screenshot captures exactly the diagram.
+	res, err := el.Eval(`(scale) => {
+		const vb = this.viewBox && this.viewBox.baseVal;
+		const w = (vb && vb.width ? vb.width : this.getBBox().width) * scale;
+		const h = (vb && vb.height ? vb.height : this.getBBox().height) * scale;
+		this.setAttribute('width', w);
+		this.setAttribute('height', h);
+		this.style.width = w + 'px';
+		this.style.height = h + 'px';
+		this.style.maxWidth = 'none';
+		this.style.maxHeight = 'none';
+		return { w: Math.ceil(w), h: Math.ceil(h) };
+	}`, pngScale)
+	if err != nil {
+		return nil, fmt.Errorf("measure svg: %w", err)
+	}
+	w, h := res.Value.Get("w").Int(), res.Value.Get("h").Int()
+	if err := page.SetViewport(&proto.EmulationSetDeviceMetricsOverride{Width: w, Height: h}); err != nil {
+		return nil, fmt.Errorf("set viewport: %w", err)
+	}
+
 	png, err := el.Screenshot(proto.PageCaptureScreenshotFormatPng, 0)
 	if err != nil {
 		return nil, fmt.Errorf("screenshot svg: %w", err)

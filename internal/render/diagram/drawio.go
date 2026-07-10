@@ -106,17 +106,24 @@ func drawioFromD2(d *d2target.Diagram) ([]byte, error) {
 	return marshalDrawio(cells)
 }
 
-var svgSizeRE = regexp.MustCompile(`<svg[^>]*\bwidth="(\d+)(?:\.\d+)?(?:px)?"[^>]*\bheight="(\d+)(?:\.\d+)?(?:px)?"`)
+var (
+	svgSizeRE    = regexp.MustCompile(`<svg[^>]*\bwidth="(\d+)(?:\.\d+)?(?:px)?"[^>]*\bheight="(\d+)(?:\.\d+)?(?:px)?"`)
+	svgViewBoxRE = regexp.MustCompile(`viewBox="[\d.]+ +[\d.]+ +([\d.]+) +([\d.]+)"`)
+)
+
+func atoiOr(b []byte, fallback int) int {
+	if v, err := strconv.ParseFloat(string(b), 64); err == nil && v > 0 {
+		return int(v)
+	}
+	return fallback
+}
 
 func DrawioFromSVG(svg []byte) ([]byte, error) {
 	width, height := 640, 480
 	if m := svgSizeRE.FindSubmatch(svg); m != nil {
-		if w, err := strconv.Atoi(string(m[1])); err == nil && w > 0 {
-			width = w
-		}
-		if h, err := strconv.Atoi(string(m[2])); err == nil && h > 0 {
-			height = h
-		}
+		width, height = atoiOr(m[1], width), atoiOr(m[2], height)
+	} else if m := svgViewBoxRE.FindSubmatch(svg); m != nil {
+		width, height = atoiOr(m[1], width), atoiOr(m[2], height)
 	}
 	dataURI := "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(svg)
 	cells := []mxCell{{
