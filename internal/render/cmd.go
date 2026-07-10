@@ -1,0 +1,224 @@
+package rendertool
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"runtime"
+	"time"
+
+	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	ometric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/danielriddell21/unum/internal/config"
+	"github.com/danielriddell21/unum/internal/render/diagram"
+	"github.com/danielriddell21/unum/internal/render/render/static"
+	"github.com/danielriddell21/unum/internal/telemetry"
+)
+
+type flags struct {
+	lang    string
+	format  string
+	output  string
+	theme   string
+	quiet   bool
+	noColor bool
+	version string
+	tel     *telemetry.Telemetry
+}
+
+func Command(globalNoColor *bool, globalQuiet *bool, version string, tel *telemetry.Telemetry) *cobra.Command {
+	f := &flags{}
+	f.version = version
+	f.tel = tel
+	cfg := config.Load()
+	f.theme = cfg.DarkTheme
+
+	cmd := &cobra.Command{
+		Use:   "render <file>",
+		Short: "Render mermaid and d2 diagrams to images and draw.io",
+		Long: `Render a diagram source file to an image or an editable draw.io document.
+
+Language is auto-detected from the file extension:
+  .mmd / .mermaid → mermaid
+  .d2             → d2
+Override with --lang.
+
+Output formats (--format):
+  svg      Scalable vector image (default)
+  png      Rasterised image (requires a Chromium browser)
+  drawio   diagrams.net document — editable for d2, embedded SVG for mermaid
+
+Output goes to stdout unless --output is given. mermaid rendering and PNG
+output drive a headless Chromium (found on PATH or via UNUM_CHROMIUM_BIN).`,
+		Args:         cobra.ExactArgs(1),
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			f.noColor = f.noColor || *globalNoColor
+			f.quiet = f.quiet || *globalQuiet
+			return runRender(f, args[0])
+		},
+	}
+
+	cmd.Flags().StringVar(&f.lang, "lang", "", "force language: mermaid, d2 (default: auto)")
+	cmd.Flags().StringVar(&f.format, "format", "svg", "output format: svg, png, drawio")
+	cmd.Flags().StringVarP(&f.output, "output", "o", "", "write to a file (default: stdout)")
+	cmd.Flags().BoolVar(&f.quiet, "quiet", false, "suppress the boot line")
+
+	return cmd
+}
+
+func runRender(f *flags, file string) error {
+	lang := ParseLanguage(f.lang, file)
+	if lang == LangUnknown {
+		return fmt.Errorf("cannot determine diagram language for %s (use --lang mermaid|d2)", file)
+	}
+	format, ok := ParseFormat(f.format)
+	if !ok {
+		return fmt.Errorf("unknown format %q (want svg, png, or drawio)", f.format)
+	}
+
+	ctx, span := f.tel.Tracer().Start(context.Background(), "render.execute",
+		trace.WithAttributes(
+			attribute.String("tool", "render"),
+			attribute.String("mode", "cli"),
+			attribute.String("lang", lang.String()),
+			attribute.String("format", format.String()),
+			attribute.String("os", runtime.GOOS),
+			attribute.String("arch", runtime.GOARCH),
+		),
+	)
+	defer span.End()
+
+	data, err := os.ReadFile(file)
+	if err != nil {
+		recordError(ctx, f, span, "read")
+		return fmt.Errorf("cannot read %s: %w", file, err)
+	}
+
+	opts := static.Options{Theme: static.ResolveTheme(f.theme), NoColor: f.noColor, Quiet: f.quiet}
+	static.Boot(os.Stderr, lang.String(), format.String(), opts)
+
+	start := time.Now()
+	out, err := render(lang, format, data)
+	if err != nil {
+		recordError(ctx, f, span, "render")
+		return err
+	}
+	elapsed := time.Since(start)
+
+	if err := writeOutput(f, format, out); err != nil {
+		recordError(ctx, f, span, "write")
+		return err
+	}
+
+	span.SetAttributes(attribute.Int("render.input_bytes", len(data)), attribute.Int("render.output_bytes", len(out)))
+	f.tel.M.Invocations.Add(ctx, 1, ometric.WithAttributes(
+		attribute.String("tool", "render"),
+		attribute.String("mode", "cli"),
+		attribute.String("os", runtime.GOOS),
+		attribute.String("arch", runtime.GOARCH),
+		attribute.String("version", f.version),
+	))
+	f.tel.M.InputBytes.Record(ctx, int64(len(data)), ometric.WithAttributes(attribute.String("tool", "render")))
+	f.tel.M.Duration.Record(ctx, elapsed.Seconds(), ometric.WithAttributes(
+		attribute.String("tool", "render"),
+		attribute.String("mode", "cli"),
+	))
+	return nil
+}
+
+func render(lang Language, format Format, data []byte) ([]byte, error) {
+	needBrowser := lang == LangMermaid || format == FormatPNG
+	var browser *diagram.Browser
+	if needBrowser {
+		if !diagram.BrowserAvailable() {
+			return nil, fmt.Errorf("rendering %s as %s needs a Chromium browser: install one or set UNUM_CHROMIUM_BIN", lang, format)
+		}
+		b, err := diagram.NewBrowser()
+		if err != nil {
+			return nil, fmt.Errorf("start browser: %w", err)
+		}
+		defer b.Close()
+		browser = b
+	}
+
+	var svg []byte
+	var d2 *diagram.D2Diagram
+	switch lang {
+	case LangD2:
+		d, err := diagram.RenderD2(string(data))
+		if err != nil {
+			return nil, fmt.Errorf("render d2: %w", err)
+		}
+		d2, svg = d, d.SVG
+	case LangMermaid:
+		s, err := browser.RenderMermaid(string(data))
+		if err != nil {
+			return nil, fmt.Errorf("render mermaid: %w", err)
+		}
+		svg = s
+	}
+
+	switch format {
+	case FormatPNG:
+		png, err := browser.SVGToPNG(svg)
+		if err != nil {
+			return nil, fmt.Errorf("rasterise png: %w", err)
+		}
+		return png, nil
+	case FormatDrawio:
+		return renderDrawio(d2, svg)
+	}
+	return svg, nil
+}
+
+func renderDrawio(d2 *diagram.D2Diagram, svg []byte) ([]byte, error) {
+	if d2 != nil {
+		out, err := d2.Drawio()
+		if err != nil {
+			return nil, fmt.Errorf("d2 drawio: %w", err)
+		}
+		return out, nil
+	}
+	out, err := diagram.DrawioFromSVG(svg)
+	if err != nil {
+		return nil, fmt.Errorf("svg drawio: %w", err)
+	}
+	return out, nil
+}
+
+func writeOutput(f *flags, format Format, out []byte) error {
+	if f.output != "" {
+		if err := os.WriteFile(f.output, out, 0o644); err != nil { //nolint:gosec // user-facing artifact, not a secret
+			return fmt.Errorf("write %s: %w", f.output, err)
+		}
+		return nil
+	}
+	if format == FormatPNG && isTerminal(os.Stdout) {
+		return fmt.Errorf("refusing to write PNG to the terminal: use --output <file> or redirect stdout")
+	}
+	if err := static.Write(os.Stdout, out); err != nil {
+		return fmt.Errorf("write stdout: %w", err)
+	}
+	return nil
+}
+
+func isTerminal(file *os.File) bool {
+	fi, err := file.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
+}
+
+func recordError(ctx context.Context, f *flags, span trace.Span, kind string) {
+	span.SetStatus(codes.Error, kind)
+	f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
+		attribute.String("tool", "render"),
+		attribute.String("error_type", kind),
+	))
+}

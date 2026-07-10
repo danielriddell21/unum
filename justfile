@@ -160,3 +160,25 @@ hash-ui:
 [group('hash')]
 hash-web:
     go run {{ main }} hash --web
+
+# ── Render ────────────────────────────────────────────────────────────────────
+
+# d2 diagram to SVG
+[group('render')]
+render file="testdata/sample.d2":
+    go run {{ main }} render {{ file }}
+
+# mermaid diagram to SVG
+[group('render')]
+render-mermaid file="testdata/sample.mmd":
+    go run {{ main }} render {{ file }}
+
+# diagram to PNG
+[group('render')]
+render-png file="testdata/sample.d2":
+    go run {{ main }} render {{ file }} --format png -o out.png
+
+# diagram to draw.io
+[group('render')]
+render-drawio file="testdata/sample.d2":
+    go run {{ main }} render {{ file }} --format drawio -o out.drawio
