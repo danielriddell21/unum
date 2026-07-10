@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>unum — Render</title>
+  <link rel="stylesheet" href="/shared.css" />
+  <link rel="stylesheet" href="/style.css" />
+  <script>window.UNUM_CONFIG={darkTheme:"{{.DarkTheme}}",lightTheme:"{{.LightTheme}}",version:"{{.Version}}",themes:{{.ThemeData}}};</script>
+  <script>window.RENDER_CONFIG={lang:"{{.Lang}}",source:{{.SourceJSON}}};</script>
+  <script src="/shared.js"></script>
+  {{if .UmamiEnabled}}<script defer src="/umami/script.js" data-website-id="{{.UmamiWebsiteID}}"></script>{{end}}
+</head>
+<body>
+
+  <div id="header">
+    <span class="brand">[ UNUM ]</span>
+    <span class="hdr-tool">render</span>
+  </div>
+
+  <div class="layout">
+    <section class="editor">
+      <div class="controls">
+        <label>language
+          <select id="lang">
+            <option value="d2">d2</option>
+            <option value="mermaid">mermaid</option>
+          </select>
+        </label>
+        <div class="downloads">
+          <button data-fmt="svg">svg</button>
+          <button data-fmt="png">png</button>
+          <button data-fmt="drawio">drawio</button>
+        </div>
+      </div>
+      <textarea id="source" spellcheck="false" placeholder="type a diagram..."></textarea>
+    </section>
+
+    <section class="preview">
+      <div id="canvas" class="canvas"></div>
+      <div id="error" class="error hidden"></div>
+    </section>
+  </div>
+
+  <div id="status-bar">
+    <span id="status-lang"></span>
+    <span id="status-size"></span>
+    <span id="status-hints">edit source · live preview · download svg / png / drawio</span>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

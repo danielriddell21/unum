@@ -182,3 +182,13 @@ render-png file="testdata/sample.d2":
 [group('render')]
 render-drawio file="testdata/sample.d2":
     go run {{ main }} render {{ file }} --format drawio -o out.drawio
+
+# terminal viewer
+[group('render')]
+render-ui file="testdata/sample.d2":
+    go run {{ main }} render {{ file }} --ui
+
+# browser live preview
+[group('render')]
+render-web file="testdata/sample.d2":
+    go run {{ main }} render {{ file }} --web

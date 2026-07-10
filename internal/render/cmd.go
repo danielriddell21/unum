@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -16,18 +17,24 @@ import (
 	"github.com/danielriddell21/unum/internal/config"
 	"github.com/danielriddell21/unum/internal/render/diagram"
 	"github.com/danielriddell21/unum/internal/render/render/static"
+	rendertui "github.com/danielriddell21/unum/internal/render/render/tui"
+	renderweb "github.com/danielriddell21/unum/internal/render/render/web"
 	"github.com/danielriddell21/unum/internal/telemetry"
 )
 
 type flags struct {
-	lang    string
-	format  string
-	output  string
-	theme   string
-	quiet   bool
-	noColor bool
-	version string
-	tel     *telemetry.Telemetry
+	ui         bool
+	web        bool
+	webPort    int
+	lang       string
+	format     string
+	output     string
+	theme      string
+	lightTheme string
+	quiet      bool
+	noColor    bool
+	version    string
+	tel        *telemetry.Telemetry
 }
 
 func Command(globalNoColor *bool, globalQuiet *bool, version string, tel *telemetry.Telemetry) *cobra.Command {
@@ -36,6 +43,7 @@ func Command(globalNoColor *bool, globalQuiet *bool, version string, tel *teleme
 	f.tel = tel
 	cfg := config.Load()
 	f.theme = cfg.DarkTheme
+	f.lightTheme = cfg.LightTheme
 
 	cmd := &cobra.Command{
 		Use:   "render <file>",
@@ -52,8 +60,13 @@ Output formats (--format):
   png      Rasterised image (requires a Chromium browser)
   drawio   diagrams.net document — editable for d2, embedded SVG for mermaid
 
-Output goes to stdout unless --output is given. mermaid rendering and PNG
-output drive a headless Chromium (found on PATH or via UNUM_CHROMIUM_BIN).`,
+Output modes:
+  (default)  Write the rendered diagram to stdout or --output
+  --ui       Terminal viewer with source and render details
+  --web      Browser-based live preview
+
+mermaid rendering and PNG output drive a headless Chromium (found on PATH
+or via UNUM_CHROMIUM_BIN).`,
 		Args:         cobra.ExactArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -63,6 +76,9 @@ output drive a headless Chromium (found on PATH or via UNUM_CHROMIUM_BIN).`,
 		},
 	}
 
+	cmd.Flags().BoolVar(&f.ui, "ui", false, "launch terminal viewer")
+	cmd.Flags().BoolVar(&f.web, "web", false, "launch web UI in browser")
+	cmd.Flags().IntVar(&f.webPort, "web-port", 0, "port for --web (default: random free port)")
 	cmd.Flags().StringVar(&f.lang, "lang", "", "force language: mermaid, d2 (default: auto)")
 	cmd.Flags().StringVar(&f.format, "format", "svg", "output format: svg, png, drawio")
 	cmd.Flags().StringVarP(&f.output, "output", "o", "", "write to a file (default: stdout)")
@@ -81,10 +97,17 @@ func runRender(f *flags, file string) error {
 		return fmt.Errorf("unknown format %q (want svg, png, or drawio)", f.format)
 	}
 
+	mode := "cli"
+	if f.ui {
+		mode = "tui"
+	} else if f.web {
+		mode = "web"
+	}
+
 	ctx, span := f.tel.Tracer().Start(context.Background(), "render.execute",
 		trace.WithAttributes(
 			attribute.String("tool", "render"),
-			attribute.String("mode", "cli"),
+			attribute.String("mode", mode),
 			attribute.String("lang", lang.String()),
 			attribute.String("format", format.String()),
 			attribute.String("os", runtime.GOOS),
@@ -98,7 +121,28 @@ func runRender(f *flags, file string) error {
 		recordError(ctx, f, span, "read")
 		return fmt.Errorf("cannot read %s: %w", file, err)
 	}
+	f.tel.M.Invocations.Add(ctx, 1, ometric.WithAttributes(
+		attribute.String("tool", "render"),
+		attribute.String("mode", mode),
+		attribute.String("os", runtime.GOOS),
+		attribute.String("arch", runtime.GOARCH),
+		attribute.String("version", f.version),
+	))
+	f.tel.M.InputBytes.Record(ctx, int64(len(data)), ometric.WithAttributes(attribute.String("tool", "render")))
 
+	if f.web {
+		return runWeb(f, lang, data)
+	}
+	if f.ui {
+		if err := rendertui.Start(f.version, f.theme, tuiInfo(file, lang, data)); err != nil {
+			return fmt.Errorf("render TUI: %w", err)
+		}
+		return nil
+	}
+	return runStatic(ctx, f, span, lang, format, data)
+}
+
+func runStatic(ctx context.Context, f *flags, span trace.Span, lang Language, format Format, data []byte) error {
 	opts := static.Options{Theme: static.ResolveTheme(f.theme), NoColor: f.noColor, Quiet: f.quiet}
 	static.Boot(os.Stderr, lang.String(), format.String(), opts)
 
@@ -115,15 +159,7 @@ func runRender(f *flags, file string) error {
 		return err
 	}
 
-	span.SetAttributes(attribute.Int("render.input_bytes", len(data)), attribute.Int("render.output_bytes", len(out)))
-	f.tel.M.Invocations.Add(ctx, 1, ometric.WithAttributes(
-		attribute.String("tool", "render"),
-		attribute.String("mode", "cli"),
-		attribute.String("os", runtime.GOOS),
-		attribute.String("arch", runtime.GOARCH),
-		attribute.String("version", f.version),
-	))
-	f.tel.M.InputBytes.Record(ctx, int64(len(data)), ometric.WithAttributes(attribute.String("tool", "render")))
+	span.SetAttributes(attribute.Int("render.output_bytes", len(out)))
 	f.tel.M.Duration.Record(ctx, elapsed.Seconds(), ometric.WithAttributes(
 		attribute.String("tool", "render"),
 		attribute.String("mode", "cli"),
@@ -131,10 +167,25 @@ func runRender(f *flags, file string) error {
 	return nil
 }
 
+func runWeb(f *flags, lang Language, data []byte) error {
+	if err := renderweb.Start(renderweb.Options{
+		Port:       f.webPort,
+		Quiet:      f.quiet,
+		DarkTheme:  f.theme,
+		LightTheme: f.lightTheme,
+		Version:    f.version,
+		Tel:        f.tel,
+		Source:     string(data),
+		Lang:       lang.String(),
+	}); err != nil {
+		return fmt.Errorf("render web: %w", err)
+	}
+	return nil
+}
+
 func render(lang Language, format Format, data []byte) ([]byte, error) {
-	needBrowser := lang == LangMermaid || format == FormatPNG
 	var browser *diagram.Browser
-	if needBrowser {
+	if diagram.NeedsBrowser(lang.String(), format.String()) {
 		if !diagram.BrowserAvailable() {
 			return nil, fmt.Errorf("rendering %s as %s needs a Chromium browser: install one or set UNUM_CHROMIUM_BIN", lang, format)
 		}
@@ -145,50 +196,33 @@ func render(lang Language, format Format, data []byte) ([]byte, error) {
 		defer b.Close()
 		browser = b
 	}
-
-	var svg []byte
-	var d2 *diagram.D2Diagram
-	switch lang {
-	case LangD2:
-		d, err := diagram.RenderD2(string(data))
-		if err != nil {
-			return nil, fmt.Errorf("render d2: %w", err)
-		}
-		d2, svg = d, d.SVG
-	case LangMermaid:
-		s, err := browser.RenderMermaid(string(data))
-		if err != nil {
-			return nil, fmt.Errorf("render mermaid: %w", err)
-		}
-		svg = s
-	}
-
-	switch format {
-	case FormatPNG:
-		png, err := browser.SVGToPNG(svg)
-		if err != nil {
-			return nil, fmt.Errorf("rasterise png: %w", err)
-		}
-		return png, nil
-	case FormatDrawio:
-		return renderDrawio(d2, svg)
-	}
-	return svg, nil
-}
-
-func renderDrawio(d2 *diagram.D2Diagram, svg []byte) ([]byte, error) {
-	if d2 != nil {
-		out, err := d2.Drawio()
-		if err != nil {
-			return nil, fmt.Errorf("d2 drawio: %w", err)
-		}
-		return out, nil
-	}
-	out, err := diagram.DrawioFromSVG(svg)
+	out, _, err := diagram.Render(lang.String(), format.String(), string(data), browser)
 	if err != nil {
-		return nil, fmt.Errorf("svg drawio: %w", err)
+		return nil, fmt.Errorf("render %s: %w", lang, err)
 	}
 	return out, nil
+}
+
+func tuiInfo(file string, lang Language, data []byte) rendertui.Info {
+	info := rendertui.Info{
+		File:   filepath.Base(file),
+		Lang:   lang.String(),
+		Source: string(data),
+		Shapes: -1,
+	}
+	svg, err := render(lang, FormatSVG, data)
+	if err != nil {
+		info.Err = err
+		return info
+	}
+	info.Width, info.Height = diagram.SVGSize(svg)
+	info.Bytes = len(svg)
+	if lang == LangD2 {
+		if d, err := diagram.RenderD2(string(data)); err == nil {
+			info.Shapes, info.Conns = d.NumShapes(), d.NumConnections()
+		}
+	}
+	return info
 }
 
 func writeOutput(f *flags, format Format, out []byte) error {
