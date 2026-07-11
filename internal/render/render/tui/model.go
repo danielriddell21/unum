@@ -180,7 +180,7 @@ func (m Model) sourceView(w, h int) string {
 			line = line[:w-1] + "…"
 		}
 		num := tuipanels.StyleTitleDim.Render(fmt.Sprintf("%3d ", i+1))
-		fmt.Fprintf(&b, "%s%s\n", num, line)
+		fmt.Fprintf(&b, "%s%s\n", num, styleText.Render(line))
 	}
 	return b.String()
 }
