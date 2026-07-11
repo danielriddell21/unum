@@ -7,9 +7,17 @@ import (
 )
 
 func ThemeByName(name string) *Theme {
-	p := theme.ResolvePalette(name)
+	switch name {
+	case "clean", "solarized":
+		return themeFromPalette(theme.ResolveLightPalette(name), false)
+	default:
+		return themeFromPalette(theme.ResolvePalette(name), true)
+	}
+}
+
+func themeFromPalette(p theme.Palette, dark bool) *Theme {
 	return &Theme{
-		Dark:       true,
+		Dark:       dark,
 		Background: p.BG,
 		Surface:    p.BGPanel,
 		SurfaceAlt: p.BGSelected,

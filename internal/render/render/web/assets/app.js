@@ -18,10 +18,16 @@ function debounceRender() {
   timer = setTimeout(render, 250);
 }
 
+function currentTheme() {
+  const c = window.UNUM_CONFIG || {};
+  const mode = (window._unumResolveMode && window._unumResolveMode()) || 'dark';
+  return mode === 'light' ? (c.lightTheme || 'clean') : (c.darkTheme || 'cyber');
+}
+
 async function render() {
   const lang = langSel.value;
   statusLang.textContent = '[ ' + lang + ' ]';
-  const res = await fetch('/api/render?lang=' + lang + '&format=svg', {
+  const res = await fetch('/api/render?lang=' + lang + '&format=svg&theme=' + encodeURIComponent(currentTheme()), {
     method: 'POST',
     body: source.value,
   });
@@ -38,6 +44,12 @@ async function render() {
   if (el) {
     const vb = el.viewBox && el.viewBox.baseVal;
     if (vb && vb.width) {
+      // d2 SVGs carry only a viewBox; give them an intrinsic size so the
+      // preview doesn't collapse, then CSS scales it to fit.
+      if (!el.getAttribute('width')) {
+        el.setAttribute('width', vb.width);
+        el.setAttribute('height', vb.height);
+      }
       statusSize.textContent = Math.round(vb.width) + ' × ' + Math.round(vb.height);
     }
   }
@@ -45,7 +57,7 @@ async function render() {
 
 async function download(format) {
   const lang = langSel.value;
-  const res = await fetch('/api/render?lang=' + lang + '&format=' + format, {
+  const res = await fetch('/api/render?lang=' + lang + '&format=' + format + '&theme=' + encodeURIComponent(currentTheme()), {
     method: 'POST',
     body: source.value,
   });
@@ -64,6 +76,12 @@ source.addEventListener('input', debounceRender);
 langSel.addEventListener('change', render);
 document.querySelectorAll('.downloads button').forEach(btn => {
   btn.addEventListener('click', () => download(btn.dataset.fmt));
+});
+
+// Re-render the diagram in the matching palette when the light/dark toggle flips.
+document.addEventListener('DOMContentLoaded', () => {
+  const toggle = document.getElementById('mode-toggle');
+  if (toggle) toggle.addEventListener('click', () => setTimeout(render, 0));
 });
 
 render();

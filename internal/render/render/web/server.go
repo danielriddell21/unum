@@ -129,6 +129,10 @@ func (s *server) handleRender(w http.ResponseWriter, r *http.Request) {
 	if format == "" {
 		format = "svg"
 	}
+	themeName := r.URL.Query().Get("theme")
+	if themeName == "" {
+		themeName = s.opts.DarkTheme
+	}
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "cannot read body", http.StatusBadRequest)
@@ -149,7 +153,7 @@ func (s *server) handleRender(w http.ResponseWriter, r *http.Request) {
 		b = bb
 	}
 
-	out, contentType, err := diagram.Render(lang, format, string(body), b, diagram.ThemeByName(s.opts.DarkTheme))
+	out, contentType, err := diagram.Render(lang, format, string(body), b, diagram.ThemeByName(themeName))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

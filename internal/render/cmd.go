@@ -83,6 +83,7 @@ or via UNUM_CHROMIUM_BIN).`,
 	cmd.Flags().BoolVar(&f.web, "web", false, "launch web UI in browser")
 	cmd.Flags().IntVar(&f.webPort, "web-port", 0, "port for --web (default: random free port)")
 	cmd.Flags().StringVar(&f.lang, "lang", "", "force language: mermaid, d2 (default: auto)")
+	cmd.Flags().StringVar(&f.theme, "theme", cfg.DarkTheme, "color theme: cyber, matrix, dracula, nord, clean, solarized")
 	cmd.Flags().StringVar(&f.format, "format", "svg", "output format: svg, png, drawio")
 	cmd.Flags().StringVarP(&f.output, "output", "o", "", "write to a file (default: stdout)")
 	cmd.Flags().BoolVar(&f.quiet, "quiet", false, "suppress the boot line")
