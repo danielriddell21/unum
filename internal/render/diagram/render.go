@@ -6,12 +6,12 @@ func NeedsBrowser(lang, format string) bool {
 	return lang == "mermaid" || format == "png"
 }
 
-func Render(lang, format, source string, b *Browser) (out []byte, contentType string, err error) {
+func Render(lang, format, source string, b *Browser, t *Theme) (out []byte, contentType string, err error) {
 	var svg []byte
 	var d2 *D2Diagram
 	switch lang {
 	case "d2":
-		d, err := RenderD2(source)
+		d, err := RenderD2(source, t)
 		if err != nil {
 			return nil, "", err
 		}
@@ -20,7 +20,7 @@ func Render(lang, format, source string, b *Browser) (out []byte, contentType st
 		if b == nil {
 			return nil, "", fmt.Errorf("mermaid rendering needs a browser")
 		}
-		s, err := b.RenderMermaid(source)
+		s, err := b.RenderMermaid(source, t)
 		if err != nil {
 			return nil, "", err
 		}

@@ -149,7 +149,7 @@ func (s *server) handleRender(w http.ResponseWriter, r *http.Request) {
 		b = bb
 	}
 
-	out, contentType, err := diagram.Render(lang, format, string(body), b)
+	out, contentType, err := diagram.Render(lang, format, string(body), b, diagram.ThemeByName(s.opts.DarkTheme))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

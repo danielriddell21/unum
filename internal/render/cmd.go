@@ -137,7 +137,7 @@ func runRender(f *flags, file string) error {
 		return runWeb(f, lang, data)
 	}
 	if f.ui {
-		if err := rendertui.Start(f.version, f.theme, tuiInfo(file, lang, data)); err != nil {
+		if err := rendertui.Start(f.version, f.theme, tuiInfo(f, file, lang, data)); err != nil {
 			return fmt.Errorf("render TUI: %w", err)
 		}
 		return nil
@@ -150,7 +150,7 @@ func runStatic(ctx context.Context, f *flags, span trace.Span, lang Language, fo
 	static.Boot(os.Stderr, lang.String(), format.String(), opts)
 
 	start := time.Now()
-	out, err := render(lang, format, data)
+	out, err := render(f, lang, format, data)
 	if err != nil {
 		recordError(ctx, f, span, "render")
 		return err
@@ -186,7 +186,7 @@ func runWeb(f *flags, lang Language, data []byte) error {
 	return nil
 }
 
-func render(lang Language, format Format, data []byte) ([]byte, error) {
+func render(f *flags, lang Language, format Format, data []byte) ([]byte, error) {
 	var browser *diagram.Browser
 	if diagram.NeedsBrowser(lang.String(), format.String()) {
 		if !diagram.BrowserAvailable() {
@@ -199,14 +199,14 @@ func render(lang Language, format Format, data []byte) ([]byte, error) {
 		defer b.Close()
 		browser = b
 	}
-	out, _, err := diagram.Render(lang.String(), format.String(), string(data), browser)
+	out, _, err := diagram.Render(lang.String(), format.String(), string(data), browser, diagram.ThemeByName(f.theme))
 	if err != nil {
 		return nil, fmt.Errorf("render %s: %w", lang, err)
 	}
 	return out, nil
 }
 
-func tuiInfo(file string, lang Language, data []byte) rendertui.Info {
+func tuiInfo(f *flags, file string, lang Language, data []byte) rendertui.Info {
 	info := rendertui.Info{
 		File:   filepath.Base(file),
 		Lang:   lang.String(),
@@ -224,10 +224,11 @@ func tuiInfo(file string, lang Language, data []byte) rendertui.Info {
 	}
 	defer b.Close()
 
+	t := diagram.ThemeByName(f.theme)
 	var svg []byte
 	var d2 *diagram.D2Diagram
 	if lang == LangD2 {
-		d, err := diagram.RenderD2(string(data))
+		d, err := diagram.RenderD2(string(data), t)
 		if err != nil {
 			info.Err = err
 			return info
@@ -235,7 +236,7 @@ func tuiInfo(file string, lang Language, data []byte) rendertui.Info {
 		d2, svg = d, d.SVG
 		info.Shapes, info.Conns = d.NumShapes(), d.NumConnections()
 	} else {
-		svg, err = b.RenderMermaid(string(data))
+		svg, err = b.RenderMermaid(string(data), t)
 		if err != nil {
 			info.Err = err
 			return info

@@ -9,7 +9,7 @@ import (
 //go:embed assets/mermaid.min.js
 var mermaidJS string
 
-func (b *Browser) RenderMermaid(source string) ([]byte, error) {
+func (b *Browser) RenderMermaid(source string, t *Theme) ([]byte, error) {
 	html := `<!doctype html><html><head><meta charset="utf-8"><script>` +
 		mermaidJS + `</script></head><body><div id="container"></div></body></html>`
 	page, err := b.page(html)
@@ -18,7 +18,11 @@ func (b *Browser) RenderMermaid(source string) ([]byte, error) {
 	}
 	defer page.Close() //nolint:errcheck // page discarded with the browser
 
-	if _, err := page.Eval(`() => mermaid.initialize({ startOnLoad: false })`); err != nil {
+	config := map[string]any{"startOnLoad": false}
+	if t != nil {
+		config = t.mermaidConfig()
+	}
+	if _, err := page.Eval(`(cfg) => mermaid.initialize(cfg)`, config); err != nil {
 		return nil, fmt.Errorf("init mermaid: %w", err)
 	}
 	res, err := page.Eval(`async (src) => {

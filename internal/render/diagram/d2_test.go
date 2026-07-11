@@ -8,7 +8,7 @@ import (
 )
 
 func TestRenderD2SVG(t *testing.T) {
-	d, err := diagram.RenderD2("x -> y")
+	d, err := diagram.RenderD2("x -> y", nil)
 	if err != nil {
 		t.Fatalf("RenderD2: %v", err)
 	}
@@ -18,13 +18,13 @@ func TestRenderD2SVG(t *testing.T) {
 }
 
 func TestRenderD2Invalid(t *testing.T) {
-	if _, err := diagram.RenderD2("x -> "); err == nil {
+	if _, err := diagram.RenderD2("x -> ", nil); err == nil {
 		t.Error("expected error for invalid d2 source")
 	}
 }
 
 func TestD2Drawio(t *testing.T) {
-	d, err := diagram.RenderD2("alpha -> beta")
+	d, err := diagram.RenderD2("alpha -> beta", nil)
 	if err != nil {
 		t.Fatalf("RenderD2: %v", err)
 	}

@@ -23,7 +23,7 @@ func (d *D2Diagram) Drawio() ([]byte, error) {
 	return drawioFromD2(d.target)
 }
 
-func RenderD2(source string) (*D2Diagram, error) {
+func RenderD2(source string, t *Theme) (*D2Diagram, error) {
 	ruler, err := textmeasure.NewRuler()
 	if err != nil {
 		return nil, fmt.Errorf("text ruler: %w", err)
@@ -32,6 +32,10 @@ func RenderD2(source string) (*D2Diagram, error) {
 		return d2dagrelayout.DefaultLayout, nil
 	}
 	renderOpts := &d2svg.RenderOpts{Pad: go2.Pointer(int64(8))}
+	if t != nil {
+		renderOpts.ThemeID = go2.Pointer(t.d2Base())
+		renderOpts.ThemeOverrides = t.d2Overrides()
+	}
 	compileOpts := &d2lib.CompileOptions{LayoutResolver: layoutResolver, Ruler: ruler}
 
 	ctx := log.WithDefault(context.Background())
