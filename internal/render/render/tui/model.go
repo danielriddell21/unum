@@ -2,6 +2,8 @@ package tui
 
 import (
 	"fmt"
+	"image"
+	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -14,9 +16,12 @@ type Info struct {
 	File   string
 	Lang   string
 	Source string
+	SVG    []byte
+	PNG    []byte
+	Drawio []byte
+	Img    image.Image
 	Width  int
 	Height int
-	Bytes  int
 	Shapes int
 	Conns  int
 	Err    error
@@ -26,6 +31,7 @@ type Model struct {
 	info     Info
 	lines    []string
 	scroll   int
+	status   string
 	width    int
 	height   int
 	version  string
@@ -79,8 +85,24 @@ func (m Model) handleKey(k string) (tea.Model, tea.Cmd) {
 		if m.scroll < len(m.lines)-1 {
 			m.scroll++
 		}
+	case "s":
+		m.status = save("diagram.svg", m.info.SVG)
+	case "p":
+		m.status = save("diagram.png", m.info.PNG)
+	case "d":
+		m.status = save("diagram.drawio", m.info.Drawio)
 	}
 	return m, nil
+}
+
+func save(name string, data []byte) string {
+	if len(data) == 0 {
+		return "nothing to write for " + name
+	}
+	if err := os.WriteFile(name, data, 0o644); err != nil { //nolint:gosec // user-facing artifact, not a secret
+		return "error: " + err.Error()
+	}
+	return fmt.Sprintf("wrote %s (%d bytes)", name, len(data))
 }
 
 func (m Model) View() string {
@@ -88,7 +110,7 @@ func (m Model) View() string {
 		return "Loading..."
 	}
 
-	leftW := int(float64(m.width) * 0.55)
+	leftW := int(float64(m.width) * 0.42)
 	rightW := m.width - leftW
 	bodyH := m.height - 1
 
@@ -96,7 +118,7 @@ func (m Model) View() string {
 	left := tuipanels.WrapPanel(srcTitle+"\n"+m.sourceView(leftW-4, bodyH-3), true, leftW, bodyH)
 
 	renTitle := tuipanels.PanelTitle("RENDER", false)
-	right := tuipanels.WrapPanel(renTitle+"\n"+m.renderView(), false, rightW, bodyH)
+	right := tuipanels.WrapPanel(renTitle+"\n"+m.renderView(rightW-4, bodyH-4), false, rightW, bodyH)
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 
@@ -128,35 +150,33 @@ func (m Model) sourceView(w, h int) string {
 	return b.String()
 }
 
-func (m Model) renderView() string {
+func (m Model) renderView(w, h int) string {
+	caption := tuipanels.StyleTitleDim.Render(m.caption())
 	if m.info.Err != nil {
-		return tuipanels.StyleHint.Render("render failed:\n" + m.info.Err.Error())
+		return caption + "\n\n" + tuipanels.StyleHint.Render("preview unavailable:\n"+m.info.Err.Error())
 	}
-	rows := [][2]string{
-		{"language", m.info.Lang},
-		{"formats", "svg · png · drawio"},
-		{"svg size", fmt.Sprintf("%d × %d", m.info.Width, m.info.Height)},
-		{"svg bytes", fmt.Sprintf("%d", m.info.Bytes)},
+	art := imageArt(m.info.Img, w, h-1)
+	if art == "" {
+		return caption + "\n\n" + tuipanels.StyleHint.Render("no preview")
 	}
+	return caption + "\n" + art
+}
+
+func (m Model) caption() string {
+	parts := []string{m.info.Lang, fmt.Sprintf("%d×%d", m.info.Width, m.info.Height)}
 	if m.info.Shapes >= 0 {
-		rows = append(rows,
-			[2]string{"shapes", fmt.Sprintf("%d", m.info.Shapes)},
-			[2]string{"edges", fmt.Sprintf("%d", m.info.Conns)},
-		)
+		parts = append(parts, fmt.Sprintf("%d shapes", m.info.Shapes), fmt.Sprintf("%d edges", m.info.Conns))
 	}
-	var b strings.Builder
-	for _, r := range rows {
-		fmt.Fprintf(&b, "%s  %s\n", tuipanels.StyleTitle.Render(fmt.Sprintf("%-9s", r[0])), r[1])
-	}
-	b.WriteString("\n")
-	b.WriteString(tuipanels.StyleHint.Render("terminals can't show images —\nuse --web for a live preview or\n-o to write svg/png/drawio."))
-	return b.String()
+	return strings.Join(parts, " · ")
 }
 
 func (m Model) statusBar() string {
 	left := tuipanels.StyleTitle.Render(" [ "+m.info.File+" ] ") + tuipanels.StyleHint.Render(m.info.Lang)
-	right := tuipanels.StyleHint.Render(fmt.Sprintf("%d×%d · ?:help · q:quit · v%s ", m.info.Width, m.info.Height, m.version))
-	return tuipanels.Bar(left, right, m.width)
+	right := "s:svg · p:png · d:drawio · ?:help · q:quit "
+	if m.status != "" {
+		right = m.status + "  "
+	}
+	return tuipanels.Bar(left, tuipanels.StyleHint.Render(right), m.width)
 }
 
 func helpText() string {
@@ -164,6 +184,9 @@ func helpText() string {
 
 %s
   ↑/↓  j/k   Scroll source
+  s           Write diagram.svg
+  p           Write diagram.png
+  d           Write diagram.drawio
   ?           Toggle this help
   esc / q     Quit`,
 		tuipanels.StyleTitle.Render("UNUM RENDER — keyboard reference"),

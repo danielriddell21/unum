@@ -1,8 +1,11 @@
 package rendertool
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
+	_ "image/png"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -210,17 +213,52 @@ func tuiInfo(file string, lang Language, data []byte) rendertui.Info {
 		Source: string(data),
 		Shapes: -1,
 	}
-	svg, err := render(lang, FormatSVG, data)
+	if !diagram.BrowserAvailable() {
+		info.Err = fmt.Errorf("preview needs a Chromium browser: install one or set UNUM_CHROMIUM_BIN")
+		return info
+	}
+	b, err := diagram.NewBrowser()
+	if err != nil {
+		info.Err = fmt.Errorf("start browser: %w", err)
+		return info
+	}
+	defer b.Close()
+
+	var svg []byte
+	var d2 *diagram.D2Diagram
+	if lang == LangD2 {
+		d, err := diagram.RenderD2(string(data))
+		if err != nil {
+			info.Err = err
+			return info
+		}
+		d2, svg = d, d.SVG
+		info.Shapes, info.Conns = d.NumShapes(), d.NumConnections()
+	} else {
+		svg, err = b.RenderMermaid(string(data))
+		if err != nil {
+			info.Err = err
+			return info
+		}
+	}
+
+	png, err := b.SVGToPNG(svg)
 	if err != nil {
 		info.Err = err
 		return info
 	}
+	img, _, err := image.Decode(bytes.NewReader(png))
+	if err != nil {
+		info.Err = fmt.Errorf("decode png: %w", err)
+		return info
+	}
+
+	info.SVG, info.PNG, info.Img = svg, png, img
 	info.Width, info.Height = diagram.SVGSize(svg)
-	info.Bytes = len(svg)
-	if lang == LangD2 {
-		if d, err := diagram.RenderD2(string(data)); err == nil {
-			info.Shapes, info.Conns = d.NumShapes(), d.NumConnections()
-		}
+	if d2 != nil {
+		info.Drawio, _ = d2.Drawio()
+	} else {
+		info.Drawio, _ = diagram.DrawioFromSVG(svg)
 	}
 	return info
 }
