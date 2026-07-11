@@ -60,27 +60,3 @@ func (t *Theme) d2Overrides() *d2target.ThemeOverrides {
 		AB4: p(t.SurfaceAlt), AB5: p(t.Surface),
 	}
 }
-
-func (t *Theme) mermaidConfig() map[string]any {
-	return map[string]any{
-		"startOnLoad": false,
-		"theme":       "base",
-		"themeVariables": map[string]any{
-			"darkMode":            t.Dark,
-			"background":          t.Background,
-			"primaryColor":        t.SurfaceAlt,
-			"primaryTextColor":    t.Text,
-			"primaryBorderColor":  t.Accent,
-			"lineColor":           t.Accent,
-			"secondaryColor":      t.Surface,
-			"tertiaryColor":       t.SurfaceAlt,
-			"textColor":           t.Text,
-			"mainBkg":             t.SurfaceAlt,
-			"nodeBorder":          t.Accent,
-			"clusterBkg":          t.Surface,
-			"clusterBorder":       t.Border,
-			"edgeLabelBackground": t.Surface,
-			"titleColor":          t.Text,
-		},
-	}
-}

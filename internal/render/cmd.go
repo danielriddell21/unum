@@ -241,79 +241,31 @@ func runTUID2(f *flags, info rendertui.Info, data []byte) error {
 	return startTUI(f, info)
 }
 
-// mermaid flowcharts are parsed natively (no browser) into d2 and drawn as a
-// crisp Unicode preview; a browser, if present, only pre-renders the real
-// mermaid svg/png/drawio for the save keys. Non-flowchart diagrams fall back to
-// a live raster that needs the browser.
+// mermaid is fully browser-free: rendered to svg/png natively via go-mermaid,
+// with a crisp Unicode preview for flowcharts (parsed to d2) and a native
+// raster fallback for other diagram types.
 func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
-	if d2src, err := diagram.MermaidToD2(string(data)); err == nil && d2src != "" {
-		if ascii, err := diagram.RenderD2ASCII(d2src); err == nil && ascii != "" {
-			info.ASCII = ascii
-		}
-	}
-
-	if info.ASCII != "" {
-		attachMermaidExports(f, &info, data)
-		return startTUI(f, info)
-	}
-	return runTUIMermaidRaster(f, info, data)
-}
-
-// attachMermaidExports best-effort renders the real mermaid svg/png/drawio (for
-// the save keys) when a browser is available; the preview itself is native.
-func attachMermaidExports(f *flags, info *rendertui.Info, data []byte) {
-	if !diagram.BrowserAvailable() {
-		return
-	}
-	b, err := diagram.NewBrowser()
+	svg, err := diagram.RenderMermaid(string(data), diagram.ThemeByName(f.theme))
 	if err != nil {
-		return
-	}
-	defer b.Close()
-	svg, err := b.RenderMermaid(string(data), diagram.ThemeByName(f.theme))
-	if err != nil {
-		return
-	}
-	info.SVG = svg
-	info.Width, info.Height = diagram.SVGSize(svg)
-	info.Drawio, _ = diagram.DrawioFromSVG(svg)
-	info.PNG, _ = b.SVGToPNG(svg)
-}
-
-func runTUIMermaidRaster(f *flags, info rendertui.Info, data []byte) error {
-	if !diagram.BrowserAvailable() {
-		info.Err = fmt.Errorf("mermaid preview needs a Chromium browser: install one or set UNUM_CHROMIUM_BIN")
-		return startTUI(f, info)
-	}
-	b, err := diagram.NewBrowser()
-	if err != nil {
-		info.Err = fmt.Errorf("start browser: %w", err)
-		return startTUI(f, info)
-	}
-	svg, err := b.RenderMermaid(string(data), diagram.ThemeByName(f.theme))
-	if err != nil {
-		b.Close()
 		info.Err = err
 		return startTUI(f, info)
 	}
 	info.SVG = svg
 	info.Width, info.Height = diagram.SVGSize(svg)
 	info.Drawio, _ = diagram.DrawioFromSVG(svg)
-	info.PNG, _ = b.SVGToPNG(svg)
-	info.Rasterize = func(wpx, hpx int) image.Image {
-		png, err := b.SVGToPNGSized(svg, wpx, hpx)
-		if err != nil {
-			return nil
+	info.PNG, _ = diagram.MermaidSVGToPNG(svg)
+
+	if d2src, err := diagram.MermaidToD2(string(data)); err == nil && d2src != "" {
+		if ascii, err := diagram.RenderD2ASCII(d2src); err == nil && ascii != "" {
+			info.ASCII = ascii
 		}
-		img, _, err := image.Decode(bytes.NewReader(png))
-		if err != nil {
-			return nil
-		}
-		return img
 	}
-	err = startTUI(f, info)
-	b.Close()
-	return err
+	if info.ASCII == "" && len(info.PNG) > 0 {
+		if img, _, err := image.Decode(bytes.NewReader(info.PNG)); err == nil {
+			info.Img = img
+		}
+	}
+	return startTUI(f, info)
 }
 
 func startTUI(f *flags, info rendertui.Info) error {

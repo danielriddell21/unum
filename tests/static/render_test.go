@@ -103,15 +103,29 @@ func TestRenderMissingFile(t *testing.T) {
 }
 
 func TestRenderMermaidSVG(t *testing.T) {
-	if !chromiumAvailable() {
-		t.Skip("no chromium available; skipping mermaid render")
-	}
+	// mermaid renders natively (go-mermaid) — no browser required.
 	stdout, _, code := run("render", sampleMMD, flagNoColor)
 	if code != 0 {
 		t.Fatalf(exitFmt, code)
 	}
 	if !strings.Contains(stdout, "<svg") {
 		t.Errorf("expected <svg in mermaid output:\n%s", stdout)
+	}
+}
+
+func TestRenderMermaidPNG(t *testing.T) {
+	// mermaid png also renders natively (pure-Go raster) — no browser required.
+	out := filepath.Join(t.TempDir(), "m.png")
+	_, _, code := run("render", sampleMMD, "--format", "png", "-o", out, flagNoColor)
+	if code != 0 {
+		t.Fatalf(exitFmt, code)
+	}
+	data, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("read png: %v", err)
+	}
+	if len(data) < 8 || string(data[1:4]) != "PNG" {
+		t.Errorf("output is not a PNG")
 	}
 }
 

@@ -1,42 +1,40 @@
 package diagram
 
 import (
-	_ "embed"
 	"fmt"
-	"strings"
+
+	gm "github.com/zkrebbekx/go-mermaid"
+	gmraster "github.com/zkrebbekx/go-mermaid/raster"
 )
 
-//go:embed assets/mermaid.min.js
-var mermaidJS string
+const mermaidPNGScale = 3.0
 
-func (b *Browser) RenderMermaid(source string, t *Theme) ([]byte, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	html := `<!doctype html><html><head><meta charset="utf-8"><script>` +
-		mermaidJS + `</script></head><body><div id="container"></div></body></html>`
-	page, err := b.page(html)
-	if err != nil {
-		return nil, err
-	}
-	defer page.Close() //nolint:errcheck // page discarded with the browser
-
-	config := map[string]any{"startOnLoad": false}
+func RenderMermaid(source string, t *Theme) ([]byte, error) {
+	var opts []gm.Option
 	if t != nil {
-		config = t.mermaidConfig()
+		opts = append(opts, gm.WithCustomTheme("unum", t.goMermaidPalette()))
 	}
-	if _, err := page.Eval(`(cfg) => mermaid.initialize(cfg)`, config); err != nil {
-		return nil, fmt.Errorf("init mermaid: %w", err)
-	}
-	res, err := page.Eval(`async (src) => {
-		const { svg } = await mermaid.render('unum-diagram', src);
-		return svg;
-	}`, source)
+	svg, err := gm.Render(source, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("render mermaid: %w", err)
 	}
-	svg := res.Value.Str()
-	if !strings.Contains(svg, "<svg") {
-		return nil, fmt.Errorf("mermaid produced no svg output")
+	return svg, nil
+}
+
+func MermaidSVGToPNG(svg []byte) ([]byte, error) {
+	png, err := gmraster.RasterizeSVG(svg, mermaidPNGScale)
+	if err != nil {
+		return nil, fmt.Errorf("rasterise mermaid png: %w", err)
 	}
-	return []byte(svg), nil
+	return png, nil
+}
+
+func (t *Theme) goMermaidPalette() gm.Palette {
+	return gm.Palette{
+		Background: t.Background,
+		NodeFill:   t.SurfaceAlt,
+		NodeStroke: t.Accent,
+		Text:       t.Text,
+		Edge:       t.Accent,
+	}
 }

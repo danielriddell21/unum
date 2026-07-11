@@ -3,7 +3,7 @@ package diagram
 import "fmt"
 
 func NeedsBrowser(lang, format string) bool {
-	return lang == "mermaid" || format == "png"
+	return lang == "d2" && format == "png"
 }
 
 func Render(lang, format, source string, b *Browser, t *Theme) (out []byte, contentType string, err error) {
@@ -17,10 +17,7 @@ func Render(lang, format, source string, b *Browser, t *Theme) (out []byte, cont
 		}
 		d2, svg = d, d.SVG
 	case "mermaid":
-		if b == nil {
-			return nil, "", fmt.Errorf("mermaid rendering needs a browser")
-		}
-		s, err := b.RenderMermaid(source, t)
+		s, err := RenderMermaid(source, t)
 		if err != nil {
 			return nil, "", err
 		}
@@ -31,10 +28,7 @@ func Render(lang, format, source string, b *Browser, t *Theme) (out []byte, cont
 
 	switch format {
 	case "png":
-		if b == nil {
-			return nil, "", fmt.Errorf("png output needs a browser")
-		}
-		png, err := b.SVGToPNG(svg)
+		png, err := toPNG(svg, d2, b)
 		if err != nil {
 			return nil, "", err
 		}
@@ -48,6 +42,16 @@ func Render(lang, format, source string, b *Browser, t *Theme) (out []byte, cont
 	default:
 		return svg, "image/svg+xml", nil
 	}
+}
+
+func toPNG(svg []byte, d2 *D2Diagram, b *Browser) ([]byte, error) {
+	if d2 != nil {
+		if b == nil {
+			return nil, fmt.Errorf("d2 png output needs a browser")
+		}
+		return b.SVGToPNG(svg)
+	}
+	return MermaidSVGToPNG(svg)
 }
 
 func drawio(d2 *D2Diagram, svg []byte) ([]byte, error) {
