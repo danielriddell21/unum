@@ -137,7 +137,7 @@ func runRender(f *flags, file string) error {
 		return runWeb(f, lang, data)
 	}
 	if f.ui {
-		if err := rendertui.Start(f.version, f.theme, tuiInfo(f, file, lang, data)); err != nil {
+		if err := rendertui.Start(tuiInfo(f, file, lang, data), f.theme, f.version); err != nil {
 			return fmt.Errorf("render TUI: %w", err)
 		}
 		return nil

@@ -88,7 +88,7 @@ func Start(opts Options) error {
 
 	srv := &http.Server{Addr: addr, Handler: otelhttp.NewHandler(mux, "unum-render"), ReadHeaderTimeout: 10 * time.Second}
 
-	shared.PrintStartupBanner("render", url)
+	shared.PrintStartupBanner("diagram renderer", url)
 	if autoOpen {
 		go shared.OpenBrowser(url)
 	}
@@ -154,7 +154,7 @@ func (s *server) handleRender(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	s.opts.Tel.TrackEvent("render-web", "/api/render", map[string]string{"lang": lang, "format": format})
+	s.opts.Tel.TrackEvent("render-diagram", "/api/render", map[string]string{"lang": lang, "format": format})
 	_ = ctx
 
 	w.Header().Set("Content-Type", contentType)

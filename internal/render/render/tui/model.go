@@ -38,7 +38,7 @@ type Model struct {
 	showHelp bool
 }
 
-func Start(version, themeName string, info Info) error {
+func Start(info Info, themeName, version string) error {
 	tuipanels.ApplyBaseStyles(tuipanels.ResolvePalette(themeName))
 	p := tea.NewProgram(NewModel(version, info), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
