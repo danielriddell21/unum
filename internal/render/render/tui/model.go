@@ -248,7 +248,10 @@ func isStructRune(r rune) bool {
 }
 
 func (m Model) caption() string {
-	parts := []string{m.info.Lang, fmt.Sprintf("%d×%d", m.info.Width, m.info.Height)}
+	parts := []string{m.info.Lang}
+	if m.info.Width > 0 && m.info.Height > 0 {
+		parts = append(parts, fmt.Sprintf("%d×%d", m.info.Width, m.info.Height))
+	}
 	if m.info.Shapes >= 0 {
 		parts = append(parts, fmt.Sprintf("%d shapes", m.info.Shapes), fmt.Sprintf("%d edges", m.info.Conns))
 	}

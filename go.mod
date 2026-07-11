@@ -13,6 +13,7 @@ require (
 	github.com/itchyny/gojq v0.12.19
 	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.23.2
+	github.com/sammcj/mermaid-check v0.0.4
 	github.com/sergi/go-diff v1.4.0
 	github.com/sethvargo/go-diceware v0.5.0
 	github.com/spf13/cobra v1.10.2
@@ -63,7 +64,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/itchyny/timefmt-go v0.1.8 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/mazznoer/csscolorparser v0.1.5 // indirect

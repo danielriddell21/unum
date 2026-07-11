@@ -241,9 +241,46 @@ func runTUID2(f *flags, info rendertui.Info, data []byte) error {
 	return startTUI(f, info)
 }
 
-// mermaid flowcharts are converted to d2 and drawn natively; other diagram
-// types fall back to a live raster the TUI re-rasterises at panel resolution.
+// mermaid flowcharts are parsed natively (no browser) into d2 and drawn as a
+// crisp Unicode preview; a browser, if present, only pre-renders the real
+// mermaid svg/png/drawio for the save keys. Non-flowchart diagrams fall back to
+// a live raster that needs the browser.
 func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
+	if d2src, err := diagram.MermaidToD2(string(data)); err == nil && d2src != "" {
+		if ascii, err := diagram.RenderD2ASCII(d2src); err == nil && ascii != "" {
+			info.ASCII = ascii
+		}
+	}
+
+	if info.ASCII != "" {
+		attachMermaidExports(f, &info, data)
+		return startTUI(f, info)
+	}
+	return runTUIMermaidRaster(f, info, data)
+}
+
+// attachMermaidExports best-effort renders the real mermaid svg/png/drawio (for
+// the save keys) when a browser is available; the preview itself is native.
+func attachMermaidExports(f *flags, info *rendertui.Info, data []byte) {
+	if !diagram.BrowserAvailable() {
+		return
+	}
+	b, err := diagram.NewBrowser()
+	if err != nil {
+		return
+	}
+	defer b.Close()
+	svg, err := b.RenderMermaid(string(data), diagram.ThemeByName(f.theme))
+	if err != nil {
+		return
+	}
+	info.SVG = svg
+	info.Width, info.Height = diagram.SVGSize(svg)
+	info.Drawio, _ = diagram.DrawioFromSVG(svg)
+	info.PNG, _ = b.SVGToPNG(svg)
+}
+
+func runTUIMermaidRaster(f *flags, info rendertui.Info, data []byte) error {
 	if !diagram.BrowserAvailable() {
 		info.Err = fmt.Errorf("mermaid preview needs a Chromium browser: install one or set UNUM_CHROMIUM_BIN")
 		return startTUI(f, info)
@@ -253,7 +290,6 @@ func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
 		info.Err = fmt.Errorf("start browser: %w", err)
 		return startTUI(f, info)
 	}
-
 	svg, err := b.RenderMermaid(string(data), diagram.ThemeByName(f.theme))
 	if err != nil {
 		b.Close()
@@ -264,20 +300,6 @@ func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
 	info.Width, info.Height = diagram.SVGSize(svg)
 	info.Drawio, _ = diagram.DrawioFromSVG(svg)
 	info.PNG, _ = b.SVGToPNG(svg)
-
-	// Prefer a crisp native preview: convert the mermaid flowchart's graph to
-	// d2 and render it with d2's Unicode renderer. Fall back to a raster for
-	// diagram types that don't map to a node/edge graph.
-	if d2src, err := b.MermaidToD2(string(data)); err == nil && d2src != "" {
-		if ascii, err := diagram.RenderD2ASCII(d2src); err == nil && ascii != "" {
-			info.ASCII = ascii
-		}
-	}
-	if info.ASCII != "" {
-		b.Close()
-		return startTUI(f, info)
-	}
-
 	info.Rasterize = func(wpx, hpx int) image.Image {
 		png, err := b.SVGToPNGSized(svg, wpx, hpx)
 		if err != nil {
