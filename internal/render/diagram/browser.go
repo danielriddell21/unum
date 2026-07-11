@@ -3,6 +3,7 @@ package diagram
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
@@ -14,6 +15,7 @@ const pngScale = 2
 type Browser struct {
 	browser  *rod.Browser
 	launcher *launcher.Launcher
+	mu       sync.Mutex
 }
 
 func chromiumPath() (string, bool) {
@@ -53,6 +55,8 @@ func NewBrowser() (*Browser, error) {
 }
 
 func (b *Browser) Close() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	_ = b.browser.Close()
 	b.launcher.Cleanup()
 }
@@ -70,8 +74,19 @@ func (b *Browser) page(html string) (*rod.Page, error) {
 }
 
 func (b *Browser) SVGToPNG(svg []byte) ([]byte, error) {
-	html := `<!doctype html><html><head><style>*{margin:0;padding:0}</style></head><body>` +
-		string(svg) + `</body></html>`
+	return b.rasterize(svg, pngScale, 0, 0)
+}
+
+func (b *Browser) SVGToPNGSized(svg []byte, maxW, maxH int) ([]byte, error) {
+	return b.rasterize(svg, 0, maxW, maxH)
+}
+
+func (b *Browser) rasterize(svg []byte, scale float64, maxW, maxH int) ([]byte, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	html := `<!doctype html><html><head><style>` +
+		`html,body{margin:0;padding:0;overflow:hidden}::-webkit-scrollbar{display:none}` +
+		`</style></head><body>` + string(svg) + `</body></html>`
 	page, err := b.page(html)
 	if err != nil {
 		return nil, err
@@ -84,20 +99,28 @@ func (b *Browser) SVGToPNG(svg []byte) ([]byte, error) {
 	}
 
 	// A d2 SVG carries only a viewBox (no width/height), so the browser would
-	// stretch it to the viewport. Pin the element to its intrinsic size and
-	// match the viewport so the screenshot captures exactly the diagram.
-	res, err := el.Eval(`(scale) => {
+	// stretch it to the viewport. Size the element from its intrinsic aspect —
+	// either by a fixed scale, or fit within maxW×maxH so the vector is
+	// rasterised crisply at the target resolution rather than downscaled later.
+	res, err := el.Eval(`(scale, maxW, maxH) => {
 		const vb = this.viewBox && this.viewBox.baseVal;
-		const w = (vb && vb.width ? vb.width : this.getBBox().width) * scale;
-		const h = (vb && vb.height ? vb.height : this.getBBox().height) * scale;
+		const iw = vb && vb.width ? vb.width : this.getBBox().width;
+		const ih = vb && vb.height ? vb.height : this.getBBox().height;
+		let w, h;
+		if (maxW > 0 && maxH > 0) {
+			const s = Math.min(maxW / iw, maxH / ih);
+			w = iw * s; h = ih * s;
+		} else {
+			w = iw * scale; h = ih * scale;
+		}
 		this.setAttribute('width', w);
 		this.setAttribute('height', h);
 		this.style.width = w + 'px';
 		this.style.height = h + 'px';
 		this.style.maxWidth = 'none';
 		this.style.maxHeight = 'none';
-		return { w: Math.ceil(w), h: Math.ceil(h) };
-	}`, pngScale)
+		return { w: Math.max(1, Math.ceil(w)), h: Math.max(1, Math.ceil(h)) };
+	}`, scale, maxW, maxH)
 	if err != nil {
 		return nil, fmt.Errorf("measure svg: %w", err)
 	}

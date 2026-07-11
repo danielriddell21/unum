@@ -137,10 +137,7 @@ func runRender(f *flags, file string) error {
 		return runWeb(f, lang, data)
 	}
 	if f.ui {
-		if err := rendertui.Start(tuiInfo(f, file, lang, data), f.theme, f.version); err != nil {
-			return fmt.Errorf("render TUI: %w", err)
-		}
-		return nil
+		return runTUI(f, file, lang, data)
 	}
 	return runStatic(ctx, f, span, lang, format, data)
 }
@@ -206,7 +203,7 @@ func render(f *flags, lang Language, format Format, data []byte) ([]byte, error)
 	return out, nil
 }
 
-func tuiInfo(f *flags, file string, lang Language, data []byte) rendertui.Info {
+func runTUI(f *flags, file string, lang Language, data []byte) error {
 	info := rendertui.Info{
 		File:   filepath.Base(file),
 		Lang:   lang.String(),
@@ -215,12 +212,12 @@ func tuiInfo(f *flags, file string, lang Language, data []byte) rendertui.Info {
 	}
 	if !diagram.BrowserAvailable() {
 		info.Err = fmt.Errorf("preview needs a Chromium browser: install one or set UNUM_CHROMIUM_BIN")
-		return info
+		return startTUI(f, info)
 	}
 	b, err := diagram.NewBrowser()
 	if err != nil {
 		info.Err = fmt.Errorf("start browser: %w", err)
-		return info
+		return startTUI(f, info)
 	}
 	defer b.Close()
 
@@ -231,37 +228,46 @@ func tuiInfo(f *flags, file string, lang Language, data []byte) rendertui.Info {
 		d, err := diagram.RenderD2(string(data), t)
 		if err != nil {
 			info.Err = err
-			return info
+			return startTUI(f, info)
 		}
 		d2, svg = d, d.SVG
 		info.Shapes, info.Conns = d.NumShapes(), d.NumConnections()
 	} else {
-		svg, err = b.RenderMermaid(string(data), t)
+		s, err := b.RenderMermaid(string(data), t)
 		if err != nil {
 			info.Err = err
-			return info
+			return startTUI(f, info)
 		}
+		svg = s
 	}
 
-	png, err := b.SVGToPNG(svg)
-	if err != nil {
-		info.Err = err
-		return info
-	}
-	img, _, err := image.Decode(bytes.NewReader(png))
-	if err != nil {
-		info.Err = fmt.Errorf("decode png: %w", err)
-		return info
-	}
-
-	info.SVG, info.PNG, info.Img = svg, png, img
+	info.SVG = svg
 	info.Width, info.Height = diagram.SVGSize(svg)
+	info.PNG, _ = b.SVGToPNG(svg)
 	if d2 != nil {
 		info.Drawio, _ = d2.Drawio()
 	} else {
 		info.Drawio, _ = diagram.DrawioFromSVG(svg)
 	}
-	return info
+	info.Rasterize = func(wpx, hpx int) image.Image {
+		png, err := b.SVGToPNGSized(svg, wpx, hpx)
+		if err != nil {
+			return nil
+		}
+		img, _, err := image.Decode(bytes.NewReader(png))
+		if err != nil {
+			return nil
+		}
+		return img
+	}
+	return startTUI(f, info)
+}
+
+func startTUI(f *flags, info rendertui.Info) error {
+	if err := rendertui.Start(info, f.theme, f.version); err != nil {
+		return fmt.Errorf("render TUI: %w", err)
+	}
+	return nil
 }
 
 func writeOutput(f *flags, format Format, out []byte) error {

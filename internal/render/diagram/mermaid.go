@@ -10,6 +10,8 @@ import (
 var mermaidJS string
 
 func (b *Browser) RenderMermaid(source string, t *Theme) ([]byte, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	html := `<!doctype html><html><head><meta charset="utf-8"><script>` +
 		mermaidJS + `</script></head><body><div id="container"></div></body></html>`
 	page, err := b.page(html)

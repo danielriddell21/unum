@@ -13,23 +13,27 @@ import (
 )
 
 type Info struct {
-	File   string
-	Lang   string
-	Source string
-	SVG    []byte
-	PNG    []byte
-	Drawio []byte
-	Img    image.Image
-	Width  int
-	Height int
-	Shapes int
-	Conns  int
-	Err    error
+	File      string
+	Lang      string
+	Source    string
+	SVG       []byte
+	PNG       []byte
+	Drawio    []byte
+	Img       image.Image
+	Rasterize func(wpx, hpx int) image.Image
+	Width     int
+	Height    int
+	Shapes    int
+	Conns     int
+	Err       error
 }
+
+type imageMsg struct{ img image.Image }
 
 type Model struct {
 	info     Info
 	lines    []string
+	img      image.Image
 	scroll   int
 	status   string
 	width    int
@@ -64,11 +68,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		return m, m.rasterizeCmd()
+	case imageMsg:
+		m.img = msg.img
 		return m, nil
 	case tea.KeyMsg:
 		return m.handleKey(msg.String())
 	}
 	return m, nil
+}
+
+func (m Model) rasterizeCmd() tea.Cmd {
+	if m.info.Rasterize == nil || m.width == 0 || m.height == 0 {
+		return nil
+	}
+	wpx, hpx := m.artPx()
+	if wpx < 1 || hpx < 1 {
+		return nil
+	}
+	r := m.info.Rasterize
+	return func() tea.Msg { return imageMsg{img: r(wpx, hpx)} }
+}
+
+func (m Model) artPx() (wpx, hpx int) {
+	leftW := int(float64(m.width) * 0.42)
+	rightW := m.width - leftW
+	bodyH := m.height - 1
+	return rightW - 4, (bodyH - 5) * 2
 }
 
 func (m Model) handleKey(k string) (tea.Model, tea.Cmd) {
@@ -155,9 +181,13 @@ func (m Model) renderView(w, h int) string {
 	if m.info.Err != nil {
 		return caption + "\n\n" + tuipanels.StyleHint.Render("preview unavailable:\n"+m.info.Err.Error())
 	}
-	art := imageArt(m.info.Img, w, h-1)
+	img := m.img
+	if img == nil {
+		img = m.info.Img
+	}
+	art := imageArt(img, w, h-1)
 	if art == "" {
-		return caption + "\n\n" + tuipanels.StyleHint.Render("no preview")
+		return caption + "\n\n" + tuipanels.StyleHint.Render("rendering…")
 	}
 	return caption + "\n" + art
 }
