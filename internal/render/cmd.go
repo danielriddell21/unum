@@ -210,8 +210,41 @@ func runTUI(f *flags, file string, lang Language, data []byte) error {
 		Source: string(data),
 		Shapes: -1,
 	}
+	if lang == LangD2 {
+		return runTUID2(f, info, data)
+	}
+	return runTUIMermaid(f, info, data)
+}
+
+// d2 renders a crisp Unicode diagram natively (no browser). A browser is used
+// only, and only if present, to pre-render the PNG for the save key.
+func runTUID2(f *flags, info rendertui.Info, data []byte) error {
+	d, err := diagram.RenderD2(string(data), diagram.ThemeByName(f.theme))
+	if err != nil {
+		info.Err = err
+		return startTUI(f, info)
+	}
+	info.SVG = d.SVG
+	info.Width, info.Height = diagram.SVGSize(d.SVG)
+	info.Shapes, info.Conns = d.NumShapes(), d.NumConnections()
+	info.Drawio, _ = d.Drawio()
+	if ascii, err := diagram.RenderD2ASCII(string(data)); err == nil {
+		info.ASCII = ascii
+	}
+	if diagram.BrowserAvailable() {
+		if b, err := diagram.NewBrowser(); err == nil {
+			info.PNG, _ = b.SVGToPNG(d.SVG)
+			b.Close()
+		}
+	}
+	return startTUI(f, info)
+}
+
+// mermaid has no native text renderer, so the preview is a live raster the TUI
+// re-rasterises at the panel resolution; the browser stays open for that.
+func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
 	if !diagram.BrowserAvailable() {
-		info.Err = fmt.Errorf("preview needs a Chromium browser: install one or set UNUM_CHROMIUM_BIN")
+		info.Err = fmt.Errorf("mermaid preview needs a Chromium browser: install one or set UNUM_CHROMIUM_BIN")
 		return startTUI(f, info)
 	}
 	b, err := diagram.NewBrowser()
@@ -221,34 +254,15 @@ func runTUI(f *flags, file string, lang Language, data []byte) error {
 	}
 	defer b.Close()
 
-	t := diagram.ThemeByName(f.theme)
-	var svg []byte
-	var d2 *diagram.D2Diagram
-	if lang == LangD2 {
-		d, err := diagram.RenderD2(string(data), t)
-		if err != nil {
-			info.Err = err
-			return startTUI(f, info)
-		}
-		d2, svg = d, d.SVG
-		info.Shapes, info.Conns = d.NumShapes(), d.NumConnections()
-	} else {
-		s, err := b.RenderMermaid(string(data), t)
-		if err != nil {
-			info.Err = err
-			return startTUI(f, info)
-		}
-		svg = s
+	svg, err := b.RenderMermaid(string(data), diagram.ThemeByName(f.theme))
+	if err != nil {
+		info.Err = err
+		return startTUI(f, info)
 	}
-
 	info.SVG = svg
 	info.Width, info.Height = diagram.SVGSize(svg)
+	info.Drawio, _ = diagram.DrawioFromSVG(svg)
 	info.PNG, _ = b.SVGToPNG(svg)
-	if d2 != nil {
-		info.Drawio, _ = d2.Drawio()
-	} else {
-		info.Drawio, _ = diagram.DrawioFromSVG(svg)
-	}
 	info.Rasterize = func(wpx, hpx int) image.Image {
 		png, err := b.SVGToPNGSized(svg, wpx, hpx)
 		if err != nil {

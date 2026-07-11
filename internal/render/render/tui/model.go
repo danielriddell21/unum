@@ -16,6 +16,7 @@ type Info struct {
 	File      string
 	Lang      string
 	Source    string
+	ASCII     string
 	SVG       []byte
 	PNG       []byte
 	Drawio    []byte
@@ -30,6 +31,11 @@ type Info struct {
 
 type imageMsg struct{ img image.Image }
 
+var (
+	styleStruct = lipgloss.NewStyle()
+	styleText   = lipgloss.NewStyle()
+)
+
 type Model struct {
 	info     Info
 	lines    []string
@@ -43,7 +49,10 @@ type Model struct {
 }
 
 func Start(info Info, themeName, version string) error {
-	tuipanels.ApplyBaseStyles(tuipanels.ResolvePalette(themeName))
+	pal := tuipanels.ResolvePalette(themeName)
+	tuipanels.ApplyBaseStyles(pal)
+	styleStruct = lipgloss.NewStyle().Foreground(lipgloss.Color(pal.AccentPrimary))
+	styleText = lipgloss.NewStyle().Foreground(lipgloss.Color(pal.Text))
 	p := tea.NewProgram(NewModel(version, info), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("render TUI: %w", err)
@@ -181,6 +190,9 @@ func (m Model) renderView(w, h int) string {
 	if m.info.Err != nil {
 		return caption + "\n\n" + tuipanels.StyleHint.Render("preview unavailable:\n"+m.info.Err.Error())
 	}
+	if m.info.ASCII != "" {
+		return caption + "\n" + m.asciiView(w, h-1)
+	}
 	img := m.img
 	if img == nil {
 		img = m.info.Img
@@ -190,6 +202,49 @@ func (m Model) renderView(w, h int) string {
 		return caption + "\n\n" + tuipanels.StyleHint.Render("rendering…")
 	}
 	return caption + "\n" + art
+}
+
+func (m Model) asciiView(w, h int) string {
+	lines := strings.Split(strings.TrimRight(m.info.ASCII, "\n"), "\n")
+	var b strings.Builder
+	for i, line := range lines {
+		if i >= h {
+			break
+		}
+		rs := []rune(line)
+		if w > 1 && len(rs) > w {
+			rs = append(rs[:w-1:w-1], '…')
+		}
+		b.WriteString(colorizeASCII(rs))
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
+
+func colorizeASCII(rs []rune) string {
+	var b strings.Builder
+	for _, r := range rs {
+		switch {
+		case r == ' ':
+			b.WriteRune(r)
+		case isStructRune(r):
+			b.WriteString(styleStruct.Render(string(r)))
+		default:
+			b.WriteString(styleText.Render(string(r)))
+		}
+	}
+	return b.String()
+}
+
+func isStructRune(r rune) bool {
+	if r >= 0x2500 && r <= 0x257F { // box-drawing block
+		return true
+	}
+	switch r {
+	case '▲', '▼', '◄', '►', '◀', '▶', '↑', '↓', '←', '→':
+		return true
+	}
+	return false
 }
 
 func (m Model) caption() string {

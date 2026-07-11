@@ -96,6 +96,23 @@ func TestSaveKeyWritesFile(t *testing.T) {
 	}
 }
 
+func TestAsciiPreview(t *testing.T) {
+	m := NewModel("dev", Info{
+		File:   "a.d2",
+		Lang:   "d2",
+		Source: "x -> y",
+		ASCII:  "┌───┐\n│ x │\n└───┘",
+		Width:  40,
+		Height: 30,
+		Shapes: -1,
+	})
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 90, Height: 30})
+	view := next.(Model).View()
+	if !strings.Contains(view, "┌") || !strings.Contains(view, "x") {
+		t.Errorf("expected native ascii diagram in view:\n%s", view)
+	}
+}
+
 func TestErrorInfo(t *testing.T) {
 	m := NewModel("1.0", Info{File: "x.mmd", Lang: "mermaid", Source: "flowchart", Shapes: -1, Err: errStub{}})
 	next, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
