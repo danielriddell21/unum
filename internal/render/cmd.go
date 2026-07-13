@@ -220,8 +220,11 @@ func runTUID2(f *flags, info rendertui.Info, data []byte) error {
 	info.Width, info.Height = diagram.SVGSize(d.SVG)
 	info.Shapes, info.Conns = d.NumShapes(), d.NumConnections()
 	info.Drawio, _ = d.Drawio()
-	setASCII(&info, string(data))
+	if ascii, err := diagram.RenderD2ASCII(string(data)); err == nil {
+		info.ASCII = ascii
+	}
 	info.PNG, _ = diagram.SVGToPNG(d.SVG)
+	decodePNG(&info)
 	return startTUI(f, info)
 }
 
@@ -240,31 +243,23 @@ func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
 	info.PNG, _ = diagram.MermaidSVGToPNG(svg)
 
 	if d2src, err := diagram.MermaidToD2(string(data)); err == nil && d2src != "" {
-		setASCII(&info, d2src)
-	}
-	if info.ASCII == "" && len(info.PNG) > 0 {
-		if img, _, err := image.Decode(bytes.NewReader(info.PNG)); err == nil {
-			info.Img = img
+		if ascii, err := diagram.RenderD2ASCII(d2src); err == nil {
+			info.ASCII = ascii
 		}
 	}
+	decodePNG(&info)
 	return startTUI(f, info)
 }
 
-// setASCII wires a crisp Unicode preview into info: the base render at scale 1
-// plus a closure the TUI calls to re-render at a larger scale when zooming. Both
-// draw from the same d2 source, so ascii stays native (never a blurry raster).
-func setASCII(info *rendertui.Info, d2src string) {
-	base, err := diagram.RenderD2ASCII(d2src, 1)
-	if err != nil || base == "" {
+// decodePNG decodes info.PNG into info.Img so the TUI can magnify the diagram on
+// zoom. The Unicode preview stays the crisp default at the fit view; zooming in
+// switches to this rasterised image, which is the only path that truly enlarges.
+func decodePNG(info *rendertui.Info) {
+	if info.Img != nil || len(info.PNG) == 0 {
 		return
 	}
-	info.ASCII = base
-	info.ASCIIRender = func(scale float64) string {
-		out, err := diagram.RenderD2ASCII(d2src, scale)
-		if err != nil {
-			return ""
-		}
-		return out
+	if img, _, err := image.Decode(bytes.NewReader(info.PNG)); err == nil {
+		info.Img = img
 	}
 }
 

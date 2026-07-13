@@ -9,7 +9,7 @@ import (
 	"golang.org/x/image/draw"
 )
 
-func imageArt(img image.Image, cols, rows int, zoom float64, panX, panY int) string {
+func imageArt(img image.Image, cols, rows int) string {
 	if img == nil || cols < 1 || rows < 1 {
 		return ""
 	}
@@ -18,36 +18,26 @@ func imageArt(img image.Image, cols, rows int, zoom float64, panX, panY int) str
 	if iw == 0 || ih == 0 {
 		return ""
 	}
-	if zoom <= 0 {
-		zoom = 1
-	}
 
 	// Each character cell shows two vertical pixels via the upper half block,
-	// so the viewport is cols wide and rows*2 tall. Fit while preserving aspect
-	// ratio, then apply zoom so the scaled image can exceed the viewport.
-	fit := math.Min(float64(cols)/float64(iw), float64(rows*2)/float64(ih))
-	scale := fit * zoom
+	// so the target raster is cols wide and rows*2 tall. Fit while preserving
+	// aspect ratio, then centre the result within the pane.
+	scale := math.Min(float64(cols)/float64(iw), float64(rows*2)/float64(ih))
 	ow := max(1, int(float64(iw)*scale))
 	oh := max(1, int(float64(ih)*scale))
 
 	dst := image.NewRGBA(image.Rect(0, 0, ow, oh))
 	draw.CatmullRom.Scale(dst, dst.Bounds(), img, src, draw.Over, nil)
 
-	// Window the scaled image into the viewport: center when it is smaller,
-	// pan (clamped) when larger. Vertical units are terminal rows (2 px each).
-	rowsImg := (oh + 1) / 2
-	startCol, padLeft := windowRange(ow, cols, panX)
-	startRow, padTop := windowRange(rowsImg, rows, panY)
-
-	pad := strings.Repeat(" ", padLeft)
+	_, padTop := windowRange((oh+1)/2, rows)
+	pad := strings.Repeat(" ", max(0, (cols-ow)/2))
 	var b strings.Builder
 	for i := 0; i < padTop; i++ {
 		b.WriteByte('\n')
 	}
-	for r := startRow; r < rowsImg && r < startRow+rows-padTop; r++ {
-		y := r * 2
+	for y := 0; y < oh; y += 2 {
 		b.WriteString(pad)
-		for x := startCol; x < ow && x < startCol+cols-padLeft; x++ {
+		for x := 0; x < ow; x++ {
 			tr, tg, tb, _ := dst.At(x, y).RGBA()
 			br, bg, bb := tr, tg, tb
 			if y+1 < oh {
