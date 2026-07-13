@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"image"
 	"os"
 	"strings"
 
@@ -20,7 +19,6 @@ type Info struct {
 	SVG    []byte
 	PNG    []byte
 	Drawio []byte
-	Img    image.Image
 	Width  int
 	Height int
 	Shapes int
@@ -167,11 +165,8 @@ func (m Model) renderView(w, h int) string {
 	if m.info.ASCII != "" {
 		return caption + "\n" + m.asciiView(w, h-1)
 	}
-	art := imageArt(m.info.Img, w, h-1)
-	if art == "" {
-		return caption + "\n\n" + tuipanels.StyleHint.Render("rendering…")
-	}
-	return caption + "\n" + art
+	note := "no terminal preview for this diagram type\n\nopen it with --web, or export --format svg / png"
+	return caption + "\n\n" + tuipanels.StyleHint.Render(note)
 }
 
 // asciiView draws the Unicode diagram centred inside the preview pane: it pads

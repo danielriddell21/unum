@@ -1,11 +1,8 @@
 package rendertool
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"image"
-	_ "image/png"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -224,13 +221,12 @@ func runTUID2(f *flags, info rendertui.Info, data []byte) error {
 		info.ASCII = ascii
 	}
 	info.PNG, _ = diagram.SVGToPNG(d.SVG)
-	decodePNG(&info)
 	return startTUI(f, info)
 }
 
-// mermaid is fully browser-free: rendered to svg/png natively via go-mermaid,
-// with a crisp Unicode preview for flowcharts (parsed to d2) and a native
-// raster fallback for other diagram types.
+// mermaid is fully browser-free. Graph-shaped diagrams (flowchart, sequence,
+// state, ER) are converted to d2 and drawn as a crisp Unicode preview; chart and
+// timeline types have no terminal rendering and show a note pointing at --web.
 func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
 	svg, err := diagram.RenderMermaid(string(data), diagram.ThemeByName(f.theme))
 	if err != nil {
@@ -247,20 +243,7 @@ func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
 			info.ASCII = ascii
 		}
 	}
-	decodePNG(&info)
 	return startTUI(f, info)
-}
-
-// decodePNG decodes info.PNG into info.Img so the TUI can magnify the diagram on
-// zoom. The Unicode preview stays the crisp default at the fit view; zooming in
-// switches to this rasterised image, which is the only path that truly enlarges.
-func decodePNG(info *rendertui.Info) {
-	if info.Img != nil || len(info.PNG) == 0 {
-		return
-	}
-	if img, _, err := image.Decode(bytes.NewReader(info.PNG)); err == nil {
-		info.Img = img
-	}
 }
 
 func startTUI(f *flags, info rendertui.Info) error {

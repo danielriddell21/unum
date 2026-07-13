@@ -2,7 +2,6 @@ package tui_test
 
 import (
 	"bytes"
-	"image"
 	"testing"
 	"time"
 
@@ -13,18 +12,14 @@ import (
 )
 
 func stubInfo() rendertui.Info {
-	img := image.NewRGBA(image.Rect(0, 0, 16, 16))
-	for i := range img.Pix {
-		img.Pix[i] = 180
-	}
 	return rendertui.Info{
 		File:   "sample.d2",
 		Lang:   "d2",
 		Source: "client -> api\napi -> db",
+		ASCII:  "┌────────┐\n│ client │\n└────────┘",
 		SVG:    []byte("<svg/>"),
 		PNG:    []byte("\x89PNG\r\n"),
 		Drawio: []byte("<mxGraphModel/>"),
-		Img:    img,
 		Width:  155,
 		Height: 458,
 		Shapes: 3,

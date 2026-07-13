@@ -123,7 +123,7 @@ func atoiOr(b []byte, fallback int) int {
 // diagram types that are not node/edge flowcharts fall back to the rendered SVG
 // wrapped in a single image cell.
 func MermaidDrawio(source string, svg []byte, t *Theme) ([]byte, error) {
-	if d2src, err := MermaidToD2(source); err == nil && d2src != "" {
+	if d2src, err := mermaidFlowchartD2(source); err == nil && d2src != "" {
 		if d, err := RenderD2(d2src, t); err == nil {
 			return d.Drawio()
 		}

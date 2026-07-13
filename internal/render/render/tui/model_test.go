@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"image"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,23 +9,15 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func stubImage() image.Image {
-	img := image.NewRGBA(image.Rect(0, 0, 20, 20))
-	for i := range img.Pix {
-		img.Pix[i] = 200
-	}
-	return img
-}
-
 func sizedModel() Model {
 	m := NewModel("1.2.3", Info{
 		File:   "sample.d2",
 		Lang:   "d2",
 		Source: "client -> api\napi -> db",
+		ASCII:  "┌────────┐\n│ client │\n└────────┘",
 		SVG:    []byte("<svg/>"),
 		PNG:    []byte("\x89PNG..."),
 		Drawio: []byte("<mxGraphModel/>"),
-		Img:    stubImage(),
 		Width:  155,
 		Height: 458,
 		Shapes: 3,
@@ -43,8 +34,17 @@ func TestViewShowsPanelsAndPreview(t *testing.T) {
 			t.Errorf("view missing %q", want)
 		}
 	}
-	if !strings.Contains(view, "▀") {
-		t.Error("expected rendered image art (half blocks) in view")
+	if !strings.Contains(view, "┌") {
+		t.Error("expected native ascii preview in view")
+	}
+}
+
+func TestNoPreviewNote(t *testing.T) {
+	// A diagram with no ascii (chart/timeline types) shows a can't-render note.
+	m := NewModel("dev", Info{File: "p.mmd", Lang: "mermaid", Source: "pie", Shapes: -1})
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 90, Height: 30})
+	if !strings.Contains(next.(Model).View(), "no terminal preview") {
+		t.Error("expected a can't-render note when no ascii preview is available")
 	}
 }
 
