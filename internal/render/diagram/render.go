@@ -5,6 +5,7 @@ import "fmt"
 func Render(lang, format, source string, t *Theme) (out []byte, contentType string, err error) {
 	var svg []byte
 	var d2 *D2Diagram
+	var mermaidSrc string
 	switch lang {
 	case "d2":
 		d, err := RenderD2(source, t)
@@ -18,6 +19,7 @@ func Render(lang, format, source string, t *Theme) (out []byte, contentType stri
 			return nil, "", err
 		}
 		svg = s
+		mermaidSrc = source
 	default:
 		return nil, "", fmt.Errorf("unknown language %q", lang)
 	}
@@ -30,7 +32,7 @@ func Render(lang, format, source string, t *Theme) (out []byte, contentType stri
 		}
 		return png, "image/png", nil
 	case "drawio":
-		out, err := drawio(d2, svg)
+		out, err := drawio(d2, svg, mermaidSrc, t)
 		if err != nil {
 			return nil, "", err
 		}
@@ -47,9 +49,9 @@ func toPNG(d2 *D2Diagram, svg []byte) ([]byte, error) {
 	return MermaidSVGToPNG(svg)
 }
 
-func drawio(d2 *D2Diagram, svg []byte) ([]byte, error) {
+func drawio(d2 *D2Diagram, svg []byte, mermaidSrc string, t *Theme) ([]byte, error) {
 	if d2 != nil {
 		return d2.Drawio()
 	}
-	return DrawioFromSVG(svg)
+	return MermaidDrawio(mermaidSrc, svg, t)
 }
