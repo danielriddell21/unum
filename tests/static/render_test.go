@@ -2,7 +2,6 @@ package static_test
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -12,20 +11,6 @@ var (
 	sampleD2  = filepath.Join("testdata", "sample.d2")
 	sampleMMD = filepath.Join("testdata", "sample.mmd")
 )
-
-func chromiumAvailable() bool {
-	if bin := os.Getenv("UNUM_CHROMIUM_BIN"); bin != "" {
-		if _, err := os.Stat(bin); err == nil {
-			return true
-		}
-	}
-	for _, name := range []string{"chromium", "chromium-browser", "google-chrome", "google-chrome-stable", "chrome"} {
-		if _, err := exec.LookPath(name); err == nil {
-			return true
-		}
-	}
-	return false
-}
 
 func TestRenderD2SVG(t *testing.T) {
 	stdout, _, code := run("render", sampleD2, flagNoColor)
@@ -130,9 +115,7 @@ func TestRenderMermaidPNG(t *testing.T) {
 }
 
 func TestRenderD2PNG(t *testing.T) {
-	if !chromiumAvailable() {
-		t.Skip("no chromium available; skipping png render")
-	}
+	// d2 png rasterises in pure Go (resvg) — no browser required.
 	out := filepath.Join(t.TempDir(), "out.png")
 	_, _, code := run("render", sampleD2, "--format", "png", "-o", out, flagNoColor)
 	if code != 0 {

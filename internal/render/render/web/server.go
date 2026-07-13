@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -35,21 +34,7 @@ type Options struct {
 }
 
 type server struct {
-	opts       Options
-	once       sync.Once
-	browser    *diagram.Browser
-	browserErr error
-}
-
-func (s *server) getBrowser() (*diagram.Browser, error) {
-	s.once.Do(func() {
-		if !diagram.BrowserAvailable() {
-			s.browserErr = fmt.Errorf("mermaid and png need a Chromium browser: install one or set UNUM_CHROMIUM_BIN")
-			return
-		}
-		s.browser, s.browserErr = diagram.NewBrowser()
-	})
-	return s.browser, s.browserErr
+	opts Options
 }
 
 func Start(opts Options) error {
@@ -143,17 +128,7 @@ func (s *server) handleRender(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 	span.SetAttributes(attribute.String("lang", lang), attribute.String("format", format))
 
-	var b *diagram.Browser
-	if diagram.NeedsBrowser(lang, format) {
-		bb, err := s.getBrowser()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusServiceUnavailable)
-			return
-		}
-		b = bb
-	}
-
-	out, contentType, err := diagram.Render(lang, format, string(body), b, diagram.ThemeByName(themeName))
+	out, contentType, err := diagram.Render(lang, format, string(body), diagram.ThemeByName(themeName))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

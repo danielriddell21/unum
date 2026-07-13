@@ -12,6 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/itchyny/gojq v0.12.19
 	github.com/joho/godotenv v1.5.1
+	github.com/kanrichan/resvg-go v0.0.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sammcj/mermaid-check v0.0.4
 	github.com/sergi/go-diff v1.4.0
@@ -81,6 +82,7 @@ require (
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
+	github.com/tetratelabs/wazero v1.4.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/ysmood/fetchup v0.2.3 // indirect
 	github.com/ysmood/goob v0.4.0 // indirect

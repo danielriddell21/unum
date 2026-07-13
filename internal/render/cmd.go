@@ -185,19 +185,7 @@ func runWeb(f *flags, lang Language, data []byte) error {
 }
 
 func render(f *flags, lang Language, format Format, data []byte) ([]byte, error) {
-	var browser *diagram.Browser
-	if diagram.NeedsBrowser(lang.String(), format.String()) {
-		if !diagram.BrowserAvailable() {
-			return nil, fmt.Errorf("rendering %s as %s needs a Chromium browser: install one or set UNUM_CHROMIUM_BIN", lang, format)
-		}
-		b, err := diagram.NewBrowser()
-		if err != nil {
-			return nil, fmt.Errorf("start browser: %w", err)
-		}
-		defer b.Close()
-		browser = b
-	}
-	out, _, err := diagram.Render(lang.String(), format.String(), string(data), browser, diagram.ThemeByName(f.theme))
+	out, _, err := diagram.Render(lang.String(), format.String(), string(data), diagram.ThemeByName(f.theme))
 	if err != nil {
 		return nil, fmt.Errorf("render %s: %w", lang, err)
 	}
@@ -217,8 +205,8 @@ func runTUI(f *flags, file string, lang Language, data []byte) error {
 	return runTUIMermaid(f, info, data)
 }
 
-// d2 renders a crisp Unicode diagram natively (no browser). A browser is used
-// only, and only if present, to pre-render the PNG for the save key.
+// d2 renders a crisp Unicode preview natively; the PNG (for the save key) is
+// rasterised in pure Go via resvg. No browser anywhere.
 func runTUID2(f *flags, info rendertui.Info, data []byte) error {
 	d, err := diagram.RenderD2(string(data), diagram.ThemeByName(f.theme))
 	if err != nil {
@@ -232,12 +220,7 @@ func runTUID2(f *flags, info rendertui.Info, data []byte) error {
 	if ascii, err := diagram.RenderD2ASCII(string(data)); err == nil {
 		info.ASCII = ascii
 	}
-	if diagram.BrowserAvailable() {
-		if b, err := diagram.NewBrowser(); err == nil {
-			info.PNG, _ = b.SVGToPNG(d.SVG)
-			b.Close()
-		}
-	}
+	info.PNG, _ = diagram.SVGToPNG(d.SVG)
 	return startTUI(f, info)
 }
 
