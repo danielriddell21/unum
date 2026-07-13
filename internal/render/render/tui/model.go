@@ -13,23 +13,38 @@ import (
 )
 
 type Info struct {
-	File      string
-	Lang      string
-	Source    string
-	ASCII     string
-	SVG       []byte
-	PNG       []byte
-	Drawio    []byte
-	Img       image.Image
-	Rasterize func(wpx, hpx int) image.Image
-	Width     int
-	Height    int
-	Shapes    int
-	Conns     int
-	Err       error
+	File        string
+	Lang        string
+	Source      string
+	ASCII       string
+	ASCIIRender func(scale float64) string
+	SVG         []byte
+	PNG         []byte
+	Drawio      []byte
+	Img         image.Image
+	Rasterize   func(wpx, hpx int) image.Image
+	Width       int
+	Height      int
+	Shapes      int
+	Conns       int
+	Err         error
 }
 
 type imageMsg struct{ img image.Image }
+
+type focusedPanel int
+
+const (
+	focusSource focusedPanel = iota
+	focusRender
+)
+
+const (
+	zoomStep = 0.5
+	zoomMin  = 0.5
+	zoomMax  = 6.0
+	panStep  = 3
+)
 
 var (
 	styleStruct = lipgloss.NewStyle()
@@ -41,6 +56,11 @@ type Model struct {
 	lines    []string
 	img      image.Image
 	scroll   int
+	focused  focusedPanel
+	zoom     float64
+	offX     int
+	offY     int
+	ascii    string
 	status   string
 	width    int
 	height   int
@@ -64,6 +84,8 @@ func NewModel(version string, info Info) Model {
 	return Model{
 		info:    info,
 		lines:   strings.Split(strings.TrimRight(info.Source, "\n"), "\n"),
+		ascii:   info.ASCII,
+		zoom:    1,
 		version: version,
 	}
 }
@@ -112,6 +134,32 @@ func (m Model) handleKey(k string) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "?":
 		m.showHelp = !m.showHelp
+		return m, nil
+	case "tab":
+		if m.focused == focusSource {
+			m.focused = focusRender
+		} else {
+			m.focused = focusSource
+		}
+		return m, nil
+	case "s":
+		m.status = save("diagram.svg", m.info.SVG)
+		return m, nil
+	case "p":
+		m.status = save("diagram.png", m.info.PNG)
+		return m, nil
+	case "d":
+		m.status = save("diagram.drawio", m.info.Drawio)
+		return m, nil
+	}
+	if m.focused == focusRender {
+		return m.handleRenderKey(k)
+	}
+	return m.handleSourceKey(k)
+}
+
+func (m Model) handleSourceKey(k string) (tea.Model, tea.Cmd) {
+	switch k {
 	case "up", "k":
 		if m.scroll > 0 {
 			m.scroll--
@@ -120,14 +168,43 @@ func (m Model) handleKey(k string) (tea.Model, tea.Cmd) {
 		if m.scroll < len(m.lines)-1 {
 			m.scroll++
 		}
-	case "s":
-		m.status = save("diagram.svg", m.info.SVG)
-	case "p":
-		m.status = save("diagram.png", m.info.PNG)
-	case "d":
-		m.status = save("diagram.drawio", m.info.Drawio)
 	}
 	return m, nil
+}
+
+func (m Model) handleRenderKey(k string) (tea.Model, tea.Cmd) {
+	switch k {
+	case "left", "h":
+		m.offX -= panStep
+	case "right", "l":
+		m.offX += panStep
+	case "up", "k":
+		m.offY -= panStep
+	case "down", "j":
+		m.offY += panStep
+	case "+", "=":
+		m.setZoom(m.zoom + zoomStep)
+	case "-", "_":
+		m.setZoom(m.zoom - zoomStep)
+	case "0":
+		m.zoom = 1
+		m.offX, m.offY = 0, 0
+		m.ascii = m.info.ASCII
+	}
+	return m, nil
+}
+
+func (m *Model) setZoom(z float64) {
+	z = clampF(z, zoomMin, zoomMax)
+	if z == m.zoom {
+		return
+	}
+	m.zoom = z
+	if m.info.ASCIIRender != nil {
+		if out := m.info.ASCIIRender(z); out != "" {
+			m.ascii = out
+		}
+	}
 }
 
 func save(name string, data []byte) string {
@@ -149,11 +226,14 @@ func (m Model) View() string {
 	rightW := m.width - leftW
 	bodyH := m.height - 1
 
-	srcTitle := tuipanels.PanelTitle("SOURCE", true)
-	left := tuipanels.WrapPanel(srcTitle+"\n"+m.sourceView(leftW-4, bodyH-3), true, leftW, bodyH)
+	srcFocus := m.focused == focusSource
+	renFocus := m.focused == focusRender
 
-	renTitle := tuipanels.PanelTitle("RENDER", false)
-	right := tuipanels.WrapPanel(renTitle+"\n"+m.renderView(rightW-4, bodyH-4), false, rightW, bodyH)
+	srcTitle := tuipanels.PanelTitle("SOURCE", srcFocus)
+	left := tuipanels.WrapPanel(srcTitle+"\n"+m.sourceView(leftW-4, bodyH-3), srcFocus, leftW, bodyH)
+
+	renTitle := tuipanels.PanelTitle("RENDER", renFocus)
+	right := tuipanels.WrapPanel(renTitle+"\n"+m.renderView(rightW-4, bodyH-4), renFocus, rightW, bodyH)
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 
@@ -190,14 +270,14 @@ func (m Model) renderView(w, h int) string {
 	if m.info.Err != nil {
 		return caption + "\n\n" + tuipanels.StyleHint.Render("preview unavailable:\n"+m.info.Err.Error())
 	}
-	if m.info.ASCII != "" {
+	if m.ascii != "" {
 		return caption + "\n" + m.asciiView(w, h-1)
 	}
 	img := m.img
 	if img == nil {
 		img = m.info.Img
 	}
-	art := imageArt(img, w, h-1)
+	art := imageArt(img, w, h-1, m.zoom, m.offX, m.offY)
 	if art == "" {
 		return caption + "\n\n" + tuipanels.StyleHint.Render("rendering…")
 	}
@@ -205,20 +285,75 @@ func (m Model) renderView(w, h int) string {
 }
 
 func (m Model) asciiView(w, h int) string {
-	lines := strings.Split(strings.TrimRight(m.info.ASCII, "\n"), "\n")
-	var b strings.Builder
+	if w < 1 || h < 1 {
+		return ""
+	}
+	lines := strings.Split(strings.TrimRight(m.ascii, "\n"), "\n")
+	rows := make([][]rune, len(lines))
+	contentW := 0
 	for i, line := range lines {
-		if i >= h {
-			break
+		rows[i] = []rune(line)
+		if len(rows[i]) > contentW {
+			contentW = len(rows[i])
 		}
-		rs := []rune(line)
-		if w > 1 && len(rs) > w {
-			rs = append(rs[:w-1:w-1], '…')
+	}
+
+	startRow, padTop := windowRange(len(rows), h, m.offY)
+	startCol, padLeft := windowRange(contentW, w, m.offX)
+
+	var b strings.Builder
+	for i := 0; i < padTop; i++ {
+		b.WriteByte('\n')
+	}
+	pad := strings.Repeat(" ", padLeft)
+	for i := startRow; i < len(rows) && i < startRow+h-padTop; i++ {
+		rs := rows[i]
+		if startCol < len(rs) {
+			rs = rs[startCol:]
+		} else {
+			rs = nil
 		}
+		if len(rs) > w-padLeft {
+			rs = rs[:w-padLeft]
+		}
+		b.WriteString(pad)
 		b.WriteString(colorizeASCII(rs))
 		b.WriteByte('\n')
 	}
 	return b.String()
+}
+
+// windowRange centers a content span of length content inside a viewport of
+// length view, offset by pan (a delta from centered). It returns the content
+// index the viewport starts at and, when the content is smaller than the
+// viewport, the leading pad that keeps it centered.
+func windowRange(content, view, pan int) (start, pad int) {
+	if content <= view {
+		return 0, (view - content) / 2
+	}
+	maxStart := content - view
+	start = clampI(maxStart/2+pan, 0, maxStart)
+	return start, 0
+}
+
+func clampI(v, lo, hi int) int {
+	if v < lo {
+		return lo
+	}
+	if v > hi {
+		return hi
+	}
+	return v
+}
+
+func clampF(v, lo, hi float64) float64 {
+	if v < lo {
+		return lo
+	}
+	if v > hi {
+		return hi
+	}
+	return v
 }
 
 func colorizeASCII(rs []rune) string {
@@ -260,7 +395,7 @@ func (m Model) caption() string {
 
 func (m Model) statusBar() string {
 	left := tuipanels.StyleTitle.Render(" [ "+m.info.File+" ] ") + tuipanels.StyleHint.Render(m.info.Lang)
-	right := "s:svg · p:png · d:drawio · ?:help · q:quit "
+	right := "tab:focus · s:svg · p:png · d:drawio · ?:help · q:quit "
 	if m.status != "" {
 		right = m.status + "  "
 	}
@@ -271,13 +406,26 @@ func helpText() string {
 	return fmt.Sprintf(`%s
 
 %s
+  tab         Switch focus (source ⇄ render)
+
+%s
   ↑/↓  j/k   Scroll source
+
+%s
+  h/j/k/l     Pan (arrow keys too)
+  + / -       Zoom in / out
+  0           Reset zoom and center
+
+%s
   s           Write diagram.svg
   p           Write diagram.png
   d           Write diagram.drawio
   ?           Toggle this help
   esc / q     Quit`,
 		tuipanels.StyleTitle.Render("UNUM RENDER — keyboard reference"),
+		tuipanels.StyleTitle.Render("FOCUS"),
+		tuipanels.StyleTitle.Render("SOURCE"),
+		tuipanels.StyleTitle.Render("RENDER"),
 		tuipanels.StyleTitle.Render("ACTIONS"),
 	)
 }

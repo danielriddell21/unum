@@ -15,7 +15,7 @@ import (
 	"oss.terrastruct.com/util-go/go2"
 )
 
-func RenderD2ASCII(source string) (string, error) {
+func RenderD2ASCII(source string, scale float64) (string, error) {
 	ruler, err := textmeasure.NewRuler()
 	if err != nil {
 		return "", fmt.Errorf("text ruler: %w", err)
@@ -31,7 +31,11 @@ func RenderD2ASCII(source string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("compile d2: %w", err)
 	}
-	out, err := d2ascii.NewASCIIartist().Render(ctx, target, &d2ascii.RenderOpts{Charset: charset.Unicode})
+	asciiOpts := &d2ascii.RenderOpts{Charset: charset.Unicode}
+	if scale > 0 {
+		asciiOpts.Scale = go2.Pointer(scale)
+	}
+	out, err := d2ascii.NewASCIIartist().Render(ctx, target, asciiOpts)
 	if err != nil {
 		return "", fmt.Errorf("render d2 ascii: %w", err)
 	}

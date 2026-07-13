@@ -60,16 +60,19 @@ Override with --lang.
 
 Output formats (--format):
   svg      Scalable vector image (default)
-  png      Rasterised image (requires a Chromium browser)
-  drawio   diagrams.net document — editable for d2, embedded SVG for mermaid
+  png      Rasterised image
+  drawio   diagrams.net document — an editable node graph for d2 and mermaid
+           flowcharts, an embedded image for other mermaid diagram types
 
 Output modes:
   (default)  Write the rendered diagram to stdout or --output
   --ui       Terminal viewer with source and render details
   --web      Browser-based live preview
 
-mermaid rendering and PNG output drive a headless Chromium (found on PATH
-or via UNUM_CHROMIUM_BIN).`,
+Rendering is pure Go and needs no browser. d2 draws via the terrastruct
+library; mermaid draws via go-mermaid, which supports flowchart, sequence,
+class, state, er, pie, journey, quadrant, gitgraph, timeline, mindmap,
+gantt, c4, requirement, sankey, xychart, block, kanban, packet and radar.`,
 		Args:         cobra.ExactArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -217,9 +220,7 @@ func runTUID2(f *flags, info rendertui.Info, data []byte) error {
 	info.Width, info.Height = diagram.SVGSize(d.SVG)
 	info.Shapes, info.Conns = d.NumShapes(), d.NumConnections()
 	info.Drawio, _ = d.Drawio()
-	if ascii, err := diagram.RenderD2ASCII(string(data)); err == nil {
-		info.ASCII = ascii
-	}
+	setASCII(&info, string(data))
 	info.PNG, _ = diagram.SVGToPNG(d.SVG)
 	return startTUI(f, info)
 }
@@ -235,13 +236,11 @@ func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
 	}
 	info.SVG = svg
 	info.Width, info.Height = diagram.SVGSize(svg)
-	info.Drawio, _ = diagram.DrawioFromSVG(svg)
+	info.Drawio, _ = diagram.MermaidDrawio(string(data), svg, diagram.ThemeByName(f.theme))
 	info.PNG, _ = diagram.MermaidSVGToPNG(svg)
 
 	if d2src, err := diagram.MermaidToD2(string(data)); err == nil && d2src != "" {
-		if ascii, err := diagram.RenderD2ASCII(d2src); err == nil && ascii != "" {
-			info.ASCII = ascii
-		}
+		setASCII(&info, d2src)
 	}
 	if info.ASCII == "" && len(info.PNG) > 0 {
 		if img, _, err := image.Decode(bytes.NewReader(info.PNG)); err == nil {
@@ -249,6 +248,24 @@ func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
 		}
 	}
 	return startTUI(f, info)
+}
+
+// setASCII wires a crisp Unicode preview into info: the base render at scale 1
+// plus a closure the TUI calls to re-render at a larger scale when zooming. Both
+// draw from the same d2 source, so ascii stays native (never a blurry raster).
+func setASCII(info *rendertui.Info, d2src string) {
+	base, err := diagram.RenderD2ASCII(d2src, 1)
+	if err != nil || base == "" {
+		return
+	}
+	info.ASCII = base
+	info.ASCIIRender = func(scale float64) string {
+		out, err := diagram.RenderD2ASCII(d2src, scale)
+		if err != nil {
+			return ""
+		}
+		return out
+	}
 }
 
 func startTUI(f *flags, info rendertui.Info) error {
