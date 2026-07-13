@@ -39,6 +39,17 @@ func TestHandleRenderD2Drawio(t *testing.T) {
 	}
 }
 
+func TestHandleRenderMermaidNonFlowchart(t *testing.T) {
+	s := &server{}
+	w := postRender(t, s, "mermaid", "svg", "pie title T\n \"A\" : 10\n \"B\" : 20\n")
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d, want 200 (%s)", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "<svg") {
+		t.Errorf("expected <svg for a non-flowchart mermaid type:\n%s", w.Body.String())
+	}
+}
+
 func TestHandleRenderUnknownLang(t *testing.T) {
 	s := &server{}
 	w := postRender(t, s, "cobol", "svg", "x -> y")

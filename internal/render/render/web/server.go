@@ -137,5 +137,5 @@ func (s *server) handleRender(w http.ResponseWriter, r *http.Request) {
 	_ = ctx
 
 	w.Header().Set("Content-Type", contentType)
-	_, _ = w.Write(out)
+	_, _ = w.Write(out) //nolint:gosec // local single-user renderer serving the user's own diagram under an explicit content type, not a multi-user web app
 }

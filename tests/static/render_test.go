@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	sampleD2  = filepath.Join("testdata", "sample.d2")
-	sampleMMD = filepath.Join("testdata", "sample.mmd")
+	sampleD2     = filepath.Join("testdata", "sample.d2")
+	sampleMMD    = filepath.Join("testdata", "sample.mmd")
+	samplePieMMD = filepath.Join("testdata", "sample-pie.mmd")
 )
 
 func TestRenderD2SVG(t *testing.T) {
@@ -29,6 +30,42 @@ func TestRenderD2Drawio(t *testing.T) {
 	}
 	if !strings.Contains(stdout, "mxGraphModel") {
 		t.Errorf("expected mxGraphModel in drawio output:\n%s", stdout)
+	}
+}
+
+func TestRenderMermaidDrawioEditable(t *testing.T) {
+	// A mermaid flowchart exports as an editable node graph, not an image cell.
+	stdout, _, code := run("render", sampleMMD, "--format", "drawio", flagNoColor)
+	if code != 0 {
+		t.Fatalf(exitFmt, code)
+	}
+	if !strings.Contains(stdout, `vertex="1"`) || !strings.Contains(stdout, `edge="1"`) {
+		t.Errorf("expected editable vertex/edge cells in mermaid drawio:\n%s", stdout)
+	}
+	if strings.Contains(stdout, "shape=image") {
+		t.Errorf("mermaid flowchart drawio should not be an embedded image:\n%s", stdout)
+	}
+}
+
+func TestRenderMermaidPieSVG(t *testing.T) {
+	// A non-flowchart mermaid type still renders natively to SVG.
+	stdout, _, code := run("render", samplePieMMD, flagNoColor)
+	if code != 0 {
+		t.Fatalf(exitFmt, code)
+	}
+	if !strings.Contains(stdout, "<svg") {
+		t.Errorf("expected <svg for pie chart:\n%s", stdout)
+	}
+}
+
+func TestRenderMermaidPieDrawioImageCell(t *testing.T) {
+	// Non-flowchart types fall back to an embedded-image drawio cell.
+	stdout, _, code := run("render", samplePieMMD, "--format", "drawio", flagNoColor)
+	if code != 0 {
+		t.Fatalf(exitFmt, code)
+	}
+	if !strings.Contains(stdout, "shape=image") {
+		t.Errorf("expected image cell for non-flowchart drawio:\n%s", stdout)
 	}
 }
 
