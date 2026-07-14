@@ -20,7 +20,7 @@ function debounceRender() {
 
 function currentTheme() {
   const c = window.UNUM_CONFIG || {};
-  const mode = (window._unumResolveMode && window._unumResolveMode()) || 'dark';
+  const mode = window._unumResolveMode?.() || 'dark';
   return mode === 'light' ? (c.lightTheme || 'clean') : (c.darkTheme || 'cyber');
 }
 
@@ -39,19 +39,25 @@ async function render() {
   }
   errorBox.classList.add('hidden');
   const svg = await res.text();
-  canvas.innerHTML = svg;
-  const el = canvas.querySelector('svg');
-  if (el) {
-    const vb = el.viewBox && el.viewBox.baseVal;
-    if (vb && vb.width) {
-      // d2 SVGs carry only a viewBox; give them an intrinsic size so the
-      // preview doesn't collapse, then CSS scales it to fit.
-      if (!el.getAttribute('width')) {
-        el.setAttribute('width', vb.width);
-        el.setAttribute('height', vb.height);
-      }
-      statusSize.textContent = Math.round(vb.width) + ' × ' + Math.round(vb.height);
+  // Parse the SVG into a document and append the node rather than assigning
+  // innerHTML, so untrusted markup can never execute as script.
+  const parsed = new DOMParser().parseFromString(svg, 'image/svg+xml');
+  const el = parsed.querySelector('svg');
+  if (!el) {
+    canvas.replaceChildren();
+    return;
+  }
+  const node = document.importNode(el, true);
+  canvas.replaceChildren(node);
+  const vb = node.viewBox?.baseVal;
+  if (vb?.width) {
+    // d2 SVGs carry only a viewBox; give them an intrinsic size so the
+    // preview doesn't collapse, then CSS scales it to fit.
+    if (!node.getAttribute('width')) {
+      node.setAttribute('width', vb.width);
+      node.setAttribute('height', vb.height);
     }
+    statusSize.textContent = Math.round(vb.width) + ' × ' + Math.round(vb.height);
   }
 }
 
