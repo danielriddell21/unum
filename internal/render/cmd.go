@@ -205,8 +205,6 @@ func runTUI(f *flags, file string, lang Language, data []byte) error {
 	return runTUIMermaid(f, info, data)
 }
 
-// d2 renders a crisp Unicode preview natively; the PNG (for the save key) is
-// rasterised in pure Go via resvg. No browser anywhere.
 func runTUID2(f *flags, info rendertui.Info, data []byte) error {
 	d, err := diagram.RenderD2(string(data), diagram.ThemeByName(f.theme))
 	if err != nil {
@@ -224,9 +222,6 @@ func runTUID2(f *flags, info rendertui.Info, data []byte) error {
 	return startTUI(f, info)
 }
 
-// mermaid is fully browser-free. Graph-shaped diagrams (flowchart, sequence,
-// state, ER) are converted to d2 and drawn as a crisp Unicode preview; chart and
-// timeline types have no terminal rendering and show a note pointing at --web.
 func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
 	svg, err := diagram.RenderMermaid(string(data), diagram.ThemeByName(f.theme))
 	if err != nil {
@@ -238,6 +233,8 @@ func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
 	info.Drawio, _ = diagram.MermaidDrawio(string(data), svg, diagram.ThemeByName(f.theme))
 	info.PNG, _ = diagram.MermaidSVGToPNG(svg)
 
+	// Graph-shaped types convert to d2 for a crisp Unicode preview; chart and
+	// timeline types yield "", leaving the TUI to show its no-preview note.
 	if d2src, err := diagram.MermaidToD2(string(data)); err == nil && d2src != "" {
 		if ascii, err := diagram.RenderD2ASCII(d2src); err == nil {
 			info.ASCII = ascii

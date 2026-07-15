@@ -16,15 +16,13 @@ var (
 	d2FontAny  = regexp.MustCompile(`d2-\d+-font-\w+`)
 )
 
-// SVGToPNG rasterises a d2 SVG to PNG in pure Go via resvg (WebAssembly through
-// wazero — no browser, no CGo). d2 references fonts by a hashed WOFF @font-face
-// name that resvg can't resolve, so those names are rewritten to the bundled
-// TTF families, which are loaded into resvg's font database.
 func SVGToPNG(svg []byte) ([]byte, error) {
 	w, h := SVGSize(svg)
 	if w == 0 || h == 0 {
 		w, h = 800, 600
 	}
+	// d2 references fonts by a hashed WOFF @font-face name resvg can't resolve;
+	// rewrite them to the bundled TTF families loaded below.
 	svg = d2FontMono.ReplaceAll(svg, []byte("Source Code Pro"))
 	svg = d2FontAny.ReplaceAll(svg, []byte("Source Sans Pro"))
 

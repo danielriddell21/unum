@@ -75,10 +75,6 @@ func (g *flowGraph) d2() string {
 	return b.String()
 }
 
-// MermaidToD2 converts a mermaid diagram to equivalent d2 source for the native
-// Unicode preview. Flowchart, sequence, state and entity-relationship diagrams
-// map cleanly onto d2 graphs; chart and timeline types (pie, gantt, xychart, …)
-// have no d2 equivalent and return an empty string.
 func MermaidToD2(source string) (string, error) {
 	diagram, err := mmparse.Parse(source)
 	if err != nil {
@@ -96,13 +92,11 @@ func MermaidToD2(source string) (string, error) {
 	case *ast.ERDiagram:
 		return erD2(n), nil
 	default:
+		// Chart and timeline types have no d2 graph equivalent.
 		return "", nil
 	}
 }
 
-// mermaidFlowchartD2 converts only mermaid flowcharts, for the editable draw.io
-// export. Other diagram types yield an empty string so the caller falls back to
-// an embedded image cell.
 func mermaidFlowchartD2(source string) (string, error) {
 	fc, err := mmparse.ParseFlowchart(source)
 	if err != nil {

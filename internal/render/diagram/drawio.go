@@ -118,11 +118,9 @@ func atoiOr(b []byte, fallback int) int {
 	return fallback
 }
 
-// MermaidDrawio builds an editable draw.io document for a mermaid diagram.
-// Flowcharts are re-emitted as d2 and exported as an editable node/edge mxGraph;
-// diagram types that are not node/edge flowcharts fall back to the rendered SVG
-// wrapped in a single image cell.
 func MermaidDrawio(source string, svg []byte, t *Theme) ([]byte, error) {
+	// Flowcharts become an editable node/edge mxGraph; anything else falls back
+	// to the rendered SVG wrapped in a single image cell.
 	if d2src, err := mermaidFlowchartD2(source); err == nil && d2src != "" {
 		if d, err := RenderD2(d2src, t); err == nil {
 			return d.Drawio()

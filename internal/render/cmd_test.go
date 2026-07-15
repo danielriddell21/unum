@@ -1,4 +1,4 @@
-package rendertool
+package rendertool_test
 
 import (
 	"os"
@@ -8,13 +8,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/danielriddell21/unum/internal/config"
+	rendertool "github.com/danielriddell21/unum/internal/render"
 	"github.com/danielriddell21/unum/internal/telemetry"
 )
 
 func testCommand(t *testing.T) *cobra.Command {
 	t.Helper()
 	noColor, quiet := true, true
-	return Command(&noColor, &quiet, "test", telemetry.Init(config.Config{}, "test", "0"))
+	return rendertool.Command(&noColor, &quiet, "test", telemetry.Init(config.Config{}, "test", "0"))
 }
 
 func writeSource(t *testing.T, name, content string) string {

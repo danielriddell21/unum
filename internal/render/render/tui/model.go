@@ -169,8 +169,6 @@ func (m Model) renderView(w, h int) string {
 	return caption + "\n\n" + tuipanels.StyleHint.Render(note)
 }
 
-// asciiView draws the Unicode diagram centred inside the preview pane: it pads
-// to centre when the art is smaller than the pane and clips otherwise.
 func (m Model) asciiView(w, h int) string {
 	if w < 1 || h < 1 {
 		return ""
@@ -210,13 +208,12 @@ func (m Model) asciiView(w, h int) string {
 	return b.String()
 }
 
-// windowRange centres a content span of length content inside a viewport of
-// length view. It returns the content index to start at and, when the content
-// is smaller than the viewport, the leading pad that keeps it centred.
 func windowRange(content, view int) (start, pad int) {
 	if content <= view {
+		// Smaller than the pane: no scroll, pad to centre it.
 		return 0, (view - content) / 2
 	}
+	// Larger than the pane: start at the centred offset, no pad.
 	return (content - view) / 2, 0
 }
 
