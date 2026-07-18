@@ -1,10 +1,10 @@
-package diagram_test
+package engine_test
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/danielriddell21/unum/internal/render/diagram"
+	"github.com/danielriddell21/unum/internal/diagram/engine"
 )
 
 const (
@@ -27,7 +27,7 @@ func TestRenderDispatch(t *testing.T) {
 		if tc.lang == "mermaid" {
 			src = mmdSrc
 		}
-		out, ct, err := diagram.Render(tc.lang, tc.format, src, diagram.ThemeByName("cyber"))
+		out, ct, err := engine.Render(tc.lang, tc.format, src, engine.ThemeByName("cyber"))
 		if err != nil {
 			t.Fatalf("Render(%s,%s): %v", tc.lang, tc.format, err)
 		}
@@ -46,7 +46,7 @@ func TestRenderPNG(t *testing.T) {
 		if lang == "mermaid" {
 			src = mmdSrc
 		}
-		out, ct, err := diagram.Render(lang, "png", src, diagram.ThemeByName("cyber"))
+		out, ct, err := engine.Render(lang, "png", src, engine.ThemeByName("cyber"))
 		if err != nil {
 			t.Fatalf("Render(%s,png): %v", lang, err)
 		}
@@ -60,25 +60,25 @@ func TestRenderPNG(t *testing.T) {
 }
 
 func TestRenderUnknownLang(t *testing.T) {
-	if _, _, err := diagram.Render("cobol", "svg", "x", nil); err == nil {
+	if _, _, err := engine.Render("cobol", "svg", "x", nil); err == nil {
 		t.Error("expected an error for an unknown language")
 	}
 }
 
 func TestSVGSize(t *testing.T) {
-	if w, h := diagram.SVGSize([]byte(`<svg width="320" height="240">`)); w != 320 || h != 240 {
+	if w, h := engine.SVGSize([]byte(`<svg width="320" height="240">`)); w != 320 || h != 240 {
 		t.Errorf("SVGSize width/height = %d/%d, want 320/240", w, h)
 	}
-	if w, h := diagram.SVGSize([]byte(`<svg viewBox="0 0 100 50">`)); w != 100 || h != 50 {
+	if w, h := engine.SVGSize([]byte(`<svg viewBox="0 0 100 50">`)); w != 100 || h != 50 {
 		t.Errorf("SVGSize from viewBox = %d/%d, want 100/50", w, h)
 	}
-	if w, h := diagram.SVGSize([]byte("<svg>")); w != 0 || h != 0 {
+	if w, h := engine.SVGSize([]byte("<svg>")); w != 0 || h != 0 {
 		t.Errorf("SVGSize with no dimensions = %d/%d, want 0/0", w, h)
 	}
 }
 
 func TestD2Counts(t *testing.T) {
-	d, err := diagram.RenderD2(d2Src, diagram.ThemeByName("cyber"))
+	d, err := engine.RenderD2(d2Src, engine.ThemeByName("cyber"))
 	if err != nil {
 		t.Fatalf("RenderD2: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestD2Counts(t *testing.T) {
 }
 
 func TestRenderD2ASCII(t *testing.T) {
-	out, err := diagram.RenderD2ASCII(d2Src)
+	out, err := engine.RenderD2ASCII(d2Src)
 	if err != nil {
 		t.Fatalf("RenderD2ASCII: %v", err)
 	}
@@ -101,11 +101,11 @@ func TestRenderD2ASCII(t *testing.T) {
 }
 
 func TestSVGToPNG(t *testing.T) {
-	d, err := diagram.RenderD2(d2Src, diagram.ThemeByName("cyber"))
+	d, err := engine.RenderD2(d2Src, engine.ThemeByName("cyber"))
 	if err != nil {
 		t.Fatalf("RenderD2: %v", err)
 	}
-	png, err := diagram.SVGToPNG(d.SVG)
+	png, err := engine.SVGToPNG(d.SVG)
 	if err != nil {
 		t.Fatalf("SVGToPNG: %v", err)
 	}
@@ -115,11 +115,11 @@ func TestSVGToPNG(t *testing.T) {
 }
 
 func TestMermaidSVGToPNG(t *testing.T) {
-	svg, err := diagram.RenderMermaid(mmdSrc, diagram.ThemeByName("cyber"))
+	svg, err := engine.RenderMermaid(mmdSrc, engine.ThemeByName("cyber"))
 	if err != nil {
 		t.Fatalf("RenderMermaid: %v", err)
 	}
-	png, err := diagram.MermaidSVGToPNG(svg)
+	png, err := engine.MermaidSVGToPNG(svg)
 	if err != nil {
 		t.Fatalf("MermaidSVGToPNG: %v", err)
 	}

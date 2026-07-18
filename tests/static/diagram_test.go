@@ -14,7 +14,7 @@ var (
 )
 
 func TestRenderD2SVG(t *testing.T) {
-	stdout, _, code := run("render", sampleD2, flagNoColor)
+	stdout, _, code := run("diagram", sampleD2, flagNoColor)
 	if code != 0 {
 		t.Fatalf(exitFmt, code)
 	}
@@ -24,7 +24,7 @@ func TestRenderD2SVG(t *testing.T) {
 }
 
 func TestRenderD2Drawio(t *testing.T) {
-	stdout, _, code := run("render", sampleD2, "--format", "drawio", flagNoColor)
+	stdout, _, code := run("diagram", sampleD2, "--format", "drawio", flagNoColor)
 	if code != 0 {
 		t.Fatalf(exitFmt, code)
 	}
@@ -35,7 +35,7 @@ func TestRenderD2Drawio(t *testing.T) {
 
 func TestRenderMermaidDrawioEditable(t *testing.T) {
 	// A mermaid flowchart exports as an editable node graph, not an image cell.
-	stdout, _, code := run("render", sampleMMD, "--format", "drawio", flagNoColor)
+	stdout, _, code := run("diagram", sampleMMD, "--format", "drawio", flagNoColor)
 	if code != 0 {
 		t.Fatalf(exitFmt, code)
 	}
@@ -49,7 +49,7 @@ func TestRenderMermaidDrawioEditable(t *testing.T) {
 
 func TestRenderMermaidPieSVG(t *testing.T) {
 	// A non-flowchart mermaid type still renders natively to SVG.
-	stdout, _, code := run("render", samplePieMMD, flagNoColor)
+	stdout, _, code := run("diagram", samplePieMMD, flagNoColor)
 	if code != 0 {
 		t.Fatalf(exitFmt, code)
 	}
@@ -60,7 +60,7 @@ func TestRenderMermaidPieSVG(t *testing.T) {
 
 func TestRenderMermaidPieDrawioImageCell(t *testing.T) {
 	// Non-flowchart types fall back to an embedded-image drawio cell.
-	stdout, _, code := run("render", samplePieMMD, "--format", "drawio", flagNoColor)
+	stdout, _, code := run("diagram", samplePieMMD, "--format", "drawio", flagNoColor)
 	if code != 0 {
 		t.Fatalf(exitFmt, code)
 	}
@@ -70,7 +70,7 @@ func TestRenderMermaidPieDrawioImageCell(t *testing.T) {
 }
 
 func TestRenderNoColor(t *testing.T) {
-	stdout, stderr, code := run("render", sampleD2, flagNoColor)
+	stdout, stderr, code := run("diagram", sampleD2, flagNoColor)
 	if code != 0 {
 		t.Fatalf(exitFmt, code)
 	}
@@ -81,7 +81,7 @@ func TestRenderNoColor(t *testing.T) {
 
 func TestRenderOutputFile(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "out.svg")
-	_, _, code := run("render", sampleD2, "-o", out, flagNoColor)
+	_, _, code := run("diagram", sampleD2, "-o", out, flagNoColor)
 	if code != 0 {
 		t.Fatalf(exitFmt, code)
 	}
@@ -95,7 +95,7 @@ func TestRenderOutputFile(t *testing.T) {
 }
 
 func TestRenderUnknownLanguage(t *testing.T) {
-	_, stderr, code := run("render", filepath.Join("testdata", "sample.json"), flagNoColor)
+	_, stderr, code := run("diagram", filepath.Join("testdata", "sample.json"), flagNoColor)
 	if code == 0 {
 		t.Fatal("expected non-zero exit for unknown diagram language")
 	}
@@ -105,7 +105,7 @@ func TestRenderUnknownLanguage(t *testing.T) {
 }
 
 func TestRenderBadFormat(t *testing.T) {
-	_, stderr, code := run("render", sampleD2, "--format", "pdf")
+	_, stderr, code := run("diagram", sampleD2, "--format", "pdf")
 	if code == 0 {
 		t.Fatal("expected non-zero exit for unknown format")
 	}
@@ -115,7 +115,7 @@ func TestRenderBadFormat(t *testing.T) {
 }
 
 func TestRenderMissingFile(t *testing.T) {
-	_, stderr, code := run("render", "nonexistent.d2")
+	_, stderr, code := run("diagram", "nonexistent.d2")
 	if code == 0 {
 		t.Fatal("expected non-zero exit for missing file")
 	}
@@ -126,7 +126,7 @@ func TestRenderMissingFile(t *testing.T) {
 
 func TestRenderMermaidSVG(t *testing.T) {
 	// mermaid renders natively (go-mermaid) — no browser required.
-	stdout, _, code := run("render", sampleMMD, flagNoColor)
+	stdout, _, code := run("diagram", sampleMMD, flagNoColor)
 	if code != 0 {
 		t.Fatalf(exitFmt, code)
 	}
@@ -138,7 +138,7 @@ func TestRenderMermaidSVG(t *testing.T) {
 func TestRenderMermaidPNG(t *testing.T) {
 	// mermaid png also renders natively (pure-Go raster) — no browser required.
 	out := filepath.Join(t.TempDir(), "m.png")
-	_, _, code := run("render", sampleMMD, "--format", "png", "-o", out, flagNoColor)
+	_, _, code := run("diagram", sampleMMD, "--format", "png", "-o", out, flagNoColor)
 	if code != 0 {
 		t.Fatalf(exitFmt, code)
 	}
@@ -154,7 +154,7 @@ func TestRenderMermaidPNG(t *testing.T) {
 func TestRenderD2PNG(t *testing.T) {
 	// d2 png rasterises in pure Go (resvg) — no browser required.
 	out := filepath.Join(t.TempDir(), "out.png")
-	_, _, code := run("render", sampleD2, "--format", "png", "-o", out, flagNoColor)
+	_, _, code := run("diagram", sampleD2, "--format", "png", "-o", out, flagNoColor)
 	if code != 0 {
 		t.Fatalf(exitFmt, code)
 	}

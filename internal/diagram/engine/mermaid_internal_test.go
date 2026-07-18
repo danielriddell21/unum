@@ -1,4 +1,4 @@
-package diagram
+package engine
 
 import "testing"
 

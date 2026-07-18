@@ -14,7 +14,7 @@ const renderStartServerErr = "start server: %v"
 
 func startRenderServer(t *testing.T, port string) {
 	t.Helper()
-	cmd := exec.Command(unumBin, "render", "testdata/sample.d2", "--web")
+	cmd := exec.Command(unumBin, "diagram", "testdata/sample.d2", "--web")
 	cmd.Env = append(os.Environ(), "PORT="+port)
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(renderStartServerErr, err)

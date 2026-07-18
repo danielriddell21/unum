@@ -1,15 +1,15 @@
-package diagram_test
+package engine_test
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/danielriddell21/unum/internal/render/diagram"
+	"github.com/danielriddell21/unum/internal/diagram/engine"
 )
 
 func TestDrawioFromSVG(t *testing.T) {
 	svg := []byte(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240"></svg>`)
-	out, err := diagram.DrawioFromSVG(svg)
+	out, err := engine.DrawioFromSVG(svg)
 	if err != nil {
 		t.Fatalf("DrawioFromSVG: %v", err)
 	}
@@ -22,7 +22,7 @@ func TestDrawioFromSVG(t *testing.T) {
 
 func TestMermaidDrawioFlowchartEditable(t *testing.T) {
 	src := "flowchart TD\n    A[Client] --> B(API Server)\n"
-	out, err := diagram.MermaidDrawio(src, nil, nil)
+	out, err := engine.MermaidDrawio(src, nil, nil)
 	if err != nil {
 		t.Fatalf("MermaidDrawio: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestMermaidDrawioFlowchartEditable(t *testing.T) {
 
 func TestMermaidDrawioNonFlowchartImageCell(t *testing.T) {
 	svg := []byte(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240"></svg>`)
-	out, err := diagram.MermaidDrawio("sequenceDiagram\n    Alice->>Bob: hi\n", svg, nil)
+	out, err := engine.MermaidDrawio("sequenceDiagram\n    Alice->>Bob: hi\n", svg, nil)
 	if err != nil {
 		t.Fatalf("MermaidDrawio: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestMermaidDrawioNonFlowchartImageCell(t *testing.T) {
 }
 
 func TestDrawioFromSVGDefaultSize(t *testing.T) {
-	out, err := diagram.DrawioFromSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg"></svg>`))
+	out, err := engine.DrawioFromSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg"></svg>`))
 	if err != nil {
 		t.Fatalf("DrawioFromSVG: %v", err)
 	}

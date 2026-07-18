@@ -1,9 +1,9 @@
-package diagram_test
+package engine_test
 
 import (
 	"testing"
 
-	"github.com/danielriddell21/unum/internal/render/diagram"
+	"github.com/danielriddell21/unum/internal/diagram/engine"
 )
 
 func TestThemeByName(t *testing.T) {
@@ -18,7 +18,7 @@ func TestThemeByName(t *testing.T) {
 		{"", true}, // unknown → default dark
 	}
 	for _, tt := range tests {
-		got := diagram.ThemeByName(tt.name)
+		got := engine.ThemeByName(tt.name)
 		if got.Dark != tt.wantDark {
 			t.Errorf("ThemeByName(%q).Dark = %v, want %v", tt.name, got.Dark, tt.wantDark)
 		}

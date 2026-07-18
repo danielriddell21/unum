@@ -1,4 +1,4 @@
-package diagram
+package engine
 
 import (
 	"oss.terrastruct.com/d2/d2target"

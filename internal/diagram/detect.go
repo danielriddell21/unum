@@ -1,4 +1,4 @@
-package rendertool
+package diagramtool
 
 import (
 	"path/filepath"

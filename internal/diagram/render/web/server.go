@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 
-	"github.com/danielriddell21/unum/internal/render/diagram"
+	"github.com/danielriddell21/unum/internal/diagram/engine"
 	"github.com/danielriddell21/unum/internal/telemetry"
 	"github.com/danielriddell21/unum/internal/web/shared"
 )
@@ -71,7 +71,7 @@ func Start(opts Options) error {
 	shared.RegisterMetrics(mux)
 	shared.RegisterUmamiProxy(mux)
 
-	srv := &http.Server{Addr: addr, Handler: otelhttp.NewHandler(mux, "unum-render"), ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Addr: addr, Handler: otelhttp.NewHandler(mux, "unum-diagram"), ReadHeaderTimeout: 10 * time.Second}
 
 	shared.PrintStartupBanner("diagram renderer", url)
 	if autoOpen {
@@ -124,11 +124,11 @@ func (s *server) handleRender(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, span := s.opts.Tel.Tracer().Start(r.Context(), "render.web")
+	ctx, span := s.opts.Tel.Tracer().Start(r.Context(), "diagram.web")
 	defer span.End()
 	span.SetAttributes(attribute.String("lang", lang), attribute.String("format", format))
 
-	out, contentType, err := diagram.Render(lang, format, string(body), diagram.ThemeByName(themeName))
+	out, contentType, err := engine.Render(lang, format, string(body), engine.ThemeByName(themeName))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

@@ -1,4 +1,4 @@
-package rendertool
+package diagramtool
 
 import (
 	"context"
@@ -15,10 +15,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/danielriddell21/unum/internal/config"
-	"github.com/danielriddell21/unum/internal/render/diagram"
-	"github.com/danielriddell21/unum/internal/render/render/static"
-	rendertui "github.com/danielriddell21/unum/internal/render/render/tui"
-	renderweb "github.com/danielriddell21/unum/internal/render/render/web"
+	"github.com/danielriddell21/unum/internal/diagram/engine"
+	"github.com/danielriddell21/unum/internal/diagram/render/static"
+	"github.com/danielriddell21/unum/internal/diagram/render/tui"
+	diagramweb "github.com/danielriddell21/unum/internal/diagram/render/web"
 	"github.com/danielriddell21/unum/internal/telemetry"
 )
 
@@ -46,7 +46,7 @@ func Command(globalNoColor *bool, globalQuiet *bool, version string, tel *teleme
 	f.lightTheme = cfg.LightTheme
 
 	cmd := &cobra.Command{
-		Use:   "render <file>",
+		Use:   "diagram <file>",
 		Short: "Render mermaid and d2 diagrams to images and draw.io",
 		Long: `Render a diagram source file to an image or an editable draw.io document.
 
@@ -112,9 +112,10 @@ func runRender(f *flags, file string) error {
 		mode = "web"
 	}
 
-	ctx, span := f.tel.Tracer().Start(context.Background(), "render.execute",
+	ctx, span := f.tel.Tracer().Start(
+		context.Background(), "diagram.execute",
 		trace.WithAttributes(
-			attribute.String("tool", "render"),
+			attribute.String("tool", "diagram"),
 			attribute.String("mode", mode),
 			attribute.String("lang", lang.String()),
 			attribute.String("format", format.String()),
@@ -130,13 +131,13 @@ func runRender(f *flags, file string) error {
 		return fmt.Errorf("cannot read %s: %w", file, err)
 	}
 	f.tel.M.Invocations.Add(ctx, 1, ometric.WithAttributes(
-		attribute.String("tool", "render"),
+		attribute.String("tool", "diagram"),
 		attribute.String("mode", mode),
 		attribute.String("os", runtime.GOOS),
 		attribute.String("arch", runtime.GOARCH),
 		attribute.String("version", f.version),
 	))
-	f.tel.M.InputBytes.Record(ctx, int64(len(data)), ometric.WithAttributes(attribute.String("tool", "render")))
+	f.tel.M.InputBytes.Record(ctx, int64(len(data)), ometric.WithAttributes(attribute.String("tool", "diagram")))
 
 	if f.web {
 		return runWeb(f, lang, data)
@@ -166,14 +167,14 @@ func runStatic(ctx context.Context, f *flags, span trace.Span, lang Language, fo
 
 	span.SetAttributes(attribute.Int("render.output_bytes", len(out)))
 	f.tel.M.Duration.Record(ctx, elapsed.Seconds(), ometric.WithAttributes(
-		attribute.String("tool", "render"),
+		attribute.String("tool", "diagram"),
 		attribute.String("mode", "cli"),
 	))
 	return nil
 }
 
 func runWeb(f *flags, lang Language, data []byte) error {
-	if err := renderweb.Start(renderweb.Options{
+	if err := diagramweb.Start(diagramweb.Options{
 		Port:       f.webPort,
 		Quiet:      f.quiet,
 		DarkTheme:  f.theme,
@@ -189,7 +190,7 @@ func runWeb(f *flags, lang Language, data []byte) error {
 }
 
 func render(f *flags, lang Language, format Format, data []byte) ([]byte, error) {
-	out, _, err := diagram.Render(lang.String(), format.String(), string(data), diagram.ThemeByName(f.theme))
+	out, _, err := engine.Render(lang.String(), format.String(), string(data), engine.ThemeByName(f.theme))
 	if err != nil {
 		return nil, fmt.Errorf("render %s: %w", lang, err)
 	}
@@ -197,7 +198,7 @@ func render(f *flags, lang Language, format Format, data []byte) ([]byte, error)
 }
 
 func runTUI(f *flags, file string, lang Language, data []byte) error {
-	info := rendertui.Info{
+	info := tui.Info{
 		File:   filepath.Base(file),
 		Lang:   lang.String(),
 		Source: string(data),
@@ -209,46 +210,46 @@ func runTUI(f *flags, file string, lang Language, data []byte) error {
 	return runTUIMermaid(f, info, data)
 }
 
-func runTUID2(f *flags, info rendertui.Info, data []byte) error {
-	d, err := diagram.RenderD2(string(data), diagram.ThemeByName(f.theme))
+func runTUID2(f *flags, info tui.Info, data []byte) error {
+	d, err := engine.RenderD2(string(data), engine.ThemeByName(f.theme))
 	if err != nil {
 		info.Err = err
 		return startTUI(f, info)
 	}
 	info.SVG = d.SVG
-	info.Width, info.Height = diagram.SVGSize(d.SVG)
+	info.Width, info.Height = engine.SVGSize(d.SVG)
 	info.Shapes, info.Conns = d.NumShapes(), d.NumConnections()
 	info.Drawio, _ = d.Drawio()
-	if ascii, err := diagram.RenderD2ASCII(string(data)); err == nil {
+	if ascii, err := engine.RenderD2ASCII(string(data)); err == nil {
 		info.ASCII = ascii
 	}
-	info.PNG, _ = diagram.SVGToPNG(d.SVG)
+	info.PNG, _ = engine.SVGToPNG(d.SVG)
 	return startTUI(f, info)
 }
 
-func runTUIMermaid(f *flags, info rendertui.Info, data []byte) error {
-	svg, err := diagram.RenderMermaid(string(data), diagram.ThemeByName(f.theme))
+func runTUIMermaid(f *flags, info tui.Info, data []byte) error {
+	svg, err := engine.RenderMermaid(string(data), engine.ThemeByName(f.theme))
 	if err != nil {
 		info.Err = err
 		return startTUI(f, info)
 	}
 	info.SVG = svg
-	info.Width, info.Height = diagram.SVGSize(svg)
-	info.Drawio, _ = diagram.MermaidDrawio(string(data), svg, diagram.ThemeByName(f.theme))
-	info.PNG, _ = diagram.MermaidSVGToPNG(svg)
+	info.Width, info.Height = engine.SVGSize(svg)
+	info.Drawio, _ = engine.MermaidDrawio(string(data), svg, engine.ThemeByName(f.theme))
+	info.PNG, _ = engine.MermaidSVGToPNG(svg)
 
 	// Graph-shaped types convert to d2 for a crisp Unicode preview; chart and
 	// timeline types yield "", leaving the TUI to show its no-preview note.
-	if d2src, err := diagram.MermaidToD2(string(data)); err == nil && d2src != "" {
-		if ascii, err := diagram.RenderD2ASCII(d2src); err == nil {
+	if d2src, err := engine.MermaidToD2(string(data)); err == nil && d2src != "" {
+		if ascii, err := engine.RenderD2ASCII(d2src); err == nil {
 			info.ASCII = ascii
 		}
 	}
 	return startTUI(f, info)
 }
 
-func startTUI(f *flags, info rendertui.Info) error {
-	if err := rendertui.Start(info, f.theme, f.version); err != nil {
+func startTUI(f *flags, info tui.Info) error {
+	if err := tui.Start(info, f.theme, f.version); err != nil {
 		return fmt.Errorf("render TUI: %w", err)
 	}
 	return nil
@@ -281,7 +282,7 @@ func isTerminal(file *os.File) bool {
 func recordError(ctx context.Context, f *flags, span trace.Span, kind string) {
 	span.SetStatus(codes.Error, kind)
 	f.tel.M.Errors.Add(ctx, 1, ometric.WithAttributes(
-		attribute.String("tool", "render"),
+		attribute.String("tool", "diagram"),
 		attribute.String("error_type", kind),
 	))
 }

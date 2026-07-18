@@ -1,4 +1,4 @@
-package diagram
+package engine
 
 func SVGSize(svg []byte) (width, height int) {
 	if m := svgSizeRE.FindSubmatch(svg); m != nil {

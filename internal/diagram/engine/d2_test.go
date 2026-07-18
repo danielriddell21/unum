@@ -1,14 +1,14 @@
-package diagram_test
+package engine_test
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/danielriddell21/unum/internal/render/diagram"
+	"github.com/danielriddell21/unum/internal/diagram/engine"
 )
 
 func TestRenderD2SVG(t *testing.T) {
-	d, err := diagram.RenderD2("x -> y", nil)
+	d, err := engine.RenderD2("x -> y", nil)
 	if err != nil {
 		t.Fatalf("RenderD2: %v", err)
 	}
@@ -18,13 +18,13 @@ func TestRenderD2SVG(t *testing.T) {
 }
 
 func TestRenderD2Invalid(t *testing.T) {
-	if _, err := diagram.RenderD2("x -> ", nil); err == nil {
+	if _, err := engine.RenderD2("x -> ", nil); err == nil {
 		t.Error("expected error for invalid d2 source")
 	}
 }
 
 func TestD2Drawio(t *testing.T) {
-	d, err := diagram.RenderD2("alpha -> beta", nil)
+	d, err := engine.RenderD2("alpha -> beta", nil)
 	if err != nil {
 		t.Fatalf("RenderD2: %v", err)
 	}

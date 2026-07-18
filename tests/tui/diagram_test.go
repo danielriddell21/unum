@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/exp/teatest"
 
-	rendertui "github.com/danielriddell21/unum/internal/render/render/tui"
+	rendertui "github.com/danielriddell21/unum/internal/diagram/render/tui"
 )
 
 func stubInfo() rendertui.Info {

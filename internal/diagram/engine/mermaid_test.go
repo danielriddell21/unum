@@ -1,10 +1,10 @@
-package diagram_test
+package engine_test
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/danielriddell21/unum/internal/render/diagram"
+	"github.com/danielriddell21/unum/internal/diagram/engine"
 )
 
 // Every diagram kind go-mermaid v0.1.3 recognises must render to an SVG through
@@ -41,7 +41,7 @@ func TestRenderMermaidAllKinds(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.kind, func(t *testing.T) {
-			out, err := diagram.RenderMermaid(tc.src, nil)
+			out, err := engine.RenderMermaid(tc.src, nil)
 			if err != nil {
 				t.Fatalf("RenderMermaid(%s): %v", tc.kind, err)
 			}
@@ -54,7 +54,7 @@ func TestRenderMermaidAllKinds(t *testing.T) {
 
 func TestRenderMermaidUnsupported(t *testing.T) {
 	// An unrecognised header must surface a clean error, never a panic.
-	if _, err := diagram.RenderMermaid("bogusDiagram\n  x --> y\n", nil); err == nil {
+	if _, err := engine.RenderMermaid("bogusDiagram\n  x --> y\n", nil); err == nil {
 		t.Error("expected an error for an unrecognised diagram type")
 	}
 }

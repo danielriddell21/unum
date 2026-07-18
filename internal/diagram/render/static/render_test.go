@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/danielriddell21/unum/internal/render/render/static"
+	"github.com/danielriddell21/unum/internal/diagram/render/static"
 )
 
 func TestBootNoColor(t *testing.T) {
 	var buf bytes.Buffer
 	static.Boot(&buf, "d2", "svg", static.Options{NoColor: true})
 	out := buf.String()
-	if !strings.Contains(out, "render") || !strings.Contains(out, "d2 → svg") {
+	if !strings.Contains(out, "diagram") || !strings.Contains(out, "d2 → svg") {
 		t.Errorf("unexpected boot line: %q", out)
 	}
 	if strings.Contains(out, "\x1b[") {
@@ -34,7 +34,7 @@ func TestBootColored(t *testing.T) {
 	var buf bytes.Buffer
 	static.Boot(&buf, "mermaid", "png", static.Options{Theme: static.ResolveTheme("cyber")})
 	out := buf.String()
-	if !strings.Contains(out, "render") || !strings.Contains(out, "mermaid → png") {
+	if !strings.Contains(out, "diagram") || !strings.Contains(out, "mermaid → png") {
 		t.Errorf("unexpected boot line: %q", out)
 	}
 }

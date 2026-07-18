@@ -34,13 +34,13 @@ func Boot(w io.Writer, lang, format string, opts Options) {
 		return
 	}
 	if opts.NoColor {
-		_, _ = fmt.Fprintf(w, "[ UNUM ] render  %s → %s  · ✓\n", lang, format)
+		_, _ = fmt.Fprintf(w, "[ UNUM ] diagram  %s → %s  · ✓\n", lang, format)
 		return
 	}
 	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("#3A3A3A"))
 	_, _ = fmt.Fprintf(w, "%s %s  %s\n",
 		opts.Theme.Banner.Render("[ UNUM ]"),
-		opts.Theme.Banner.Render("render"),
+		opts.Theme.Banner.Render("diagram"),
 		muted.Render(fmt.Sprintf("%s → %s  · ✓", lang, format)),
 	)
 }
