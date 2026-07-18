@@ -69,7 +69,11 @@ Output modes:
 Rendering is pure Go and needs no browser. d2 draws via the terrastruct
 library; mermaid draws via go-mermaid, which supports flowchart, sequence,
 class, state, er, pie, journey, quadrant, gitgraph, timeline, mindmap,
-gantt, c4, requirement, sankey, xychart, block, kanban, packet and radar.`,
+gantt, c4, requirement, sankey, xychart, block, kanban, packet and radar.
+
+Mermaid sources the native converter cannot map (for example flowcharts
+with hyphenated node IDs) still render to svg and png, but fall back to an
+embedded-image draw.io export and skip the --ui terminal preview.`,
 		Args:         cobra.ExactArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -7,6 +7,7 @@ import (
 
 	mmparse "github.com/sammcj/mermaid-check"
 	"github.com/sammcj/mermaid-check/ast"
+	"oss.terrastruct.com/d2/d2ast"
 )
 
 var d2IDSafe = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
@@ -189,11 +190,13 @@ func stateD2(sd *ast.StateDiagram) string {
 			case *ast.Transition:
 				g.edge(n.From, n.To, n.Label)
 			case *ast.StartState:
-				g.labels["start"] = "●"
-				g.edge("start", n.To, "")
+				// Underscored IDs keep the synthetic terminals from colliding
+				// with user states that happen to be named "start" or "end".
+				g.labels["__start__"] = "●"
+				g.edge("__start__", n.To, "")
 			case *ast.EndState:
-				g.labels["end"] = "◉"
-				g.edge(n.From, "end", "")
+				g.labels["__end__"] = "◉"
+				g.edge(n.From, "__end__", "")
 			}
 		}
 	}
@@ -216,8 +219,10 @@ func erD2(erd *ast.ERDiagram) string {
 }
 
 func d2ID(id string) string {
-	if d2IDSafe.MatchString(id) {
-		return id
+	// Quoting escapes both unsafe characters and d2 reserved keywords (a node
+	// named "style" would otherwise fail to compile as a shape ID).
+	if _, reserved := d2ast.ReservedKeywords[strings.ToLower(id)]; reserved || !d2IDSafe.MatchString(id) {
+		return fmt.Sprintf("%q", id)
 	}
-	return fmt.Sprintf("%q", id)
+	return id
 }

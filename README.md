@@ -17,6 +17,7 @@ A unified developer tool suite, built in Go.
 | `unum json` | JSON viewer, validator, and analyzer — three output modes, six analysis lenses |
 | `unum diff` | Diff visualizer — text, JSON, YAML, and Terraform plans; static, TUI, and web output |
 | `unum hash` | Deterministic deriver — maps any string to a stable port, UUID, color, short ID, emoji, and passphrase |
+| `unum render` | Diagram renderer — mermaid and d2 to SVG, PNG, and editable draw.io; static, TUI, and web output |
 
 ## Install
 
