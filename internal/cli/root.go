@@ -52,6 +52,7 @@ across terminal, TUI, and web interfaces.`,
 	root.AddCommand(jsontool.Command(&noColor, &quiet, version, tel))
 	root.AddCommand(difftool.Command(&noColor, &quiet, version, tel))
 	root.AddCommand(hashtool.Command(&noColor, &quiet, version, tel))
+	root.AddCommand(windowCmd(version, tel))
 	root.AddCommand(completionCmd())
 
 	if err := root.Execute(); err != nil {

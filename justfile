@@ -139,6 +139,13 @@ diff-yaml file-a="testdata/diff-a.yaml" file-b="testdata/diff-b.yaml":
 diff-tf file="testdata/diff-a.tfplan.json":
     go run {{ main }} diff {{ file }} {{ file }} --format terraform
 
+# ── Window ────────────────────────────────────────────────────────────────────
+
+# native window app with every tool; requires a display and OpenGL
+[group('window')]
+window file-a="testdata/diff-a.json" file-b="testdata/diff-b.json":
+    go run -tags ebiten {{ main }} window {{ file-a }} {{ file-b }}
+
 # ── Hash ──────────────────────────────────────────────────────────────────────
 
 # full derivation table
