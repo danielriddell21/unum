@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>unum — Render</title>
+  <title>unum — Diagram</title>
   <link rel="stylesheet" href="/shared.css" />
   <link rel="stylesheet" href="/style.css" />
   <script>window.UNUM_CONFIG={darkTheme:"{{.DarkTheme}}",lightTheme:"{{.LightTheme}}",version:"{{.Version}}",themes:{{.ThemeData}}};</script>
-  <script>window.RENDER_CONFIG={lang:"{{.Lang}}",source:{{.SourceJSON}}};</script>
+  <script>window.DIAGRAM_CONFIG={lang:"{{.Lang}}",source:{{.SourceJSON}}};</script>
   <script src="/shared.js"></script>
   {{if .UmamiEnabled}}<script defer src="/umami/script.js" data-website-id="{{.UmamiWebsiteID}}"></script>{{end}}
 </head>
@@ -15,7 +15,7 @@
 
   <div id="header">
     <span class="brand">[ UNUM ]</span>
-    <span class="hdr-tool">render</span>
+    <span class="hdr-tool">diagram</span>
   </div>
 
   <div class="layout">

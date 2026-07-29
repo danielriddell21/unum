@@ -67,7 +67,7 @@ func TestHandleIndex(t *testing.T) {
 		t.Fatalf("status %d, want 200", w.Code)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, "RENDER_CONFIG") || !strings.Contains(body, "render") {
+	if !strings.Contains(body, "DIAGRAM_CONFIG") || !strings.Contains(body, "diagram") {
 		t.Errorf("index missing expected content:\n%s", body)
 	}
 }

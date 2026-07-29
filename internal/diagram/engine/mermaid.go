@@ -31,8 +31,10 @@ func MermaidSVGToPNG(svg []byte) ([]byte, error) {
 
 func (t *Theme) goMermaidPalette() gm.Palette {
 	return gm.Palette{
+		// Fill nodes with the canvas colour (border-only, like the d2 render) so
+		// the two engines look like one tool and labels keep full contrast.
 		Background: t.Background,
-		NodeFill:   t.SurfaceAlt,
+		NodeFill:   t.Background,
 		NodeStroke: t.Accent,
 		Text:       t.Text,
 		Edge:       t.Accent,

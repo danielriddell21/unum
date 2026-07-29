@@ -7,7 +7,7 @@ const errorBox = document.getElementById('error');
 const statusLang = document.getElementById('status-lang');
 const statusSize = document.getElementById('status-size');
 
-const cfg = window.RENDER_CONFIG || { lang: 'd2', source: '' };
+const cfg = window.DIAGRAM_CONFIG || { lang: 'd2', source: '' };
 source.value = cfg.source || '';
 if (cfg.lang === 'mermaid' || cfg.lang === 'd2') langSel.value = cfg.lang;
 

@@ -238,9 +238,13 @@ func runTUIMermaid(f *flags, info tui.Info, data []byte) error {
 	info.Drawio, _ = engine.MermaidDrawio(string(data), svg, engine.ThemeByName(f.theme))
 	info.PNG, _ = engine.MermaidSVGToPNG(svg)
 
-	// Graph-shaped types convert to d2 for a crisp Unicode preview; chart and
-	// timeline types yield "", leaving the TUI to show its no-preview note.
+	// Graph-shaped types convert to d2 for a crisp Unicode preview and a
+	// shape/edge count matching the d2 caption; chart and timeline types yield
+	// "", leaving the TUI to show its no-preview note.
 	if d2src, err := engine.MermaidToD2(string(data)); err == nil && d2src != "" {
+		if d, err := engine.RenderD2(d2src, engine.ThemeByName(f.theme)); err == nil {
+			info.Shapes, info.Conns = d.NumShapes(), d.NumConnections()
+		}
 		if ascii, err := engine.RenderD2ASCII(d2src); err == nil {
 			info.ASCII = ascii
 		}
