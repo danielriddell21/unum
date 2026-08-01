@@ -50,6 +50,20 @@ func TestHandleRenderMermaidNonFlowchart(t *testing.T) {
 	}
 }
 
+func TestHandleIndexWithoutSource(t *testing.T) {
+	// Started with no file: the page still serves so the browser can load one.
+	s := &server{opts: Options{Source: "", Lang: "d2", Version: "test"}}
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	s.handleIndex(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d, want 200", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), `source:""`) {
+		t.Errorf("expected an empty source in the page config:\n%s", w.Body.String())
+	}
+}
+
 func TestHandleRenderUnknownLang(t *testing.T) {
 	s := &server{}
 	w := postRender(t, s, "cobol", "svg", "x -> y")

@@ -114,6 +114,16 @@ func TestRenderBadFormat(t *testing.T) {
 	}
 }
 
+func TestDiagramNoFileWithoutWeb(t *testing.T) {
+	_, stderr, code := run("diagram", flagNoColor)
+	if code == 0 {
+		t.Fatal("expected non-zero exit when no file is given without --web")
+	}
+	if stderr == "" {
+		t.Error("expected an error message in stderr")
+	}
+}
+
 func TestRenderMissingFile(t *testing.T) {
 	_, stderr, code := run("diagram", "nonexistent.d2")
 	if code == 0 {

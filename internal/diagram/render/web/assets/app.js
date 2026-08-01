@@ -6,6 +6,9 @@ const canvas = document.getElementById('canvas');
 const errorBox = document.getElementById('error');
 const statusLang = document.getElementById('status-lang');
 const statusSize = document.getElementById('status-size');
+const fileInput = document.getElementById('file-input');
+const browseBtn = document.getElementById('browse-btn');
+const filenameEl = document.getElementById('filename');
 
 const cfg = window.DIAGRAM_CONFIG || { lang: 'd2', source: '' };
 source.value = cfg.source || '';
@@ -27,6 +30,14 @@ function currentTheme() {
 async function render() {
   const lang = langSel.value;
   statusLang.textContent = '[ ' + lang + ' ]';
+  if (!source.value.trim()) {
+    // Nothing loaded yet (started with no file): leave the canvas empty rather
+    // than rendering a blank diagram or surfacing a parse error.
+    errorBox.classList.add('hidden');
+    canvas.replaceChildren();
+    statusSize.textContent = '';
+    return;
+  }
   const res = await fetch('/api/render?lang=' + lang + '&format=svg&theme=' + encodeURIComponent(currentTheme()), {
     method: 'POST',
     body: source.value,
@@ -77,6 +88,46 @@ async function download(format) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+function langFromName(name) {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.mmd') || lower.endsWith('.mermaid')) return 'mermaid';
+  if (lower.endsWith('.d2')) return 'd2';
+  return '';
+}
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    source.value = e.target.result;
+    filenameEl.textContent = file.name;
+    const lang = langFromName(file.name);
+    if (lang) langSel.value = lang;
+    render();
+  };
+  reader.onerror = () => {
+    errorBox.textContent = 'failed to read ' + file.name;
+    errorBox.classList.remove('hidden');
+  };
+  reader.readAsText(file);
+}
+
+browseBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (file) loadFile(file);
+});
+source.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  source.classList.add('drag-over');
+});
+source.addEventListener('dragleave', () => source.classList.remove('drag-over'));
+source.addEventListener('drop', (e) => {
+  e.preventDefault();
+  source.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+});
 
 source.addEventListener('input', debounceRender);
 langSel.addEventListener('change', render);

@@ -142,3 +142,33 @@
 #status-lang { color: var(--border-active); font-weight: bold; }
 #status-size { color: var(--text); }
 #status-hints { margin-left: auto; color: var(--muted); }
+
+.browse-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.browse-btn:hover {
+  border-color: var(--border-active);
+  color: var(--border-active);
+}
+
+.paste-filename {
+  color: var(--border-active);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#source.drag-over {
+  background: var(--bg-hover);
+}

@@ -46,7 +46,7 @@ func Command(globalNoColor *bool, globalQuiet *bool, version string, tel *teleme
 	f.lightTheme = cfg.LightTheme
 
 	cmd := &cobra.Command{
-		Use:   "diagram <file>",
+		Use:   "diagram [file]",
 		Short: "Render mermaid and d2 diagrams to images and draw.io",
 		Long: `Render a diagram source file to an image or an editable draw.io document.
 
@@ -66,6 +66,9 @@ Output modes:
   --ui       Terminal viewer with source and render details
   --web      Browser-based live preview
 
+Omit [file] with --web to start empty and drop, paste, or browse a diagram
+in the browser.
+
 Rendering is pure Go and needs no browser. d2 draws via the terrastruct
 library; mermaid draws via go-mermaid, which supports flowchart, sequence,
 class, state, er, pie, journey, quadrant, gitgraph, timeline, mindmap,
@@ -74,11 +77,14 @@ gantt, c4, requirement, sankey, xychart, block, kanban, packet and radar.
 Mermaid sources the native converter cannot map (for example flowcharts
 with hyphenated node IDs) still render to svg and png, but fall back to an
 embedded-image draw.io export and skip the --ui terminal preview.`,
-		Args:         cobra.ExactArgs(1),
+		Args:         cobra.MaximumNArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			f.noColor = f.noColor || *globalNoColor
 			f.quiet = f.quiet || *globalQuiet
+			if len(args) == 0 {
+				return runNoFile(f)
+			}
 			return runRender(f, args[0])
 		},
 	}
@@ -93,6 +99,22 @@ embedded-image draw.io export and skip the --ui terminal preview.`,
 	cmd.Flags().BoolVar(&f.quiet, "quiet", false, "suppress the boot line")
 
 	return cmd
+}
+
+func runNoFile(f *flags) error {
+	if !f.web {
+		return fmt.Errorf("no diagram file given (use --web to load one in the browser)")
+	}
+	_, span := f.tel.Tracer().Start(context.Background(), "diagram.execute",
+		trace.WithAttributes(
+			attribute.String("tool", "diagram"),
+			attribute.String("mode", "web"),
+			attribute.String("os", runtime.GOOS),
+			attribute.String("arch", runtime.GOARCH),
+		),
+	)
+	defer span.End()
+	return runWeb(f, LangD2, nil)
 }
 
 func runRender(f *flags, file string) error {

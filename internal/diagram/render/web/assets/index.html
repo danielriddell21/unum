@@ -27,13 +27,15 @@
             <option value="mermaid">mermaid</option>
           </select>
         </label>
+        <button class="browse-btn" id="browse-btn">browse...</button>
+        <input id="file-input" type="file" accept=".d2,.mmd,.mermaid,text/plain" style="display:none" />
         <div class="downloads">
           <button data-fmt="svg">svg</button>
           <button data-fmt="png">png</button>
           <button data-fmt="drawio">drawio</button>
         </div>
       </div>
-      <textarea id="source" spellcheck="false" aria-label="Diagram source" placeholder="type a diagram..."></textarea>
+      <textarea id="source" spellcheck="false" aria-label="Diagram source" placeholder="drop a .d2 or .mmd file here, paste, or click browse..."></textarea>
     </section>
 
     <section class="preview">
@@ -44,6 +46,7 @@
 
   <div id="status-bar">
     <span id="status-lang"></span>
+    <span class="paste-filename" id="filename"></span>
     <span id="status-size"></span>
     <span id="status-hints">edit source · live preview · download svg / png / drawio</span>
   </div>

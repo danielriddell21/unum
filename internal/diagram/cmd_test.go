@@ -66,6 +66,7 @@ func TestCommandErrors(t *testing.T) {
 		{"bad-format", []string{writeSource(t, "y.d2", "a -> b"), "--format", "pdf"}},
 		{"missing-file", []string{"does-not-exist.d2"}},
 		{"forced-lang-render-error", []string{writeSource(t, "z.d2", "a ->"), "--lang", "d2"}},
+		{"no-file-without-web", []string{}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

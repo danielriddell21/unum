@@ -32,6 +32,24 @@ func TestRenderWebContainerMode(t *testing.T) {
 	}
 }
 
+func TestDiagramWebNoFile(t *testing.T) {
+	// Started with no file: the page must still serve so a diagram can be
+	// dropped, pasted, or browsed in the browser.
+	const port = "19574"
+	cmd := exec.Command(unumBin, "diagram", "--web")
+	cmd.Env = append(os.Environ(), "PORT="+port)
+	if err := cmd.Start(); err != nil {
+		t.Fatalf(renderStartServerErr, err)
+	}
+	t.Cleanup(func() { _ = cmd.Process.Kill() })
+
+	resp := waitForServer(t, fmt.Sprintf("http://localhost:%s/", port))
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("GET /: status %d, want 200", resp.StatusCode)
+	}
+}
+
 func TestRenderWebAPI_D2SVG(t *testing.T) {
 	const port = "19572"
 	startRenderServer(t, port)
