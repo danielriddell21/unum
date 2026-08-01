@@ -22,7 +22,30 @@
     <span class="hdr-info" id="hdr-meta"></span>
   </div>
 
-  <div class="layout">
+  <!-- Upload screen: the initial empty state, consistent with the json and diff web UIs -->
+  <div id="upload-panel" style="display:none">
+    <div class="upload-field">
+      <textarea class="paste-area" id="paste-area" placeholder="drop a .d2 or .mmd file here, paste, or click browse..." spellcheck="false" aria-label="Diagram source"></textarea>
+      <div class="paste-meta">
+        <span class="paste-filename" id="paste-filename"></span>
+        <button class="browse-btn" id="browse-btn">browse...</button>
+        <input id="file-input" type="file" aria-label="Load a diagram file" accept=".d2,.mmd,.mermaid,text/plain" style="display:none" />
+      </div>
+    </div>
+    <div class="upload-controls">
+      <label>language
+        <select id="up-lang">
+          <option value="d2">d2</option>
+          <option value="mermaid">mermaid</option>
+        </select>
+      </label>
+      <button id="up-submit">render →</button>
+      <span id="up-error" class="upload-error"></span>
+    </div>
+  </div>
+
+  <!-- Editor + preview: the live view once a diagram is loaded -->
+  <div class="layout" id="layout" style="display:none">
     <section class="editor">
       <div class="controls">
         <label>language
@@ -31,15 +54,13 @@
             <option value="mermaid">mermaid</option>
           </select>
         </label>
-        <button class="browse-btn" id="browse-btn">browse...</button>
-        <input id="file-input" type="file" aria-label="Load a diagram file" accept=".d2,.mmd,.mermaid,text/plain" style="display:none" />
         <div class="downloads">
           <button data-fmt="svg">svg</button>
           <button data-fmt="png">png</button>
           <button data-fmt="drawio">drawio</button>
         </div>
       </div>
-      <textarea id="source" spellcheck="false" aria-label="Diagram source" placeholder="drop a .d2 or .mmd file here, paste, or click browse..."></textarea>
+      <textarea id="source" spellcheck="false" aria-label="Diagram source" placeholder="edit source, live preview updates..."></textarea>
     </section>
 
     <section class="preview">

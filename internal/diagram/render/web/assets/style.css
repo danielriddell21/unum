@@ -143,6 +143,58 @@
 #status-size { color: var(--text); }
 #status-hints { margin-left: auto; color: var(--muted); }
 
+/* ── Upload screen ───────────────────────────────────────────────────────────── */
+
+#upload-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.upload-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.paste-area {
+  flex: 1;
+  min-height: 160px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-active);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 10px 12px;
+  resize: none;
+  outline: none;
+  transition: background 0.15s;
+}
+
+.paste-area:focus { border-color: var(--border-active); }
+.paste-area.drag-over { background: var(--bg-hover); }
+
+.paste-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.paste-filename {
+  color: var(--border-active);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .browse-btn {
   background: transparent;
   border: 1px solid var(--border);
@@ -161,16 +213,52 @@
   color: var(--border-active);
 }
 
-.paste-filename {
-  color: var(--border-active);
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
-#source.drag-over {
-  background: var(--bg-hover);
+.upload-controls label {
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.upload-controls select {
+  background: var(--bg);
+  border: 1px solid var(--border-active);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+}
+
+#up-submit {
+  background: none;
+  border: 1px solid var(--border-active);
+  color: var(--border-active);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 16px;
+  cursor: pointer;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  transition: all 0.15s;
+}
+
+#up-submit:hover {
+  background: var(--border-active);
+  color: var(--bg);
+}
+
+.upload-error {
+  color: #ff6b6b;
+  font-size: 12px;
 }
 
 #new-btn {
