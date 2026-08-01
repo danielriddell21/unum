@@ -1,0 +1,191 @@
+/* unum diagram web UI */
+
+:root {
+  --bg:            #0D0D0D;
+  --bg-panel:      #111111;
+  --bg-hover:      #1A1A2E;
+  --border:        #1E1E1E;
+  --border-active: #00D4FF;
+  --text:          #C0C0C0;
+  --muted:         #3A3A3A;
+}
+
+.layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Editor ─────────────────────────────────────────────────────────────────── */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  width: 42%;
+  min-width: 280px;
+  border-right: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.controls label {
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.controls select {
+  background: var(--bg);
+  border: 1px solid var(--border-active);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+}
+
+.downloads {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.downloads button {
+  background: none;
+  border: 1px solid var(--border-active);
+  border-radius: 3px;
+  color: var(--border-active);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  padding: 4px 12px;
+  transition: all 0.15s;
+}
+
+.downloads button:hover {
+  background: var(--border-active);
+  color: var(--bg);
+}
+
+#source {
+  flex: 1;
+  background: var(--bg);
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 16px;
+  resize: none;
+  outline: none;
+  tab-size: 2;
+}
+
+/* ── Preview ────────────────────────────────────────────────────────────────── */
+
+.preview {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+}
+
+.canvas svg {
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+}
+
+.error {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  color: #ff6b6b;
+  font-size: 12px;
+  white-space: pre-wrap;
+  background: var(--bg-panel);
+  border: 1px solid #ff6b6b;
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+
+.error.hidden { display: none; }
+
+/* ── Status bar ────────────────────────────────────────────────────────────── */
+
+#status-bar {
+  padding: 4px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+#status-lang { color: var(--border-active); font-weight: bold; }
+#status-size { color: var(--text); }
+#status-hints { margin-left: auto; color: var(--muted); }
+
+.browse-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.browse-btn:hover {
+  border-color: var(--border-active);
+  color: var(--border-active);
+}
+
+.paste-filename {
+  color: var(--border-active);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#source.drag-over {
+  background: var(--bg-hover);
+}
+
+#new-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  margin-left: auto;
+  margin-right: 6px;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+#new-btn:hover {
+  color: var(--border-active);
+}

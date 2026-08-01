@@ -1,0 +1,8 @@
+client: Client
+api: API Server
+db: Database
+
+client -> api: request
+api -> db: query
+db -> api: rows
+api -> client: response

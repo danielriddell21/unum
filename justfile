@@ -160,3 +160,35 @@ hash-ui:
 [group('hash')]
 hash-web:
     go run {{ main }} hash --web
+
+# ── Render ────────────────────────────────────────────────────────────────────
+
+# d2 diagram to SVG
+[group('diagram')]
+diagram file="testdata/sample.d2":
+    go run {{ main }} diagram {{ file }}
+
+# mermaid diagram to SVG
+[group('diagram')]
+diagram-mermaid file="testdata/sample.mmd":
+    go run {{ main }} diagram {{ file }}
+
+# diagram to PNG
+[group('diagram')]
+diagram-png file="testdata/sample.d2":
+    go run {{ main }} diagram {{ file }} --format png -o out.png
+
+# diagram to draw.io
+[group('diagram')]
+diagram-drawio file="testdata/sample.d2":
+    go run {{ main }} diagram {{ file }} --format drawio -o out.drawio
+
+# terminal viewer
+[group('diagram')]
+diagram-ui file="testdata/sample.d2":
+    go run {{ main }} diagram {{ file }} --ui
+
+# browser live preview
+[group('diagram')]
+diagram-web file="testdata/sample.d2":
+    go run {{ main }} diagram {{ file }} --web

@@ -1,0 +1,5 @@
+flowchart TD
+    Client -->|request| API[API Server]
+    API -->|query| DB[(Database)]
+    DB -->|rows| API
+    API -->|response| Client

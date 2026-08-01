@@ -84,7 +84,7 @@ func keys(m map[string]any) []string {
 func newBrowser(t *testing.T) *rod.Browser {
 	t.Helper()
 	l := launcher.New().Headless(true).Leakless(false)
-	if os.Getenv("CI") != "" {
+	if os.Getenv("CI") != "" || os.Geteuid() == 0 {
 		l = l.Set("no-sandbox")
 	}
 	u, err := l.Launch()
