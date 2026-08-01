@@ -1,12 +1,21 @@
 'use strict';
 
+const uploadPanel = document.getElementById('upload-panel');
+const layout = document.getElementById('layout');
+const pasteArea = document.getElementById('paste-area');
+const pasteFilename = document.getElementById('paste-filename');
+const browseBtn = document.getElementById('browse-btn');
+const fileInput = document.getElementById('file-input');
+const upLang = document.getElementById('up-lang');
+const upSubmit = document.getElementById('up-submit');
+const upError = document.getElementById('up-error');
+
 const source = document.getElementById('source');
 const langSel = document.getElementById('lang');
 const canvas = document.getElementById('canvas');
 const errorBox = document.getElementById('error');
 const statusLang = document.getElementById('status-lang');
-const fileInput = document.getElementById('file-input');
-const browseBtn = document.getElementById('browse-btn');
+const statusHints = document.getElementById('status-hints');
 const hdrFilename = document.getElementById('hdr-filename');
 const hdrMeta = document.getElementById('hdr-meta');
 const sepFile = document.getElementById('sep-file');
@@ -36,9 +45,6 @@ function setHeaderMeta(w, h) {
 }
 
 const cfg = window.DIAGRAM_CONFIG || { lang: 'd2', source: '' };
-source.value = cfg.source || '';
-setHeaderFile(cfg.file || '');
-if (cfg.lang === 'mermaid' || cfg.lang === 'd2') langSel.value = cfg.lang;
 
 let timer = null;
 
@@ -122,38 +128,74 @@ function langFromName(name) {
   return '';
 }
 
-function loadFile(file) {
+// ── Upload screen ─────────────────────────────────────────────────────────────
+
+function showUploadPanel() {
+  layout.style.display = 'none';
+  uploadPanel.style.display = '';
+  setHeaderFile('');
+  setHeaderMeta(0, 0);
+  statusLang.textContent = '';
+  statusHints.textContent = 'drop, paste, or browse a .d2 / .mmd file';
+  pasteArea.value = '';
+  pasteArea._fileName = undefined;
+  pasteArea._fileContent = undefined;
+  pasteFilename.textContent = '';
+  fileInput.value = '';
+  upError.textContent = '';
+  pasteArea.focus();
+}
+
+function enterEditor(src, lang, filename) {
+  uploadPanel.style.display = 'none';
+  layout.style.display = '';
+  statusHints.textContent = 'edit source · live preview · download svg / png / drawio';
+  source.value = src || '';
+  if (lang === 'mermaid' || lang === 'd2') langSel.value = lang;
+  setHeaderFile(filename || '');
+  render();
+  source.focus();
+}
+
+function loadUploadFile(file) {
   const reader = new FileReader();
   reader.onload = (e) => {
-    source.value = e.target.result;
-    setHeaderFile(file.name);
+    pasteArea.value = e.target.result;
+    pasteArea._fileName = file.name;
+    pasteArea._fileContent = e.target.result;
+    pasteFilename.textContent = file.name;
     const lang = langFromName(file.name);
-    if (lang) langSel.value = lang;
-    render();
+    if (lang) upLang.value = lang;
   };
-  reader.onerror = () => {
-    errorBox.textContent = 'failed to read ' + file.name;
-    errorBox.classList.remove('hidden');
-  };
+  reader.onerror = () => { upError.textContent = '✗ failed to read ' + file.name; };
   reader.readAsText(file);
 }
 
 browseBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', () => {
   const file = fileInput.files[0];
-  if (file) loadFile(file);
+  if (file) loadUploadFile(file);
 });
-source.addEventListener('dragover', (e) => {
+pasteArea.addEventListener('dragover', (e) => {
   e.preventDefault();
-  source.classList.add('drag-over');
+  pasteArea.classList.add('drag-over');
 });
-source.addEventListener('dragleave', () => source.classList.remove('drag-over'));
-source.addEventListener('drop', (e) => {
+pasteArea.addEventListener('dragleave', () => pasteArea.classList.remove('drag-over'));
+pasteArea.addEventListener('drop', (e) => {
   e.preventDefault();
-  source.classList.remove('drag-over');
+  pasteArea.classList.remove('drag-over');
   const file = e.dataTransfer.files[0];
-  if (file) loadFile(file);
+  if (file) loadUploadFile(file);
 });
+upSubmit.addEventListener('click', () => {
+  upError.textContent = '';
+  if (!pasteArea.value.trim()) { upError.textContent = '✗ nothing to render'; return; }
+  const name = (pasteArea._fileContent !== undefined && pasteArea.value === pasteArea._fileContent && pasteArea._fileName)
+    ? pasteArea._fileName : '';
+  enterEditor(pasteArea.value, upLang.value, name);
+});
+
+// ── Editor ────────────────────────────────────────────────────────────────────
 
 source.addEventListener('input', debounceRender);
 langSel.addEventListener('change', render);
@@ -161,7 +203,7 @@ document.querySelectorAll('.downloads button').forEach(btn => {
   btn.addEventListener('click', () => download(btn.dataset.fmt));
 });
 
-// Clear back to the empty state so another diagram can be loaded, matching the
+// Clear back to the upload screen so another diagram can be loaded, matching the
 // [ new ] affordance in the json and diff web UIs.
 function addNewButton() {
   if (document.getElementById('new-btn')) return;
@@ -169,13 +211,7 @@ function addNewButton() {
   const btn = document.createElement('button');
   btn.id = 'new-btn';
   btn.textContent = '[ new ]';
-  btn.onclick = () => {
-    source.value = '';
-    fileInput.value = '';
-    setHeaderFile('');
-    render();
-    source.focus();
-  };
+  btn.onclick = showUploadPanel;
   const toggle = document.getElementById('mode-toggle');
   if (toggle) {
     toggle.style.marginLeft = '0';
@@ -189,7 +225,15 @@ function addNewButton() {
 document.addEventListener('DOMContentLoaded', () => {
   addNewButton();
   const toggle = document.getElementById('mode-toggle');
-  if (toggle) toggle.addEventListener('click', () => setTimeout(render, 0));
+  if (toggle) toggle.addEventListener('click', () => {
+    if (layout.style.display !== 'none') setTimeout(render, 0);
+  });
 });
 
-render();
+// Boot: open straight into the editor when launched with a file, otherwise show
+// the upload screen the same way the sibling tools do.
+if ((cfg.source || '').trim()) {
+  enterEditor(cfg.source, cfg.lang, cfg.file);
+} else {
+  showUploadPanel();
+}
