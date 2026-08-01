@@ -172,3 +172,20 @@
 #source.drag-over {
   background: var(--bg-hover);
 }
+
+#new-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  margin-left: auto;
+  margin-right: 6px;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+#new-btn:hover {
+  color: var(--border-active);
+}

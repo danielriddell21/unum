@@ -114,7 +114,7 @@ func runNoFile(f *flags) error {
 		),
 	)
 	defer span.End()
-	return runWeb(f, LangD2, nil)
+	return runWeb(f, LangD2, nil, "")
 }
 
 func runRender(f *flags, file string) error {
@@ -162,7 +162,7 @@ func runRender(f *flags, file string) error {
 	f.tel.M.InputBytes.Record(ctx, int64(len(data)), ometric.WithAttributes(attribute.String("tool", "diagram")))
 
 	if f.web {
-		return runWeb(f, lang, data)
+		return runWeb(f, lang, data, filepath.Base(file))
 	}
 	if f.ui {
 		return runTUI(f, file, lang, data)
@@ -195,7 +195,7 @@ func runStatic(ctx context.Context, f *flags, span trace.Span, lang Language, fo
 	return nil
 }
 
-func runWeb(f *flags, lang Language, data []byte) error {
+func runWeb(f *flags, lang Language, data []byte, file string) error {
 	if err := diagramweb.Start(diagramweb.Options{
 		Port:       f.webPort,
 		Quiet:      f.quiet,
@@ -205,6 +205,7 @@ func runWeb(f *flags, lang Language, data []byte) error {
 		Tel:        f.tel,
 		Source:     string(data),
 		Lang:       lang.String(),
+		File:       file,
 	}); err != nil {
 		return fmt.Errorf("render web: %w", err)
 	}

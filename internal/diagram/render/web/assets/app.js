@@ -5,13 +5,39 @@ const langSel = document.getElementById('lang');
 const canvas = document.getElementById('canvas');
 const errorBox = document.getElementById('error');
 const statusLang = document.getElementById('status-lang');
-const statusSize = document.getElementById('status-size');
 const fileInput = document.getElementById('file-input');
 const browseBtn = document.getElementById('browse-btn');
-const filenameEl = document.getElementById('filename');
+const hdrFilename = document.getElementById('hdr-filename');
+const hdrMeta = document.getElementById('hdr-meta');
+const sepFile = document.getElementById('sep-file');
+const sepMeta = document.getElementById('sep-meta');
+
+function setHeaderFile(name) {
+  hdrFilename.textContent = name || '';
+  sepFile.style.display = name ? '' : 'none';
+}
+
+// Built from DOM nodes rather than innerHTML so the header can never become an
+// injection sink, with the numbers accented the way the sibling tools do.
+function setHeaderMeta(w, h) {
+  hdrMeta.replaceChildren();
+  if (!w || !h) {
+    sepMeta.style.display = 'none';
+    return;
+  }
+  const accent = (v) => {
+    const s = document.createElement('span');
+    s.style.color = 'var(--border-active)';
+    s.textContent = v;
+    return s;
+  };
+  hdrMeta.append(accent(w), document.createTextNode(' × '), accent(h));
+  sepMeta.style.display = '';
+}
 
 const cfg = window.DIAGRAM_CONFIG || { lang: 'd2', source: '' };
 source.value = cfg.source || '';
+setHeaderFile(cfg.file || '');
 if (cfg.lang === 'mermaid' || cfg.lang === 'd2') langSel.value = cfg.lang;
 
 let timer = null;
@@ -35,7 +61,7 @@ async function render() {
     // than rendering a blank diagram or surfacing a parse error.
     errorBox.classList.add('hidden');
     canvas.replaceChildren();
-    statusSize.textContent = '';
+    setHeaderMeta(0, 0);
     return;
   }
   const res = await fetch('/api/render?lang=' + lang + '&format=svg&theme=' + encodeURIComponent(currentTheme()), {
@@ -68,7 +94,7 @@ async function render() {
       node.setAttribute('width', vb.width);
       node.setAttribute('height', vb.height);
     }
-    statusSize.textContent = Math.round(vb.width) + ' × ' + Math.round(vb.height);
+    setHeaderMeta(Math.round(vb.width), Math.round(vb.height));
   }
 }
 
@@ -100,7 +126,7 @@ function loadFile(file) {
   const reader = new FileReader();
   reader.onload = (e) => {
     source.value = e.target.result;
-    filenameEl.textContent = file.name;
+    setHeaderFile(file.name);
     const lang = langFromName(file.name);
     if (lang) langSel.value = lang;
     render();
@@ -135,8 +161,33 @@ document.querySelectorAll('.downloads button').forEach(btn => {
   btn.addEventListener('click', () => download(btn.dataset.fmt));
 });
 
+// Clear back to the empty state so another diagram can be loaded, matching the
+// [ new ] affordance in the json and diff web UIs.
+function addNewButton() {
+  if (document.getElementById('new-btn')) return;
+  const header = document.getElementById('header');
+  const btn = document.createElement('button');
+  btn.id = 'new-btn';
+  btn.textContent = '[ new ]';
+  btn.onclick = () => {
+    source.value = '';
+    fileInput.value = '';
+    setHeaderFile('');
+    render();
+    source.focus();
+  };
+  const toggle = document.getElementById('mode-toggle');
+  if (toggle) {
+    toggle.style.marginLeft = '0';
+    header.insertBefore(btn, toggle);
+  } else {
+    header.appendChild(btn);
+  }
+}
+
 // Re-render the diagram in the matching palette when the light/dark toggle flips.
 document.addEventListener('DOMContentLoaded', () => {
+  addNewButton();
   const toggle = document.getElementById('mode-toggle');
   if (toggle) toggle.addEventListener('click', () => setTimeout(render, 0));
 });

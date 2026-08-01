@@ -31,6 +31,7 @@ type Options struct {
 	Tel        *telemetry.Telemetry
 	Source     string
 	Lang       string
+	File       string
 }
 
 type server struct {
@@ -98,10 +99,12 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		shared.IndexData
 		Lang       string
+		File       string
 		SourceJSON template.JS
 	}{
 		IndexData:  shared.NewIndexData(s.opts.DarkTheme, s.opts.LightTheme, s.opts.Version),
 		Lang:       s.opts.Lang,
+		File:       s.opts.File,
 		SourceJSON: template.JS(sourceJSON), //nolint:gosec // json-encoded file content, not executable markup
 	}
 	w.Header().Set("Content-Type", "text/html")
