@@ -6,74 +6,11 @@ on:
   pull_request:
     branches: ["trunk"]
 
-permissions:
-  contents: read
-
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-      - run: go test -coverprofile=coverage.txt ./...
-      - uses: codecov/codecov-action@v7
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-      - uses: golangci/golangci-lint-action@v9
-        with:
-          version: latest
-          args: --config .golangci.yml
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-      - run: go build ./...
-
-  mutate:
-    name: Mutation test
-    needs: [test]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/trunk'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-      - uses: go-gremlins/gremlins-action@v1
-        with:
-          args: --config .gremlins.yaml
-
-  tag:
-    name: Tag
-    needs: [test, lint, build]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/trunk'
-    runs-on: ubuntu-latest
+  ci:
+    uses: danielriddell21/github-actions/.github/workflows/ci.yaml@v1
     permissions:
       contents: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: mathieudutour/github-tag-action@v6.2
-        with:
-          github_token: ${{ secrets.UNUM_TOKEN }}
-          default_bump: false
-          tag_prefix: v
-          release_branches: trunk
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
+      tag-token: ${{ secrets.UNUM_TOKEN }}
