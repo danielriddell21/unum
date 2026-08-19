@@ -1,6 +1,7 @@
 package terraform
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -170,5 +171,167 @@ func TestRender_MultipleResourcesSeparated(t *testing.T) {
 	]}`)
 	if strings.Count(md, "resource ") != 2 {
 		t.Errorf("expected 2 resource blocks\n%s", md)
+	}
+}
+
+func listPlan(before, after string) string {
+	return `{"resource_changes":[{"address":"auth0_resource_server.api","type":"auth0_resource_server","name":"api","change":{"actions":["update"],"before":{"id":"api","scopes":` +
+		before + `},"after":{"id":"api","scopes":` + after + `}}}]}`
+}
+
+func markerCount(out, marker string) int {
+	n := 0
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), marker+" ") {
+			n++
+		}
+	}
+	return n
+}
+
+func TestRender_ListAlignment(t *testing.T) {
+	tests := []struct {
+		name           string
+		before, after  string
+		wantAdded      int
+		wantRemoved    int
+		want, notWant  []string
+		wantAttrHidden bool
+	}{
+		{
+			name:           "identical lists are hidden",
+			before:         `["read:users","write:users"]`,
+			after:          `["read:users","write:users"]`,
+			wantAttrHidden: true,
+		},
+		{
+			name:           "reorder only is hidden",
+			before:         `["read:users","create:users","delete:users"]`,
+			after:          `["create:users","delete:users","read:users"]`,
+			wantAttrHidden: true,
+		},
+		{
+			name:        "insert at front touches one line",
+			before:      `["create:users","delete:users","read:users"]`,
+			after:       `["admin:all","create:users","delete:users","read:users"]`,
+			wantAdded:   1,
+			wantRemoved: 0,
+			want:        []string{`+ "admin:all",`},
+			notWant:     []string{`- "create:users",`, `- "read:users",`},
+		},
+		{
+			name:        "insert in the middle touches one line",
+			before:      `["create:users","delete:users","update:users"]`,
+			after:       `["create:users","delete:users","read:reports","update:users"]`,
+			wantAdded:   1,
+			wantRemoved: 0,
+			want:        []string{`+ "read:reports",`},
+			notWant:     []string{`- "update:users",`},
+		},
+		{
+			name:      "insert at the end touches one line",
+			before:    `["create:users"]`,
+			after:     `["create:users","delete:users"]`,
+			wantAdded: 1,
+			want:      []string{`+ "delete:users",`},
+		},
+		{
+			name:        "removal from the middle touches one line",
+			before:      `["create:users","delete:users","read:users"]`,
+			after:       `["create:users","read:users"]`,
+			wantRemoved: 1,
+			want:        []string{`- "delete:users",`},
+			notWant:     []string{`- "read:users",`},
+		},
+		{
+			name:        "in-place replacement shows old and new",
+			before:      `["read:users"]`,
+			after:       `["read:reports"]`,
+			wantAdded:   1,
+			wantRemoved: 1,
+			want:        []string{`- "read:users",`, `+ "read:reports",`},
+		},
+		{
+			name:        "object elements align on content",
+			before:      `[{"value":"create:users","description":"Create"},{"value":"read:users","description":"Read"}]`,
+			after:       `[{"value":"create:users","description":"Create"},{"value":"read:reports","description":"Reports"},{"value":"read:users","description":"Read"}]`,
+			wantAdded:   1,
+			wantRemoved: 0,
+			want:        []string{`+ {"description":"Reports","value":"read:reports"},`},
+			notWant:     []string{`- {"description":"Read","value":"read:users"},`},
+		},
+		{
+			name:        "list emptied entirely",
+			before:      `["read:users","write:users"]`,
+			after:       `[]`,
+			wantRemoved: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, gutter := render(t, listPlan(tt.before, tt.after))
+			if tt.wantAttrHidden {
+				assertAttrHidden(t, gutter)
+				return
+			}
+			assertMarkerCounts(t, gutter, tt.wantAdded, tt.wantRemoved)
+			assertLines(t, gutter, tt.want, tt.notWant)
+		})
+	}
+}
+
+func assertAttrHidden(t *testing.T, gutter string) {
+	t.Helper()
+	if strings.Contains(gutter, "scopes") {
+		t.Errorf("unchanged list should be hidden\n%s", gutter)
+	}
+	if !strings.Contains(gutter, "(2 unchanged attributes hidden)") {
+		t.Errorf("expected both attributes hidden\n%s", gutter)
+	}
+}
+
+func assertMarkerCounts(t *testing.T, gutter string, wantAdded, wantRemoved int) {
+	t.Helper()
+	if got := markerCount(gutter, "+"); got != wantAdded {
+		t.Errorf("added lines = %d, want %d\n%s", got, wantAdded, gutter)
+	}
+	if got := markerCount(gutter, "-"); got != wantRemoved {
+		t.Errorf("removed lines = %d, want %d\n%s", got, wantRemoved, gutter)
+	}
+}
+
+func assertLines(t *testing.T, gutter string, want, notWant []string) {
+	t.Helper()
+	for _, w := range want {
+		if !strings.Contains(gutter, w) {
+			t.Errorf("output missing %q\n%s", w, gutter)
+		}
+	}
+	for _, w := range notWant {
+		if strings.Contains(gutter, w) {
+			t.Errorf("output should not contain %q\n%s", w, gutter)
+		}
+	}
+}
+
+func TestRender_ListAlignmentFallsBackWhenHuge(t *testing.T) {
+	var before, after strings.Builder
+	before.WriteByte('[')
+	after.WriteByte('[')
+	for i := range 600 {
+		if i > 0 {
+			before.WriteByte(',')
+			after.WriteByte(',')
+		}
+		fmt.Fprintf(&before, `"scope:%d"`, i)
+		fmt.Fprintf(&after, `"scope:%d"`, i)
+	}
+	before.WriteByte(']')
+	after.WriteString(`,"scope:new"]`)
+
+	_, gutter := render(t, listPlan(before.String(), after.String()))
+	if !strings.Contains(gutter, `+ "scope:new",`) {
+		t.Errorf("oversized list should still render the new element\n%s", gutter[:min(400, len(gutter))])
 	}
 }

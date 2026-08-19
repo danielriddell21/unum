@@ -1,0 +1,37 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.5",
+  "resource_changes": [
+    {
+      "address": "auth0_resource_server.api",
+      "mode": "managed",
+      "type": "auth0_resource_server",
+      "name": "api",
+      "provider_name": "registry.terraform.io/auth0/auth0",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "identifier": "https://api.example.com",
+          "name": "Example API",
+          "scopes": [
+            {"value": "create:users", "description": "Create users"},
+            {"value": "delete:users", "description": "Delete users"},
+            {"value": "read:users", "description": "Read users"},
+            {"value": "update:users", "description": "Update users"}
+          ]
+        },
+        "after": {
+          "identifier": "https://api.example.com",
+          "name": "Example API",
+          "scopes": [
+            {"value": "create:users", "description": "Create users"},
+            {"value": "delete:users", "description": "Delete users"},
+            {"value": "read:reports", "description": "Read reports"},
+            {"value": "read:users", "description": "Read users"},
+            {"value": "update:users", "description": "Update users"}
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -2,6 +2,8 @@ package parse
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 
 	diffnode "github.com/danielriddell21/unum/internal/diff/node"
 	jsonnode "github.com/danielriddell21/unum/internal/json/node"
@@ -88,33 +90,27 @@ func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]i
 
 	case jsonnode.KindArray: //nolint:dupl // mirrors yaml.go SequenceNode case; parallel parsers share structure but not types
 		dn.Kind = diffnode.Unchanged
-		aLen := len(a.Children)
-		bLen := len(b.Children)
-		maxLen := aLen
-		if bLen > maxLen {
-			maxLen = bLen
-		}
-		for i := range maxLen {
-			childPath := fmt.Sprintf("%s[%d]", path, i)
+		for _, op := range alignByKey(jsonNodeKeys(a.Children), jsonNodeKeys(b.Children)) {
 			switch {
-			case i < aLen && i < bLen:
+			case op.A >= 0 && op.B >= 0:
+				childPath := fmt.Sprintf("%s[%d]", path, op.B)
 				dn.Children = append(dn.Children,
-					compareNodes(a.Children[i], b.Children[i], childPath, "", i, counts))
-			case i < bLen:
+					compareNodes(a.Children[op.A], b.Children[op.B], childPath, "", op.B, counts))
+			case op.B >= 0:
 				counts[0]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Added,
-					Path:     childPath,
-					Index:    i,
-					NewValue: nodeRepr(b.Children[i]),
+					Path:     fmt.Sprintf("%s[%d]", path, op.B),
+					Index:    op.B,
+					NewValue: nodeRepr(b.Children[op.B]),
 				})
 			default:
 				counts[1]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Removed,
-					Path:     childPath,
-					Index:    i,
-					OldValue: nodeRepr(a.Children[i]),
+					Path:     fmt.Sprintf("%s[%d]", path, op.A),
+					Index:    op.A,
+					OldValue: nodeRepr(a.Children[op.A]),
 				})
 			}
 		}
@@ -145,6 +141,34 @@ func nodeRepr(n *jsonnode.Node) string {
 			return "[]"
 		}
 		return fmt.Sprintf("[%d items]", len(n.Children))
+	default:
+		return n.Raw
+	}
+}
+
+func jsonNodeKeys(nodes []*jsonnode.Node) []string {
+	keys := make([]string, len(nodes))
+	for i, n := range nodes {
+		keys[i] = jsonNodeKey(n)
+	}
+	return keys
+}
+
+func jsonNodeKey(n *jsonnode.Node) string {
+	switch n.Kind {
+	case jsonnode.KindObject:
+		parts := make([]string, 0, len(n.Children))
+		for _, c := range n.Children {
+			parts = append(parts, c.Key+":"+jsonNodeKey(c))
+		}
+		slices.Sort(parts)
+		return "{" + strings.Join(parts, ",") + "}"
+	case jsonnode.KindArray:
+		parts := make([]string, 0, len(n.Children))
+		for _, c := range n.Children {
+			parts = append(parts, jsonNodeKey(c))
+		}
+		return "[" + strings.Join(parts, ",") + "]"
 	default:
 		return n.Raw
 	}

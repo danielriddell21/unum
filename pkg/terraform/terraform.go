@@ -7,8 +7,8 @@
 // [Plan.ReplaceCount], list the changed resources with [Plan.Changed], or
 // render the diff body with [Plan.RenderDiff].
 //
-// The package emits plain, uncoloured text and imports only the standard
-// library: a caller adds any heading, footer and colour it wants.
+// The package emits plain, uncoloured text and pulls in no third-party
+// dependencies: a caller adds any heading, footer and colour it wants.
 package terraform
 
 import (

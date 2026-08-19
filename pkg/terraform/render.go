@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/danielriddell21/unum/internal/lcs"
 )
 
 type planLine struct {
@@ -176,7 +178,7 @@ func attribute(key string, bv any, bok bool, av any, aok bool, unknown, sensitiv
 	bList, bIsList := bv.([]any)
 	aList, aIsList := av.([]any)
 	if bIsList && aIsList {
-		if reflect.DeepEqual(bList, aList) {
+		if sameElements(bList, aList) {
 			return nil, false
 		}
 		return listDiff(pad, bList, aList, indent), true
@@ -230,25 +232,60 @@ func listAll(pad string, list []any, marker string, indent int) []planLine {
 }
 
 func listDiff(pad string, before, after []any, indent int) []planLine {
-	out := []planLine{{indent, "~", pad + " = ["}}
-	n := max(len(before), len(after))
-	for i := range n {
-		switch {
-		case i < len(before) && i < len(after):
-			if reflect.DeepEqual(before[i], after[i]) {
-				out = append(out, planLine{indent + 1, "", fmtValue(after[i], false) + ","})
-				continue
-			}
-			out = append(out, planLine{indent + 1, "-", fmtValue(before[i], false) + ","})
-			out = append(out, planLine{indent + 1, "+", fmtValue(after[i], false) + ","})
-		case i < len(before):
-			out = append(out, planLine{indent + 1, "-", fmtValue(before[i], false) + ","})
-		default:
-			out = append(out, planLine{indent + 1, "+", fmtValue(after[i], false) + ","})
-		}
+	ops := alignLists(before, after)
+	out := make([]planLine, 0, len(ops)+2)
+	out = append(out, planLine{indent, "~", pad + " = ["})
+	for _, op := range ops {
+		out = append(out, planLine{indent + 1, op.marker, fmtValue(op.value, false) + ","})
 	}
 	out = append(out, planLine{indent, "~", "]"})
 	return out
+}
+
+type listOp struct {
+	marker string
+	value  any
+}
+
+func alignLists(before, after []any) []listOp {
+	bKeys := listKeys(before)
+	aKeys := listKeys(after)
+
+	ops := make([]listOp, 0, max(len(before), len(after)))
+	for _, op := range lcs.Align(bKeys, aKeys) {
+		switch {
+		case op.A >= 0 && op.B >= 0:
+			if bKeys[op.A] == aKeys[op.B] {
+				ops = append(ops, listOp{"", after[op.B]})
+				continue
+			}
+			ops = append(ops, listOp{"-", before[op.A]}, listOp{"+", after[op.B]})
+		case op.B >= 0:
+			ops = append(ops, listOp{"+", after[op.B]})
+		default:
+			ops = append(ops, listOp{"-", before[op.A]})
+		}
+	}
+	return ops
+}
+
+func listKeys(list []any) []string {
+	keys := make([]string, len(list))
+	for i, el := range list {
+		keys[i] = fmtValue(el, false)
+	}
+	return keys
+}
+
+func sameElements(before, after []any) bool {
+	if len(before) != len(after) {
+		return false
+	}
+	bKeys := listKeys(before)
+	aKeys := listKeys(after)
+	slices.Sort(bKeys)
+	slices.Sort(aKeys)
+	return slices.Equal(bKeys, aKeys)
 }
 
 func fmtValue(v any, sensitive bool) string {

@@ -2,6 +2,8 @@ package parse
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -105,33 +107,27 @@ func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]i
 
 	case yaml.SequenceNode: //nolint:dupl // mirrors json.go KindArray case; parallel parsers share structure but not types
 		dn.Kind = diffnode.Unchanged
-		aLen := len(a.Content)
-		bLen := len(b.Content)
-		maxLen := aLen
-		if bLen > maxLen {
-			maxLen = bLen
-		}
-		for i := range maxLen {
-			childPath := fmt.Sprintf("%s[%d]", path, i)
+		for _, op := range alignByKey(yamlNodeKeys(a.Content), yamlNodeKeys(b.Content)) {
 			switch {
-			case i < aLen && i < bLen:
+			case op.A >= 0 && op.B >= 0:
+				childPath := fmt.Sprintf("%s[%d]", path, op.B)
 				dn.Children = append(dn.Children,
-					compareYAMLNodes(a.Content[i], b.Content[i], childPath, "", i, counts))
-			case i < bLen:
+					compareYAMLNodes(a.Content[op.A], b.Content[op.B], childPath, "", op.B, counts))
+			case op.B >= 0:
 				counts[0]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Added,
-					Path:     childPath,
-					Index:    i,
-					NewValue: yamlNodeRepr(b.Content[i]),
+					Path:     fmt.Sprintf("%s[%d]", path, op.B),
+					Index:    op.B,
+					NewValue: yamlNodeRepr(b.Content[op.B]),
 				})
 			default:
 				counts[1]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Removed,
-					Path:     childPath,
-					Index:    i,
-					OldValue: yamlNodeRepr(a.Content[i]),
+					Path:     fmt.Sprintf("%s[%d]", path, op.A),
+					Index:    op.A,
+					OldValue: yamlNodeRepr(a.Content[op.A]),
 				})
 			}
 		}
@@ -183,5 +179,34 @@ func yamlScalarDisplay(n *yaml.Node) string {
 		return "null"
 	default:
 		return n.Value
+	}
+}
+
+func yamlNodeKeys(nodes []*yaml.Node) []string {
+	keys := make([]string, len(nodes))
+	for i, n := range nodes {
+		keys[i] = yamlNodeKey(n)
+	}
+	return keys
+}
+
+func yamlNodeKey(n *yaml.Node) string {
+	n = resolveAlias(n)
+	switch n.Kind {
+	case yaml.MappingNode:
+		parts := make([]string, 0, len(n.Content)/2)
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			parts = append(parts, n.Content[i].Value+":"+yamlNodeKey(n.Content[i+1]))
+		}
+		slices.Sort(parts)
+		return "{" + strings.Join(parts, ",") + "}"
+	case yaml.SequenceNode:
+		parts := make([]string, 0, len(n.Content))
+		for _, c := range n.Content {
+			parts = append(parts, yamlNodeKey(c))
+		}
+		return "[" + strings.Join(parts, ",") + "]"
+	default:
+		return n.Tag + ":" + n.Value
 	}
 }

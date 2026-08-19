@@ -177,3 +177,72 @@ func TestYAML_RootLevelPath_NoDoubleDot(t *testing.T) {
 		t.Errorf("path=%q, want \".version\"", child.Path)
 	}
 }
+
+func TestYAML_SequenceAlignment(t *testing.T) {
+	tests := []struct {
+		name                                 string
+		a, b                                 string
+		wantAdded, wantRemoved, wantModified int
+	}{
+		{
+			name:      "insert at front shifts nothing",
+			a:         "ports:\n  - 443\n  - 8080\n",
+			b:         "ports:\n  - 80\n  - 443\n  - 8080\n",
+			wantAdded: 1,
+		},
+		{
+			name:      "insert in the middle shifts nothing",
+			a:         "ports:\n  - 80\n  - 8080\n",
+			b:         "ports:\n  - 80\n  - 443\n  - 8080\n",
+			wantAdded: 1,
+		},
+		{
+			name:        "removal from the middle shifts nothing",
+			a:           "ports:\n  - 80\n  - 443\n  - 8080\n",
+			b:           "ports:\n  - 80\n  - 8080\n",
+			wantRemoved: 1,
+		},
+		{
+			name:         "in-place edit stays a modification",
+			a:            "ports:\n  - 80\n  - 443\n",
+			b:            "ports:\n  - 80\n  - 8443\n",
+			wantModified: 1,
+		},
+		{
+			name: "reorder is unchanged",
+			a:    "ports:\n  - 8080\n  - 80\n  - 443\n",
+			b:    "ports:\n  - 80\n  - 443\n  - 8080\n",
+		},
+		{
+			name:      "mapping elements align on content",
+			a:         "scopes:\n  - value: a\n  - value: c\n",
+			b:         "scopes:\n  - value: a\n  - value: b\n  - value: c\n",
+			wantAdded: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d, err := YAML([]byte(tt.a), []byte(tt.b))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if d.Added != tt.wantAdded || d.Removed != tt.wantRemoved || d.Modified != tt.wantModified {
+				t.Errorf("added=%d removed=%d modified=%d, want %d %d %d",
+					d.Added, d.Removed, d.Modified, tt.wantAdded, tt.wantRemoved, tt.wantModified)
+			}
+		})
+	}
+}
+
+func TestYAML_NestedSequenceElementsAlign(t *testing.T) {
+	a := []byte("matrix:\n  - [1, 2]\n  - [5, 6]\n")
+	b := []byte("matrix:\n  - [1, 2]\n  - [3, 4]\n  - [5, 6]\n")
+	d, err := YAML(a, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Added != 1 || d.Removed != 0 || d.Modified != 0 {
+		t.Errorf("added=%d removed=%d modified=%d, want 1 0 0", d.Added, d.Removed, d.Modified)
+	}
+}

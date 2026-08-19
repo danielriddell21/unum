@@ -14,6 +14,7 @@ var (
 	diffAYAML = filepath.Join("testdata", "diff-a.yaml")
 	diffBYAML = filepath.Join("testdata", "diff-b.yaml")
 	diffATF   = filepath.Join("testdata", "diff-a.tfplan.json")
+	diffTFSco = filepath.Join("testdata", "diff-scopes.tfplan.json")
 )
 
 const (
@@ -96,6 +97,33 @@ func TestDiffTerraform(t *testing.T) {
 	}
 	if strings.Contains(stdout, "Terraform will perform") || strings.Contains(stdout, "Plan:") {
 		t.Errorf("CLI diff should be body-only (no preamble/footer)\n%s", stdout)
+	}
+}
+
+func TestDiffTerraformScopeInsertion(t *testing.T) {
+	stdout, _, code := run("diff", diffTFSco, diffTFSco, "--format", "terraform", flagNoColor)
+	if code != 0 {
+		t.Fatalf("terraform scopes diff: exit %d, want 0", code)
+	}
+	// Only the inserted scope is marked; the surrounding ones stay context.
+	if !strings.Contains(stdout, `+ {"description":"Read reports","value":"read:reports"},`) {
+		t.Errorf("expected the new scope to be added\n%s", stdout)
+	}
+	for _, line := range strings.Split(stdout, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "- ") {
+			t.Errorf("inserting a scope should remove nothing, got %q\n%s", trimmed, stdout)
+		}
+	}
+}
+
+func TestDiffTerraformScopeInsertionSummary(t *testing.T) {
+	stdout, stderr, code := run("diff", diffTFSco, diffTFSco, "--format", "terraform", flagNoColor)
+	if code != 0 {
+		t.Fatalf("terraform scopes diff: exit %d, want 0", code)
+	}
+	if !strings.Contains(stderr, "+1 -0") {
+		t.Errorf("expected a single addition in the summary line\n%s\n%s", stderr, stdout)
 	}
 }
 
