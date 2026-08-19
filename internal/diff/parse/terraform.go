@@ -21,7 +21,8 @@ func Terraform(data []byte) (*diffnode.Diff, error) {
 		Index: -1,
 	}
 
-	var added, removed, modified int
+	var added, removed int
+	var attrCounts [3]int
 
 	for _, rc := range plan.Changes {
 		childPath := "." + rc.Address
@@ -48,10 +49,7 @@ func Terraform(data []byte) (*diffnode.Diff, error) {
 			})
 
 		case terraform.ActionUpdate, terraform.ActionReplace:
-			modified++
-			var counts [3]int
-			resourceNode := diffTFResource(rc, childPath, &counts)
-			root.Children = append(root.Children, resourceNode)
+			root.Children = append(root.Children, diffTFResource(rc, childPath, &attrCounts))
 
 		default: // no-op, read — skip unchanged resources
 		}
@@ -60,9 +58,9 @@ func Terraform(data []byte) (*diffnode.Diff, error) {
 	return &diffnode.Diff{
 		Format:   diffnode.FormatTerraform,
 		Root:     root,
-		Added:    added,
-		Removed:  removed,
-		Modified: modified,
+		Added:    added + attrCounts[0],
+		Removed:  removed + attrCounts[1],
+		Modified: attrCounts[2],
 	}, nil
 }
 

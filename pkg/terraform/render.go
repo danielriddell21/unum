@@ -176,7 +176,7 @@ func attribute(key string, bv any, bok bool, av any, aok bool, unknown, sensitiv
 	bList, bIsList := bv.([]any)
 	aList, aIsList := av.([]any)
 	if bIsList && aIsList {
-		if reflect.DeepEqual(bList, aList) {
+		if sameElements(bList, aList) {
 			return nil, false
 		}
 		return listDiff(pad, bList, aList, indent), true
@@ -230,25 +230,109 @@ func listAll(pad string, list []any, marker string, indent int) []planLine {
 }
 
 func listDiff(pad string, before, after []any, indent int) []planLine {
-	out := []planLine{{indent, "~", pad + " = ["}}
-	n := max(len(before), len(after))
-	for i := range n {
-		switch {
-		case i < len(before) && i < len(after):
-			if reflect.DeepEqual(before[i], after[i]) {
-				out = append(out, planLine{indent + 1, "", fmtValue(after[i], false) + ","})
-				continue
-			}
-			out = append(out, planLine{indent + 1, "-", fmtValue(before[i], false) + ","})
-			out = append(out, planLine{indent + 1, "+", fmtValue(after[i], false) + ","})
-		case i < len(before):
-			out = append(out, planLine{indent + 1, "-", fmtValue(before[i], false) + ","})
-		default:
-			out = append(out, planLine{indent + 1, "+", fmtValue(after[i], false) + ","})
-		}
+	ops := alignLists(before, after)
+	out := make([]planLine, 0, len(ops)+2)
+	out = append(out, planLine{indent, "~", pad + " = ["})
+	for _, op := range ops {
+		out = append(out, planLine{indent + 1, op.marker, fmtValue(op.value, false) + ","})
 	}
 	out = append(out, planLine{indent, "~", "]"})
 	return out
+}
+
+type listOp struct {
+	marker string
+	value  any
+}
+
+const lcsCellLimit = 250_000
+
+func alignLists(before, after []any) []listOp {
+	bKeys := listKeys(before)
+	aKeys := listKeys(after)
+	if len(before)*len(after) > lcsCellLimit {
+		return positionalOps(before, after)
+	}
+
+	table := lcsTable(bKeys, aKeys)
+	ops := make([]listOp, 0, max(len(before), len(after)))
+	i, j := 0, 0
+	for i < len(before) && j < len(after) {
+		switch {
+		case bKeys[i] == aKeys[j]:
+			ops = append(ops, listOp{"", after[j]})
+			i++
+			j++
+		case table[i+1][j] >= table[i][j+1]:
+			ops = append(ops, listOp{"-", before[i]})
+			i++
+		default:
+			ops = append(ops, listOp{"+", after[j]})
+			j++
+		}
+	}
+	for ; i < len(before); i++ {
+		ops = append(ops, listOp{"-", before[i]})
+	}
+	for ; j < len(after); j++ {
+		ops = append(ops, listOp{"+", after[j]})
+	}
+	return ops
+}
+
+func positionalOps(before, after []any) []listOp {
+	ops := make([]listOp, 0, max(len(before), len(after)))
+	for i := range max(len(before), len(after)) {
+		switch {
+		case i < len(before) && i < len(after):
+			if reflect.DeepEqual(before[i], after[i]) {
+				ops = append(ops, listOp{"", after[i]})
+				continue
+			}
+			ops = append(ops, listOp{"-", before[i]}, listOp{"+", after[i]})
+		case i < len(before):
+			ops = append(ops, listOp{"-", before[i]})
+		default:
+			ops = append(ops, listOp{"+", after[i]})
+		}
+	}
+	return ops
+}
+
+func lcsTable(a, b []string) [][]int {
+	table := make([][]int, len(a)+1)
+	for i := range table {
+		table[i] = make([]int, len(b)+1)
+	}
+	for i := len(a) - 1; i >= 0; i-- {
+		for j := len(b) - 1; j >= 0; j-- {
+			if a[i] == b[j] {
+				table[i][j] = table[i+1][j+1] + 1
+				continue
+			}
+			table[i][j] = max(table[i+1][j], table[i][j+1])
+		}
+	}
+	return table
+}
+
+func listKeys(list []any) []string {
+	keys := make([]string, len(list))
+	for i, el := range list {
+		keys[i] = fmtValue(el, false)
+	}
+	return keys
+}
+
+func sameElements(before, after []any) bool {
+	if len(before) != len(after) {
+		return false
+	}
+	bKeys := listKeys(before)
+	aKeys := listKeys(after)
+	slices.Sort(bKeys)
+	slices.Sort(aKeys)
+	return slices.Equal(bKeys, aKeys)
 }
 
 func fmtValue(v any, sensitive bool) string {

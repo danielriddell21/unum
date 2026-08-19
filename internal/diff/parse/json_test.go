@@ -200,3 +200,65 @@ func findChild(n *node.DiffNode, key string) *node.DiffNode {
 	}
 	return nil
 }
+
+func TestJSON_ArrayAlignment(t *testing.T) {
+	tests := []struct {
+		name                                 string
+		a, b                                 string
+		wantAdded, wantRemoved, wantModified int
+	}{
+		{
+			name: "insert at front shifts nothing",
+			a:    `{"items":["b","c"]}`,
+			b:    `{"items":["a","b","c"]}`,
+
+			wantAdded: 1,
+		},
+		{
+			name: "insert in the middle shifts nothing",
+			a:    `{"items":["a","c"]}`,
+			b:    `{"items":["a","b","c"]}`,
+
+			wantAdded: 1,
+		},
+		{
+			name: "removal from the middle shifts nothing",
+			a:    `{"items":["a","b","c"]}`,
+			b:    `{"items":["a","c"]}`,
+
+			wantRemoved: 1,
+		},
+		{
+			name: "in-place edit stays a modification",
+			a:    `{"items":["a","b","c"]}`,
+			b:    `{"items":["a","x","c"]}`,
+
+			wantModified: 1,
+		},
+		{
+			name: "reorder is unchanged",
+			a:    `{"items":["c","a","b"]}`,
+			b:    `{"items":["a","b","c"]}`,
+		},
+		{
+			name: "object elements align on content",
+			a:    `{"scopes":[{"value":"a"},{"value":"c"}]}`,
+			b:    `{"scopes":[{"value":"a"},{"value":"b"},{"value":"c"}]}`,
+
+			wantAdded: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d, err := JSON([]byte(tt.a), []byte(tt.b))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if d.Added != tt.wantAdded || d.Removed != tt.wantRemoved || d.Modified != tt.wantModified {
+				t.Errorf("added=%d removed=%d modified=%d, want %d %d %d",
+					d.Added, d.Removed, d.Modified, tt.wantAdded, tt.wantRemoved, tt.wantModified)
+			}
+		})
+	}
+}

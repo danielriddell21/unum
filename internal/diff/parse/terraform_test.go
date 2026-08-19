@@ -236,3 +236,91 @@ func TestTerraform_UpdateFallback(t *testing.T) {
 		t.Error("expected at least one child node from update fallback")
 	}
 }
+
+func scopePlan(before, after string) []byte {
+	return []byte(`{
+		"resource_changes": [{
+			"address": "auth0_resource_server.api",
+			"type": "auth0_resource_server",
+			"name": "api",
+			"change": {
+				"actions": ["update"],
+				"before": {"identifier": "https://api.example.com", "scopes": ` + before + `},
+				"after":  {"identifier": "https://api.example.com", "scopes": ` + after + `}
+			}
+		}]
+	}`)
+}
+
+func TestTerraform_ScopeInsertion(t *testing.T) {
+	scope := func(v string) string {
+		return `{"value":"` + v + `","description":"` + v + `"}`
+	}
+	before := "[" + scope("create:users") + "," + scope("delete:users") + "," + scope("read:users") + "]"
+	after := "[" + scope("admin:all") + "," + scope("create:users") + "," + scope("delete:users") + "," + scope("read:users") + "]"
+
+	d, err := Terraform(scopePlan(before, after))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Added != 1 || d.Removed != 0 || d.Modified != 0 {
+		t.Errorf("added=%d removed=%d modified=%d, want 1 0 0", d.Added, d.Removed, d.Modified)
+	}
+
+	scopes := findChild(d.Root.Children[0], "scopes")
+	if scopes == nil {
+		t.Fatal("no 'scopes' child in resource node")
+	}
+	if len(scopes.Children) != 4 {
+		t.Fatalf("got %d scope children, want 4", len(scopes.Children))
+	}
+	for i, child := range scopes.Children {
+		want := node.Unchanged
+		if i == 0 {
+			want = node.Added
+		}
+		if child.Kind != want {
+			t.Errorf("scopes[%d] kind=%v, want %v", i, child.Kind, want)
+		}
+	}
+}
+
+func TestTerraform_ScopeReorderIsUnchanged(t *testing.T) {
+	before := `["read:users","create:users","delete:users"]`
+	after := `["create:users","delete:users","read:users"]`
+
+	d, err := Terraform(scopePlan(before, after))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Added != 0 || d.Removed != 0 || d.Modified != 0 {
+		t.Errorf("added=%d removed=%d modified=%d, want 0 0 0", d.Added, d.Removed, d.Modified)
+	}
+	scopes := findChild(d.Root.Children[0], "scopes")
+	if scopes == nil {
+		t.Fatal("no 'scopes' child in resource node")
+	}
+	for i, child := range scopes.Children {
+		if child.Kind != node.Unchanged {
+			t.Errorf("scopes[%d] kind=%v, want Unchanged", i, child.Kind)
+		}
+	}
+}
+
+func TestTerraform_ScopeRemovalAndEdit(t *testing.T) {
+	d, err := Terraform(scopePlan(`["create:users","delete:users","read:users"]`, `["create:users","read:users"]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Added != 0 || d.Removed != 1 || d.Modified != 0 {
+		t.Errorf("removal: added=%d removed=%d modified=%d, want 0 1 0", d.Added, d.Removed, d.Modified)
+	}
+
+	d, err = Terraform(scopePlan(`["create:users","read:users"]`, `["create:users","read:reports"]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Added != 0 || d.Removed != 0 || d.Modified != 1 {
+		t.Errorf("edit: added=%d removed=%d modified=%d, want 0 0 1", d.Added, d.Removed, d.Modified)
+	}
+}
