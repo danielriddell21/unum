@@ -92,25 +92,25 @@ func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]i
 		dn.Kind = diffnode.Unchanged
 		for _, op := range alignByKey(jsonNodeKeys(a.Children), jsonNodeKeys(b.Children)) {
 			switch {
-			case op.a >= 0 && op.b >= 0:
-				childPath := fmt.Sprintf("%s[%d]", path, op.b)
+			case op.A >= 0 && op.B >= 0:
+				childPath := fmt.Sprintf("%s[%d]", path, op.B)
 				dn.Children = append(dn.Children,
-					compareNodes(a.Children[op.a], b.Children[op.b], childPath, "", op.b, counts))
-			case op.b >= 0:
+					compareNodes(a.Children[op.A], b.Children[op.B], childPath, "", op.B, counts))
+			case op.B >= 0:
 				counts[0]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Added,
-					Path:     fmt.Sprintf("%s[%d]", path, op.b),
-					Index:    op.b,
-					NewValue: nodeRepr(b.Children[op.b]),
+					Path:     fmt.Sprintf("%s[%d]", path, op.B),
+					Index:    op.B,
+					NewValue: nodeRepr(b.Children[op.B]),
 				})
 			default:
 				counts[1]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Removed,
-					Path:     fmt.Sprintf("%s[%d]", path, op.a),
-					Index:    op.a,
-					OldValue: nodeRepr(a.Children[op.a]),
+					Path:     fmt.Sprintf("%s[%d]", path, op.A),
+					Index:    op.A,
+					OldValue: nodeRepr(a.Children[op.A]),
 				})
 			}
 		}

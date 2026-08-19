@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/danielriddell21/unum/internal/lcs"
 )
 
 type planLine struct {
@@ -245,82 +247,26 @@ type listOp struct {
 	value  any
 }
 
-const lcsCellLimit = 250_000
-
 func alignLists(before, after []any) []listOp {
 	bKeys := listKeys(before)
 	aKeys := listKeys(after)
-	table := lcsTable(bKeys, aKeys)
-	if table == nil {
-		return positionalOps(before, after)
-	}
 
 	ops := make([]listOp, 0, max(len(before), len(after)))
-	i, j := 0, 0
-	for i < len(before) && j < len(after) {
+	for _, op := range lcs.Align(bKeys, aKeys) {
 		switch {
-		case bKeys[i] == aKeys[j]:
-			ops = append(ops, listOp{"", after[j]})
-			i++
-			j++
-		case table[i+1][j] >= table[i][j+1]:
-			ops = append(ops, listOp{"-", before[i]})
-			i++
-		default:
-			ops = append(ops, listOp{"+", after[j]})
-			j++
-		}
-	}
-	for ; i < len(before); i++ {
-		ops = append(ops, listOp{"-", before[i]})
-	}
-	for ; j < len(after); j++ {
-		ops = append(ops, listOp{"+", after[j]})
-	}
-	return ops
-}
-
-func positionalOps(before, after []any) []listOp {
-	ops := make([]listOp, 0, max(len(before), len(after)))
-	for i := range max(len(before), len(after)) {
-		switch {
-		case i < len(before) && i < len(after):
-			if reflect.DeepEqual(before[i], after[i]) {
-				ops = append(ops, listOp{"", after[i]})
+		case op.A >= 0 && op.B >= 0:
+			if bKeys[op.A] == aKeys[op.B] {
+				ops = append(ops, listOp{"", after[op.B]})
 				continue
 			}
-			ops = append(ops, listOp{"-", before[i]}, listOp{"+", after[i]})
-		case i < len(before):
-			ops = append(ops, listOp{"-", before[i]})
+			ops = append(ops, listOp{"-", before[op.A]}, listOp{"+", after[op.B]})
+		case op.B >= 0:
+			ops = append(ops, listOp{"+", after[op.B]})
 		default:
-			ops = append(ops, listOp{"+", after[i]})
+			ops = append(ops, listOp{"-", before[op.A]})
 		}
 	}
 	return ops
-}
-
-func lcsTable(a, b []string) [][]int {
-	if len(a) > lcsCellLimit || len(b) > lcsCellLimit {
-		return nil
-	}
-	if len(a) > 0 && len(b) > lcsCellLimit/len(a) {
-		return nil
-	}
-
-	table := make([][]int, len(a)+1)
-	for i := range table {
-		table[i] = make([]int, len(b)+1)
-	}
-	for i := len(a) - 1; i >= 0; i-- {
-		for j := len(b) - 1; j >= 0; j-- {
-			if a[i] == b[j] {
-				table[i][j] = table[i+1][j+1] + 1
-				continue
-			}
-			table[i][j] = max(table[i+1][j], table[i][j+1])
-		}
-	}
-	return table
 }
 
 func listKeys(list []any) []string {

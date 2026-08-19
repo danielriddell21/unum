@@ -109,25 +109,25 @@ func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]i
 		dn.Kind = diffnode.Unchanged
 		for _, op := range alignByKey(yamlNodeKeys(a.Content), yamlNodeKeys(b.Content)) {
 			switch {
-			case op.a >= 0 && op.b >= 0:
-				childPath := fmt.Sprintf("%s[%d]", path, op.b)
+			case op.A >= 0 && op.B >= 0:
+				childPath := fmt.Sprintf("%s[%d]", path, op.B)
 				dn.Children = append(dn.Children,
-					compareYAMLNodes(a.Content[op.a], b.Content[op.b], childPath, "", op.b, counts))
-			case op.b >= 0:
+					compareYAMLNodes(a.Content[op.A], b.Content[op.B], childPath, "", op.B, counts))
+			case op.B >= 0:
 				counts[0]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Added,
-					Path:     fmt.Sprintf("%s[%d]", path, op.b),
-					Index:    op.b,
-					NewValue: yamlNodeRepr(b.Content[op.b]),
+					Path:     fmt.Sprintf("%s[%d]", path, op.B),
+					Index:    op.B,
+					NewValue: yamlNodeRepr(b.Content[op.B]),
 				})
 			default:
 				counts[1]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
 					Kind:     diffnode.Removed,
-					Path:     fmt.Sprintf("%s[%d]", path, op.a),
-					Index:    op.a,
-					OldValue: yamlNodeRepr(a.Content[op.a]),
+					Path:     fmt.Sprintf("%s[%d]", path, op.A),
+					Index:    op.A,
+					OldValue: yamlNodeRepr(a.Content[op.A]),
 				})
 			}
 		}
