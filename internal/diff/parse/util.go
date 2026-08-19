@@ -18,11 +18,11 @@ func alignByKey(aKeys, bKeys []string) []alignOp {
 	if ops := alignReordered(aKeys, bKeys); ops != nil {
 		return ops
 	}
-	if len(aKeys)*len(bKeys) > alignCellLimit {
+	table := lcsTable(aKeys, bKeys)
+	if table == nil {
 		return positionalAlign(len(aKeys), len(bKeys))
 	}
 
-	table := lcsTable(aKeys, bKeys)
 	ops := make([]alignOp, 0, max(len(aKeys), len(bKeys)))
 	i, j := 0, 0
 	for i < len(aKeys) && j < len(bKeys) {
@@ -85,6 +85,13 @@ func positionalAlign(aLen, bLen int) []alignOp {
 }
 
 func lcsTable(a, b []string) [][]int {
+	if len(a) > alignCellLimit || len(b) > alignCellLimit {
+		return nil
+	}
+	if len(a) > 0 && len(b) > alignCellLimit/len(a) {
+		return nil
+	}
+
 	table := make([][]int, len(a)+1)
 	for i := range table {
 		table[i] = make([]int, len(b)+1)

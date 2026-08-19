@@ -234,3 +234,15 @@ func TestYAML_SequenceAlignment(t *testing.T) {
 		})
 	}
 }
+
+func TestYAML_NestedSequenceElementsAlign(t *testing.T) {
+	a := []byte("matrix:\n  - [1, 2]\n  - [5, 6]\n")
+	b := []byte("matrix:\n  - [1, 2]\n  - [3, 4]\n  - [5, 6]\n")
+	d, err := YAML(a, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Added != 1 || d.Removed != 0 || d.Modified != 0 {
+		t.Errorf("added=%d removed=%d modified=%d, want 1 0 0", d.Added, d.Removed, d.Modified)
+	}
+}

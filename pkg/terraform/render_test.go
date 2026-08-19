@@ -320,3 +320,15 @@ func TestRender_ListAlignmentFallsBackWhenHuge(t *testing.T) {
 		t.Errorf("oversized list should still render the new element\n%s", gutter[:min(400, len(gutter))])
 	}
 }
+
+func TestRender_LCSTableRefusesOversizedInput(t *testing.T) {
+	if lcsTable(make([]string, 600), make([]string, 601)) != nil {
+		t.Error("oversized input should refuse the table")
+	}
+	if lcsTable(make([]string, lcsCellLimit+1), make([]string, 1)) != nil {
+		t.Error("an over-long side should refuse the table")
+	}
+	if lcsTable(make([]string, 10), make([]string, 10)) == nil {
+		t.Error("a small table should be built")
+	}
+}

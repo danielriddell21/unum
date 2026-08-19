@@ -262,3 +262,15 @@ func TestJSON_ArrayAlignment(t *testing.T) {
 		})
 	}
 }
+
+func TestJSON_NestedArrayElementsAlign(t *testing.T) {
+	a := []byte(`{"matrix":[[1,2],[5,6]]}`)
+	b := []byte(`{"matrix":[[1,2],[3,4],[5,6]]}`)
+	d, err := JSON(a, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Added != 1 || d.Removed != 0 || d.Modified != 0 {
+		t.Errorf("added=%d removed=%d modified=%d, want 1 0 0", d.Added, d.Removed, d.Modified)
+	}
+}

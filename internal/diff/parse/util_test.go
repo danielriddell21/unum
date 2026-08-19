@@ -130,3 +130,26 @@ func TestAlignByKeyFallsBackWhenHuge(t *testing.T) {
 		t.Errorf("trailing op = %v, want an addition", last)
 	}
 }
+
+func TestLCSTableRefusesOversizedInput(t *testing.T) {
+	tests := []struct {
+		name    string
+		aLen    int
+		bLen    int
+		wantNil bool
+	}{
+		{name: "within the cell budget", aLen: 100, bLen: 100},
+		{name: "too many cells", aLen: 600, bLen: 601, wantNil: true},
+		{name: "one side longer than the budget", aLen: alignCellLimit + 1, bLen: 1, wantNil: true},
+		{name: "empty side is always allowed", aLen: 0, bLen: alignCellLimit},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := lcsTable(make([]string, tt.aLen), make([]string, tt.bLen))
+			if (got == nil) != tt.wantNil {
+				t.Errorf("lcsTable(%d, %d) nil = %v, want %v", tt.aLen, tt.bLen, got == nil, tt.wantNil)
+			}
+		})
+	}
+}

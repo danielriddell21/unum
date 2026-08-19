@@ -250,11 +250,11 @@ const lcsCellLimit = 250_000
 func alignLists(before, after []any) []listOp {
 	bKeys := listKeys(before)
 	aKeys := listKeys(after)
-	if len(before)*len(after) > lcsCellLimit {
+	table := lcsTable(bKeys, aKeys)
+	if table == nil {
 		return positionalOps(before, after)
 	}
 
-	table := lcsTable(bKeys, aKeys)
 	ops := make([]listOp, 0, max(len(before), len(after)))
 	i, j := 0, 0
 	for i < len(before) && j < len(after) {
@@ -300,6 +300,13 @@ func positionalOps(before, after []any) []listOp {
 }
 
 func lcsTable(a, b []string) [][]int {
+	if len(a) > lcsCellLimit || len(b) > lcsCellLimit {
+		return nil
+	}
+	if len(a) > 0 && len(b) > lcsCellLimit/len(a) {
+		return nil
+	}
+
 	table := make([][]int, len(a)+1)
 	for i := range table {
 		table[i] = make([]int, len(b)+1)
