@@ -272,31 +272,46 @@ func TestRender_ListAlignment(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, gutter := render(t, listPlan(tt.before, tt.after))
 			if tt.wantAttrHidden {
-				if strings.Contains(gutter, "scopes") {
-					t.Errorf("unchanged list should be hidden\n%s", gutter)
-				}
-				if !strings.Contains(gutter, "(2 unchanged attributes hidden)") {
-					t.Errorf("expected both attributes hidden\n%s", gutter)
-				}
+				assertAttrHidden(t, gutter)
 				return
 			}
-			if got := markerCount(gutter, "+"); got != tt.wantAdded {
-				t.Errorf("added lines = %d, want %d\n%s", got, tt.wantAdded, gutter)
-			}
-			if got := markerCount(gutter, "-"); got != tt.wantRemoved {
-				t.Errorf("removed lines = %d, want %d\n%s", got, tt.wantRemoved, gutter)
-			}
-			for _, w := range tt.want {
-				if !strings.Contains(gutter, w) {
-					t.Errorf("output missing %q\n%s", w, gutter)
-				}
-			}
-			for _, w := range tt.notWant {
-				if strings.Contains(gutter, w) {
-					t.Errorf("output should not contain %q\n%s", w, gutter)
-				}
-			}
+			assertMarkerCounts(t, gutter, tt.wantAdded, tt.wantRemoved)
+			assertLines(t, gutter, tt.want, tt.notWant)
 		})
+	}
+}
+
+func assertAttrHidden(t *testing.T, gutter string) {
+	t.Helper()
+	if strings.Contains(gutter, "scopes") {
+		t.Errorf("unchanged list should be hidden\n%s", gutter)
+	}
+	if !strings.Contains(gutter, "(2 unchanged attributes hidden)") {
+		t.Errorf("expected both attributes hidden\n%s", gutter)
+	}
+}
+
+func assertMarkerCounts(t *testing.T, gutter string, wantAdded, wantRemoved int) {
+	t.Helper()
+	if got := markerCount(gutter, "+"); got != wantAdded {
+		t.Errorf("added lines = %d, want %d\n%s", got, wantAdded, gutter)
+	}
+	if got := markerCount(gutter, "-"); got != wantRemoved {
+		t.Errorf("removed lines = %d, want %d\n%s", got, wantRemoved, gutter)
+	}
+}
+
+func assertLines(t *testing.T, gutter string, want, notWant []string) {
+	t.Helper()
+	for _, w := range want {
+		if !strings.Contains(gutter, w) {
+			t.Errorf("output missing %q\n%s", w, gutter)
+		}
+	}
+	for _, w := range notWant {
+		if strings.Contains(gutter, w) {
+			t.Errorf("output should not contain %q\n%s", w, gutter)
+		}
 	}
 }
 
