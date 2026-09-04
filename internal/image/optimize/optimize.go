@@ -48,7 +48,23 @@ type Step struct {
 
 var DefaultLadder = []int{95, 90, 85, 80, 75, 65, 55, 40}
 
+// MaxPixels bounds how large an image may be before it is even decoded. A
+// small file can declare enormous dimensions — a few KB of PNG can claim
+// 100000x100000 and decode to hundreds of gigabytes of RGBA — so the header is
+// checked before any pixels are allocated. 50 megapixels clears any real
+// camera; raise it if you genuinely need to.
+var MaxPixels = 50_000_000
+
 func Decode(name string, data []byte) (Source, error) {
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return Source{}, fmt.Errorf("unsupported or corrupt image: %w", err)
+	}
+	if pixels := cfg.Width * cfg.Height; pixels > MaxPixels {
+		return Source{}, fmt.Errorf("image is %d × %d (%d megapixels), over the %d megapixel limit",
+			cfg.Width, cfg.Height, pixels/1_000_000, MaxPixels/1_000_000)
+	}
+
 	img, decoded, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return Source{}, fmt.Errorf("unsupported or corrupt image: %w", err)

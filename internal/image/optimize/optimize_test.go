@@ -2,9 +2,30 @@ package optimize
 
 import (
 	"bytes"
+	"encoding/binary"
+	"hash/crc32"
 	"image"
+	"strings"
 	"testing"
 )
+
+// pngHeaderClaiming builds just enough of a PNG to carry an IHDR declaring the
+// given dimensions — the shape of a decompression bomb.
+func pngHeaderClaiming(t *testing.T, w, h uint32) []byte {
+	t.Helper()
+
+	ihdr := make([]byte, 13)
+	binary.BigEndian.PutUint32(ihdr[0:], w)
+	binary.BigEndian.PutUint32(ihdr[4:], h)
+	ihdr[8] = 8 // bit depth
+	ihdr[9] = 2 // truecolor
+
+	chunk := append([]byte("IHDR"), ihdr...)
+	out := []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}
+	out = binary.BigEndian.AppendUint32(out, uint32(len(ihdr)))
+	out = append(out, chunk...)
+	return binary.BigEndian.AppendUint32(out, crc32.ChecksumIEEE(chunk))
+}
 
 func mustEncode(t *testing.T, img image.Image, format Format, quality int) []byte {
 	t.Helper()
@@ -135,7 +156,7 @@ func TestOptimizeAppliesMaxWidth(t *testing.T) {
 func TestOptimizeRejectsUnwritableFormat(t *testing.T) {
 	src := mustDecode(t, "in.png", mustEncode(t, gradientImage(16, 16), FormatPNG, 100))
 
-	if _, err := Optimize(src, Options{Quality: 80, Format: FormatWebP}); err == nil {
+	if _, err := Optimize(src, Options{Quality: 80, Format: FormatTIFF}); err == nil {
 		t.Error("expected an error asking for a format we cannot write")
 	}
 }
@@ -248,5 +269,43 @@ func TestFitToGeneratesADecodableImage(t *testing.T) {
 
 	if _, _, err := image.Decode(bytes.NewReader(got.Data)); err != nil {
 		t.Fatalf("result does not decode: %v", err)
+	}
+}
+
+func TestDecodeRejectsOversizedImages(t *testing.T) {
+	src := mustEncode(t, gradientImage(64, 64), FormatPNG, 100)
+
+	original := MaxPixels
+	t.Cleanup(func() { MaxPixels = original })
+
+	MaxPixels = 100 // 64x64 is 4096 pixels, well over this
+	_, err := Decode("huge.png", src)
+	if err == nil {
+		t.Fatal("expected an error for an image over the pixel limit")
+	}
+	if !strings.Contains(err.Error(), "megapixel") {
+		t.Errorf("error should explain the limit, got %v", err)
+	}
+
+	MaxPixels = original
+	if _, err := Decode("fine.png", src); err != nil {
+		t.Errorf("the same image should decode under the default limit: %v", err)
+	}
+}
+
+// A decompression bomb is small on disk but enormous once decoded. The header
+// must be rejected before any pixel buffer is allocated.
+func TestDecodeRejectsBombBeforeAllocating(t *testing.T) {
+	// A PNG header claiming 60000x60000 (3.6 gigapixels) in a handful of bytes.
+	bomb := pngHeaderClaiming(t, 60000, 60000)
+
+	_, err := Decode("bomb.png", bomb)
+	if err == nil {
+		t.Fatal("expected an oversized image to be rejected")
+	}
+	// It must be turned away by the pixel guard reading the header, not by
+	// failing to parse the (absent) pixel data further in.
+	if !strings.Contains(err.Error(), "megapixel") {
+		t.Errorf("bomb should be caught by the pixel limit, got %v", err)
 	}
 }
