@@ -192,3 +192,35 @@ diagram-ui file="testdata/sample.d2":
 [group('diagram')]
 diagram-web file="testdata/sample.d2":
     go run {{ main }} diagram {{ file }} --web
+
+# ── Image ─────────────────────────────────────────────────────────────────────
+
+# analysis report and quality/size ladder
+[group('image')]
+image file="testdata/sample.jpg":
+    go run {{ main }} image {{ file }}
+
+# optimize to a file
+[group('image')]
+image-out file="testdata/sample.jpg" quality="70":
+    go run {{ main }} image {{ file }} -o out.jpg -q {{ quality }}
+
+# shrink to fit a size budget
+[group('image')]
+image-target file="testdata/sample.jpg" target="30kb":
+    go run {{ main }} image {{ file }} -o out.jpg --target {{ target }}
+
+# downscale to a maximum width
+[group('image')]
+image-thumb file="testdata/sample.jpg" width="400":
+    go run {{ main }} image {{ file }} -o thumb.jpg --max-width {{ width }}
+
+# interactive terminal viewer
+[group('image')]
+image-ui file="testdata/sample.jpg":
+    go run {{ main }} image {{ file }} --ui
+
+# browser UI
+[group('image')]
+image-web file="testdata/sample.jpg":
+    go run {{ main }} image {{ file }} --web

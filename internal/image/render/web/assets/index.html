@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>unum — Image Optimizer</title>
+  <link rel="stylesheet" href="/shared.css" />
+  <link rel="stylesheet" href="/style.css" />
+  <script>window.UNUM_CONFIG={darkTheme:"{{.DarkTheme}}",lightTheme:"{{.LightTheme}}",version:"{{.Version}}",themes:{{.ThemeData}}};</script>
+  <script src="/shared.js"></script>
+  {{if .UmamiEnabled}}<script defer src="/umami/script.js" data-website-id="{{.UmamiWebsiteID}}"></script>{{end}}
+</head>
+<body>
+
+  <div id="header">
+    <span class="brand">[ UNUM ]</span>
+    <span class="hdr-tool">image optimizer</span>
+    <span class="hdr-sep">·</span>
+    <span class="hdr-info" id="hdr-info">drop an image to begin</span>
+  </div>
+
+  <div class="layout" id="dropzone">
+    <div class="main">
+      <div id="empty" class="empty-hint">
+        <p class="empty-title">drop an image here</p>
+        <p>or <label for="fileInput" class="link">choose a file</label></p>
+        <input id="fileInput" type="file" accept="image/*" hidden />
+      </div>
+
+      <div id="panes" class="panes hidden">
+        <figure class="pane">
+          <figcaption>original <span id="beforeMeta" class="meta"></span></figcaption>
+          <div class="shot"><img id="beforeImg" alt="original image" /></div>
+        </figure>
+        <figure class="pane">
+          <figcaption>optimized <span id="afterMeta" class="meta"></span></figcaption>
+          <div class="shot"><img id="afterImg" alt="optimized image" /></div>
+        </figure>
+      </div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="sidebar-title">settings</div>
+
+      <div class="control">
+        <label for="quality">quality <output id="qualityOut">80</output></label>
+        <input id="quality" type="range" min="1" max="100" value="80" />
+      </div>
+
+      <div class="control">
+        <label for="scale">scale <output id="scaleOut">100%</output></label>
+        <input id="scale" type="range" min="5" max="100" value="100" />
+      </div>
+
+      <div class="control">
+        <label for="format">format</label>
+        <select id="format">
+          <option value="">match source</option>
+          <option value="jpeg">jpeg</option>
+          <option value="png">png</option>
+          <option value="gif">gif</option>
+        </select>
+      </div>
+
+      <div id="stats" class="stats hidden">
+        <div class="stat"><span>saving</span><strong id="statSaving">—</strong></div>
+        <div class="stat"><span>size</span><strong id="statSize">—</strong></div>
+        <div class="stat"><span>output</span><strong id="statDims">—</strong></div>
+      </div>
+
+      <a id="download" class="download hidden" download>download</a>
+
+      <div class="sidebar-title ladder-title">quality vs size</div>
+      <table class="ladder">
+        <thead><tr><th scope="col">quality</th><th scope="col">size</th><th scope="col">saving</th></tr></thead>
+        <tbody id="ladderBody"></tbody>
+      </table>
+    </aside>
+  </div>
+
+  <div id="status-bar">
+    <span id="status-text">no image loaded</span>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
