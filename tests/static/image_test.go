@@ -115,6 +115,43 @@ func TestImageExplicitFormatFlag(t *testing.T) {
 	}
 }
 
+func TestImageWebPOutput(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "out.webp")
+
+	if _, _, code := run("image", samplePNG, "-o", out, flagNoColor); code != 0 {
+		t.Fatalf(exitFmt, code)
+	}
+
+	data, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("read output: %v", err)
+	}
+	if !bytes.HasPrefix(data, []byte("RIFF")) || !bytes.Contains(data[:16], []byte("WEBP")) {
+		t.Errorf("output is not a webp container: % x", data[:min(16, len(data))])
+	}
+}
+
+// Lossless webp should undercut the png it came from.
+func TestImageWebPBeatsPNG(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "out.webp")
+
+	if _, _, code := run("image", samplePNG, "-o", out, "--to", "webp", "-q", "100", flagNoColor); code != 0 {
+		t.Fatalf(exitFmt, code)
+	}
+
+	written, err := os.Stat(out)
+	if err != nil {
+		t.Fatalf("stat output: %v", err)
+	}
+	source, err := os.Stat(samplePNG)
+	if err != nil {
+		t.Fatalf("stat source: %v", err)
+	}
+	if written.Size() >= source.Size() {
+		t.Errorf("lossless webp is %d bytes, no smaller than the %d byte png", written.Size(), source.Size())
+	}
+}
+
 func TestImageScale(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "half.jpg")
 

@@ -70,8 +70,11 @@ Quality means different things per format:
          is reduced to roughly that percentage of 256 colors. A file is never
          written larger than its lossless version.
   gif    Always palettized; quality sets the number of colors.
+  webp   Lossless, and usually the smallest of the four. Quality drives the
+         same palette reduction as png.
 
-Reads jpeg, png, gif, webp, tiff and bmp. Writes jpeg, png and gif.
+Reads jpeg, png, gif, webp, tiff and bmp. Writes jpeg, png, gif and webp.
+WebP output is lossless only — for photographs, jpeg is still smaller.
 EXIF orientation is applied to the pixels so rotated photos stay upright;
 all other metadata is dropped, which is usually wanted and shrinks the file.
 
@@ -80,6 +83,7 @@ Examples:
   unum image photo.jpg -o small.jpg -q 70
   unum image photo.jpg -o thumb.jpg --max-width 400
   unum image photo.jpg -o web.jpg --target 200kb
+  unum image shot.png -o shot.webp --to webp
   unum image shot.png -o shot.jpg --to jpeg --scale 50%`,
 		Args:         cobra.MaximumNArgs(1),
 		SilenceUsage: true,
@@ -101,7 +105,7 @@ Examples:
 	cmd.Flags().StringVar(&f.scale, "scale", "", "resize by a factor or percentage, e.g. 50% or 0.5")
 	cmd.Flags().IntVar(&f.maxWidth, "max-width", 0, "shrink so the width is at most this many pixels")
 	cmd.Flags().IntVar(&f.maxHeight, "max-height", 0, "shrink so the height is at most this many pixels")
-	cmd.Flags().StringVar(&f.to, "to", "", "output format: jpeg, png, gif (default: match the source)")
+	cmd.Flags().StringVar(&f.to, "to", "", "output format: jpeg, png, gif, webp (default: match the source)")
 	cmd.Flags().StringVar(&f.target, "target", "", "target file size, e.g. 200kb — picks the best quality that fits")
 	cmd.Flags().StringVar(&f.theme, "theme", cfg.DarkTheme, "color theme: cyber, matrix, dracula, nord, clean, solarized")
 	cmd.Flags().BoolVar(&f.quiet, "quiet", false, "suppress the boot line")
@@ -131,7 +135,7 @@ func (f *flags) settings(src optimize.Source) (settings, error) {
 	if f.to != "" {
 		parsed, ok := optimize.ParseFormat(f.to)
 		if !ok {
-			return settings{}, fmt.Errorf("unknown format %q (want jpeg, png, or gif)", f.to)
+			return settings{}, fmt.Errorf("unknown format %q (want jpeg, png, gif, or webp)", f.to)
 		}
 		format = parsed
 	} else if inferred, ok := formatFromPath(f.output); ok {
@@ -140,7 +144,7 @@ func (f *flags) settings(src optimize.Source) (settings, error) {
 
 	resolved := optimize.ResolveOutputFormat(format, src.Format)
 	if !resolved.CanEncode() {
-		return settings{}, fmt.Errorf("cannot write %s: use --to jpeg, png, or gif", resolved)
+		return settings{}, fmt.Errorf("cannot write %s: use --to jpeg, png, gif, or webp", resolved)
 	}
 
 	budget := 0

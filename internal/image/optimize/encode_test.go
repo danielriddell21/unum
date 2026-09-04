@@ -40,6 +40,7 @@ func TestEncodeProducesDecodableImages(t *testing.T) {
 		{"jpeg", FormatJPEG, []byte{0xFF, 0xD8, 0xFF}},
 		{"png", FormatPNG, []byte{0x89, 'P', 'N', 'G'}},
 		{"gif", FormatGIF, []byte("GIF8")},
+		{"webp", FormatWebP, []byte("RIFF")},
 	}
 
 	for _, tt := range tests {
@@ -66,9 +67,9 @@ func TestEncodeProducesDecodableImages(t *testing.T) {
 func TestEncodeRejectsUnwritableFormats(t *testing.T) {
 	img := gradientImage(8, 8)
 
-	for _, f := range []Format{FormatWebP, FormatTIFF, FormatBMP, FormatUnknown} {
+	for _, f := range []Format{FormatTIFF, FormatBMP, FormatUnknown} {
 		if _, err := Encode(img, f, 80); err == nil {
-			t.Errorf("Encode to %v should fail while only jpeg, png and gif can be written", f)
+			t.Errorf("Encode to %v should fail — it is a decode-only format", f)
 		}
 	}
 }

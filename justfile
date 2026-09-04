@@ -220,6 +220,11 @@ image-thumb file="testdata/sample.jpg" width="400":
 image-ui file="testdata/sample.jpg":
     go run {{ main }} image {{ file }} --ui
 
+# convert to lossless webp
+[group('image')]
+image-webp file="testdata/sample.png":
+    go run {{ main }} image {{ file }} -o out.webp --to webp
+
 # browser UI
 [group('image')]
 image-web file="testdata/sample.jpg":

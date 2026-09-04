@@ -186,7 +186,7 @@ func TestHandleOptimizeRejections(t *testing.T) {
 		{"bad format", "?id=" + id + "&format=avif", http.StatusBadRequest},
 		{"bad scale", "?id=" + id + "&scale=500%25", http.StatusBadRequest},
 		{"malformed query", "?id=" + id + "&scale=50%", http.StatusBadRequest},
-		{"unwritable format", "?id=" + id + "&format=webp", http.StatusBadRequest},
+		{"unwritable format", "?id=" + id + "&format=tiff", http.StatusBadRequest},
 	}
 
 	for _, tt := range tests {

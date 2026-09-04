@@ -7,6 +7,8 @@ import (
 	"image/gif"
 	"image/jpeg"
 	"image/png"
+
+	"github.com/danielriddell21/unum/pkg/webp"
 )
 
 func ClampQuality(q int) int {
@@ -28,8 +30,10 @@ func Encode(img image.Image, format Format, quality int) ([]byte, error) {
 		if err := gif.Encode(&buf, toPaletted(img, Quantize(img, ColorsForQuality(quality))), nil); err != nil {
 			return nil, fmt.Errorf("encode gif: %w", err)
 		}
+	case FormatWebP:
+		return encodeWebP(img, quality)
 	default:
-		return nil, fmt.Errorf("cannot write %s: output format must be jpeg, png, or gif", format)
+		return nil, fmt.Errorf("cannot write %s: output format must be jpeg, png, gif, or webp", format)
 	}
 
 	return buf.Bytes(), nil
@@ -53,6 +57,28 @@ func encodePNG(img image.Image, quality int) ([]byte, error) {
 	// Dithering scatters per-pixel noise that deflate cannot pack, so on smooth
 	// or already-flat images the quantized file comes out larger than the
 	// original. An optimizer must never hand back the bigger of the two.
+	if len(lossless) <= len(quantized) {
+		return lossless, nil
+	}
+	return quantized, nil
+}
+
+// encodeWebP writes lossless WebP. Like PNG it has no continuous quality knob,
+// so quality drives the same palette reduction, and the larger of the two
+// results is never returned.
+func encodeWebP(img image.Image, quality int) ([]byte, error) {
+	lossless, err := webp.EncodeToBytes(img)
+	if err != nil {
+		return nil, fmt.Errorf("encode webp: %w", err)
+	}
+	if quality >= 100 {
+		return lossless, nil
+	}
+
+	quantized, err := webp.EncodeToBytes(quantizedFor(img, quality))
+	if err != nil {
+		return nil, fmt.Errorf("encode webp: %w", err)
+	}
 	if len(lossless) <= len(quantized) {
 		return lossless, nil
 	}

@@ -72,7 +72,7 @@ func (f Format) MIME() string {
 }
 
 func (f Format) CanEncode() bool {
-	return f == FormatJPEG || f == FormatPNG || f == FormatGIF
+	return f == FormatJPEG || f == FormatPNG || f == FormatGIF || f == FormatWebP
 }
 
 func (f Format) Lossy() bool {
@@ -98,7 +98,7 @@ func ParseFormat(s string) (Format, bool) {
 }
 
 func EncodableFormats() []Format {
-	return []Format{FormatJPEG, FormatPNG, FormatGIF}
+	return []Format{FormatJPEG, FormatPNG, FormatGIF, FormatWebP}
 }
 
 func formatFromDecoded(name string) Format {

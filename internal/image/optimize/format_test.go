@@ -63,7 +63,7 @@ func TestFormatStringExtMIME(t *testing.T) {
 }
 
 func TestFormatCanEncode(t *testing.T) {
-	encodable := map[Format]bool{FormatJPEG: true, FormatPNG: true, FormatGIF: true}
+	encodable := map[Format]bool{FormatJPEG: true, FormatPNG: true, FormatGIF: true, FormatWebP: true}
 	all := []Format{FormatUnknown, FormatJPEG, FormatPNG, FormatGIF, FormatWebP, FormatTIFF, FormatBMP}
 
 	for _, f := range all {
@@ -93,7 +93,7 @@ func TestResolveOutputFormat(t *testing.T) {
 		{"explicit wins", FormatPNG, FormatJPEG, FormatPNG},
 		{"falls back to encodable source", FormatUnknown, FormatJPEG, FormatJPEG},
 		{"gif source kept", FormatUnknown, FormatGIF, FormatGIF},
-		{"webp source becomes png", FormatUnknown, FormatWebP, FormatPNG},
+		{"webp source kept", FormatUnknown, FormatWebP, FormatWebP},
 		{"bmp source becomes png", FormatUnknown, FormatBMP, FormatPNG},
 		{"unknown source becomes png", FormatUnknown, FormatUnknown, FormatPNG},
 	}
