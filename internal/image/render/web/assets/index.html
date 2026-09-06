@@ -15,19 +15,37 @@
   <div id="header">
     <span class="brand">[ UNUM ]</span>
     <span class="hdr-tool">image optimizer</span>
-    <span class="hdr-sep">·</span>
-    <span class="hdr-info" id="hdr-info">drop an image to begin</span>
+    <span class="hdr-sep" id="sep-file" style="display:none">·</span>
+    <span class="hdr-info" id="hdr-filename"></span>
   </div>
 
-  <div class="layout" id="dropzone">
-    <div class="main">
-      <div id="empty" class="empty-hint">
-        <p class="empty-title">drop an image here</p>
-        <p>or <label for="fileInput" class="link">choose a file</label></p>
-        <input id="fileInput" type="file" accept="image/*" hidden />
+  <!-- Upload screen: the initial empty state, consistent with the json, diff and
+       diagram web UIs -->
+  <div id="upload-panel" style="display:none">
+    <div class="upload-field">
+      <!-- The sibling tools make this drop target a <textarea>, because their
+           input is text you can also paste into it. An image is binary, so the
+           target is a div wearing the same class; clipboard images arrive via a
+           paste listener on the document instead. -->
+      <div class="paste-area" id="drop-area" role="button" tabindex="0"
+           aria-label="Drop an image here, paste, or browse for a file">
+        <span class="paste-placeholder">drop an image here, paste, or click browse...</span>
       </div>
+      <div class="paste-meta">
+        <span class="paste-filename" id="paste-filename"></span>
+        <button class="browse-btn" id="browse-btn">browse...</button>
+        <input id="file-input" type="file" accept="image/*" aria-label="Load an image file" style="display:none" />
+      </div>
+    </div>
+    <div class="upload-controls">
+      <span id="up-error" class="upload-error"></span>
+    </div>
+  </div>
 
-      <div id="panes" class="panes hidden">
+  <!-- Optimizer: the live view once an image is loaded -->
+  <div class="layout" id="layout" style="display:none">
+    <div class="main">
+      <div id="panes" class="panes">
         <figure class="pane">
           <figcaption>original <span id="beforeMeta" class="meta"></span></figcaption>
           <div class="shot"><img id="beforeImg" alt="original image" /></div>
@@ -59,16 +77,17 @@
           <option value="jpeg">jpeg</option>
           <option value="png">png</option>
           <option value="gif">gif</option>
+          <option value="webp">webp</option>
         </select>
       </div>
 
-      <div id="stats" class="stats hidden">
+      <div id="stats" class="stats">
         <div class="stat"><span>saving</span><strong id="statSaving">—</strong></div>
         <div class="stat"><span>size</span><strong id="statSize">—</strong></div>
         <div class="stat"><span>output</span><strong id="statDims">—</strong></div>
       </div>
 
-      <a id="download" class="download hidden" download>download</a>
+      <a id="download" class="download" download>download</a>
 
       <div class="sidebar-title ladder-title">quality vs size</div>
       <table class="ladder">
@@ -79,7 +98,8 @@
   </div>
 
   <div id="status-bar">
-    <span id="status-text">no image loaded</span>
+    <span id="status-info"></span>
+    <span id="status-hints">drop, paste, or browse an image</span>
   </div>
 
   <script src="/app.js"></script>

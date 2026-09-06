@@ -205,7 +205,7 @@ func TestImageWebAPI_ErrorCodes(t *testing.T) {
 		{"missing id", "/api/optimize", http.StatusBadRequest},
 		{"unknown id", "/api/optimize?id=0123456789abcdef", http.StatusNotFound},
 		{"bad format", "/api/optimize?id=" + id + "&format=avif", http.StatusBadRequest},
-		{"format we cannot write", "/api/optimize?id=" + id + "&format=webp", http.StatusBadRequest},
+		{"decode-only format", "/api/optimize?id=" + id + "&format=tiff", http.StatusBadRequest},
 	}
 
 	for _, tt := range tests {
@@ -220,6 +220,43 @@ func TestImageWebAPI_ErrorCodes(t *testing.T) {
 				t.Errorf("status %d, want %d", resp.StatusCode, tt.want)
 			}
 		})
+	}
+}
+
+// Launched with no file, the tool must open on the shared upload screen rather
+// than a half-populated optimizer.
+func TestWebFrontend_ImageUploadScreen(t *testing.T) {
+	const port = "19899"
+
+	cmd := exec.Command(unumBin, "image", "--web")
+	cmd.Env = append(os.Environ(), "PORT="+port)
+	if err := cmd.Start(); err != nil {
+		t.Fatalf(imageStartServerErr, err)
+	}
+	defer func() { _ = cmd.Process.Kill() }()
+
+	resp := waitForServer(t, fmt.Sprintf("http://localhost:%s/", port))
+	_ = resp.Body.Close()
+
+	browser := newBrowser(t)
+	page := browser.MustPage(fmt.Sprintf("http://localhost:%s/", port))
+	page.MustWaitLoad()
+
+	// The structure the json, diff and diagram web UIs all share.
+	for _, selector := range []string{
+		"#upload-panel", "#drop-area.paste-area", ".browse-btn", ".paste-filename", ".upload-error",
+	} {
+		waitForElement(t, page, selector)
+	}
+
+	if hints := waitForElement(t, page, "#status-hints").MustText(); !strings.Contains(hints, "browse") {
+		t.Errorf("status hints = %q, want it to describe drop/paste/browse", hints)
+	}
+
+	// The optimizer stays hidden until something is loaded.
+	display := page.MustEval(`() => getComputedStyle(document.getElementById('layout')).display`).String()
+	if display != "none" {
+		t.Errorf("layout display = %q, want none before an image is loaded", display)
 	}
 }
 
@@ -244,5 +281,15 @@ func TestWebFrontend_ImageUILoadsAndOptimizes(t *testing.T) {
 	src := after.MustProperty("src").String()
 	if !strings.HasPrefix(src, "data:image/") {
 		t.Errorf("optimized preview src = %.40q, want a data url", src)
+	}
+
+	// [ new ] appears once loaded and returns to the upload screen, matching the
+	// sibling tools.
+	waitForElement(t, page, "#new-btn").MustClick()
+	waitForElement(t, page, "#upload-panel")
+
+	display := page.MustEval(`() => getComputedStyle(document.getElementById('layout')).display`).String()
+	if display != "none" {
+		t.Errorf("layout display = %q after [ new ], want none", display)
 	}
 }

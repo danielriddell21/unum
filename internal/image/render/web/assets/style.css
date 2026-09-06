@@ -6,11 +6,6 @@
   min-height: 0;
 }
 
-.layout.dragging {
-  outline: 1px dashed var(--border-active);
-  outline-offset: -6px;
-}
-
 .main {
   flex: 1;
   min-width: 0;
@@ -41,25 +36,107 @@
 
 .hidden { display: none !important; }
 
-/* ── Empty state ────────────────────────────────────────────────────────────── */
+/* ── Upload screen ───────────────────────────────────────────────────────────── */
+/* Ported from the diagram web UI so the empty state reads identically across
+   tools. The only change is that .paste-area is a div here rather than a
+   textarea, since an image cannot be typed into one. */
 
-.empty-hint {
-  margin: auto;
-  text-align: center;
-  color: var(--muted);
+#upload-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
 }
 
-.empty-title {
+.upload-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.paste-area {
+  flex: 1;
+  min-height: 160px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-active);
+  border-radius: 4px;
   color: var(--text);
-  font-size: 15px;
-  margin-bottom: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 10px 12px;
+  outline: none;
+  transition: background 0.15s;
+  cursor: pointer;
 }
 
-.link {
-  color: var(--border-active);
-  cursor: pointer;
-  text-decoration: underline;
+.paste-area.drag-over { background: var(--bg-hover); }
+
+.paste-placeholder { color: var(--muted); }
+
+.paste-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
 }
+
+.paste-filename {
+  color: var(--border-active);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browse-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.browse-btn:hover {
+  border-color: var(--border-active);
+  color: var(--border-active);
+}
+
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  min-height: 18px;
+}
+
+.upload-error {
+  color: #ff6b6b;
+  font-size: 12px;
+}
+
+#new-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  margin-left: auto;
+  margin-right: 6px;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+#new-btn:hover { color: var(--border-active); }
 
 /* ── Before / after ─────────────────────────────────────────────────────────── */
 
@@ -199,7 +276,7 @@
 #status-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
   padding: 4px 16px;
   border-top: 1px solid var(--border);
   background: var(--bg-panel);
@@ -207,3 +284,6 @@
   font-size: 11px;
   flex-shrink: 0;
 }
+
+#status-info { color: var(--text); }
+#status-hints { margin-left: auto; color: var(--muted); }
