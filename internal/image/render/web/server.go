@@ -63,6 +63,7 @@ func Start(opts Options) error {
 	mux.HandleFunc("/api/upload", handleUpload(opts.Tel, st))
 	mux.HandleFunc("/api/optimize", handleOptimize(opts.Tel, st))
 	mux.HandleFunc("/api/analyze", handleAnalyze(opts.Tel, st))
+	mux.HandleFunc("/api/original", handleOriginal(st))
 	mux.HandleFunc("/api/source", handleSource(opts))
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
 	shared.RegisterMetrics(mux)

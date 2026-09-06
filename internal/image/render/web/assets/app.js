@@ -94,7 +94,9 @@ async function upload(file) {
   }
 
   current = await res.json();
-  beforeImg.src = URL.createObjectURL(file);
+  // Ask the server for the bytes it just took, rather than making a same-origin
+  // blob URL out of the File the user picked.
+  beforeImg.src = '/api/original?id=' + encodeURIComponent(current.id);
   beforeMeta.textContent = current.format + ' · ' + current.width + ' × ' + current.height +
     ' · ' + humanBytes(current.bytes);
   setHeaderFile(current.name);

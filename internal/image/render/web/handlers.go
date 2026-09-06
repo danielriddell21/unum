@@ -89,6 +89,35 @@ func handleUpload(tel *telemetry.Telemetry, st *store) http.HandlerFunc {
 	}
 }
 
+// handleOriginal serves an uploaded image back to the page.
+//
+// The "original" pane could show the local File directly via
+// URL.createObjectURL, but turning a user-chosen file into a same-origin blob
+// URL is a pattern worth avoiding — an HTML or SVG file handed an object URL
+// runs in this origin the moment anything navigates to it. The bytes already
+// live server-side, so the page just asks for them back.
+func handleOriginal(st *store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			http.Error(w, "missing id param", http.StatusBadRequest)
+			return
+		}
+
+		data, format, ok := st.raw(id)
+		if !ok {
+			http.Error(w, "unknown image id — upload it again", http.StatusNotFound)
+			return
+		}
+
+		// Only images that decoded successfully are ever stored, but say so
+		// explicitly rather than letting the browser sniff a content type.
+		w.Header().Set("Content-Type", format.MIME())
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		_, _ = w.Write(data)
+	}
+}
+
 func handleOptimize(tel *telemetry.Telemetry, st *store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		src, opts, ok := requestOptions(w, r, st)

@@ -229,6 +229,59 @@ func TestHandleAnalyze(t *testing.T) {
 	}
 }
 
+func TestHandleOriginal(t *testing.T) {
+	tel := testTelemetry(t)
+	st := newStore()
+	data := testImageBytes(t)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/upload?name=fixture.jpg", bytes.NewReader(data))
+	handleUpload(tel, st)(rec, req)
+	var up uploadResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &up); err != nil {
+		t.Fatalf("decode upload: %v", err)
+	}
+
+	t.Run("serves the bytes back untouched", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		handleOriginal(st)(rec, httptest.NewRequest(http.MethodGet, "/api/original?id="+up.ID, nil))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status %d, want 200", rec.Code)
+		}
+		if !bytes.Equal(rec.Body.Bytes(), data) {
+			t.Error("body does not match the uploaded bytes")
+		}
+		if got := rec.Header().Get("Content-Type"); got != "image/jpeg" {
+			t.Errorf("Content-Type = %q, want image/jpeg", got)
+		}
+		// Browsers must not be left to sniff a type for content a user supplied.
+		if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+			t.Errorf("X-Content-Type-Options = %q, want nosniff", got)
+		}
+	})
+
+	t.Run("rejections", func(t *testing.T) {
+		tests := []struct {
+			name  string
+			query string
+			want  int
+		}{
+			{"missing id", "", http.StatusBadRequest},
+			{"unknown id", "?id=0123456789abcdef", http.StatusNotFound},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				rec := httptest.NewRecorder()
+				handleOriginal(st)(rec, httptest.NewRequest(http.MethodGet, "/api/original"+tt.query, nil))
+				if rec.Code != tt.want {
+					t.Errorf("status %d, want %d", rec.Code, tt.want)
+				}
+			})
+		}
+	})
+}
+
 func TestHandleSource(t *testing.T) {
 	data := testImageBytes(t)
 

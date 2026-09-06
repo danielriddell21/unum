@@ -321,6 +321,16 @@ func TestWebFrontend_ImageUILoadsAndOptimizes(t *testing.T) {
 		t.Error("expected quality ladder rows")
 	}
 
+	// The original pane is served from the server, not from a blob URL made out
+	// of the local File.
+	before := waitForElement(t, page, "#beforeImg")
+	if src := before.MustProperty("src").String(); !strings.Contains(src, "/api/original?id=") {
+		t.Errorf("original preview src = %q, want it served from /api/original", src)
+	}
+	if w := before.MustEval(`() => this.naturalWidth`).Int(); w == 0 {
+		t.Error("original preview did not load")
+	}
+
 	after := waitForElement(t, page, "#afterImg")
 	src := after.MustProperty("src").String()
 	if !strings.HasPrefix(src, "data:image/") {
