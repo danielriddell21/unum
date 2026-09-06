@@ -18,6 +18,7 @@ import (
 	"github.com/danielriddell21/unum/internal/hash/render/static"
 	hashTUI "github.com/danielriddell21/unum/internal/hash/render/tui"
 	hashWeb "github.com/danielriddell21/unum/internal/hash/render/web"
+	"github.com/danielriddell21/unum/internal/hash/types"
 	"github.com/danielriddell21/unum/internal/telemetry"
 	"github.com/danielriddell21/unum/internal/tui/panels"
 )
@@ -166,35 +167,7 @@ func runHash(f *flags, args []string) error {
 		fmt.Fprintf(os.Stderr, "warning: could not write hash history: %v\n", err)
 	}
 
-	outputField := "full"
-	switch {
-	case f.portOnly:
-		outputField = "port"
-		static.RenderSingle(os.Stdout, fmt.Sprintf("%d", r.Port))
-	case f.uuidOnly:
-		outputField = "uuid"
-		static.RenderSingle(os.Stdout, r.UUID)
-	case f.colorOnly:
-		outputField = "color"
-		static.RenderSingle(os.Stdout, r.Color)
-	case f.shortOnly:
-		outputField = "short"
-		static.RenderSingle(os.Stdout, r.Short)
-	case f.emojiOnly:
-		outputField = "emoji"
-		static.RenderSingle(os.Stdout, r.Emoji)
-	case f.phraseOnly:
-		outputField = "phrase"
-		static.RenderSingle(os.Stdout, r.Phrase)
-	default:
-		opts := static.Options{
-			Theme:   static.ResolveTheme(f.theme),
-			NoColor: f.noColor,
-			Quiet:   f.quiet,
-		}
-		static.Boot(os.Stderr, opts)
-		static.RenderTable(os.Stdout, r, opts)
-	}
+	outputField := renderHashResult(f, r)
 
 	span.SetAttributes(attribute.String("hash.output_field", outputField))
 	f.tel.M.Invocations.Add(ctx, 1, ometric.WithAttributes(
@@ -212,7 +185,42 @@ func (f *flags) recordHistory(input string) error {
 	if f.noHistory || !f.historyOn {
 		return nil
 	}
-	return history.Append(input)
+	if err := history.Append(input); err != nil {
+		return fmt.Errorf("append history: %w", err)
+	}
+	return nil
+}
+
+func renderHashResult(f *flags, r types.Result) string {
+	switch {
+	case f.portOnly:
+		static.RenderSingle(os.Stdout, fmt.Sprintf("%d", r.Port))
+		return "port"
+	case f.uuidOnly:
+		static.RenderSingle(os.Stdout, r.UUID)
+		return "uuid"
+	case f.colorOnly:
+		static.RenderSingle(os.Stdout, r.Color)
+		return "color"
+	case f.shortOnly:
+		static.RenderSingle(os.Stdout, r.Short)
+		return "short"
+	case f.emojiOnly:
+		static.RenderSingle(os.Stdout, r.Emoji)
+		return "emoji"
+	case f.phraseOnly:
+		static.RenderSingle(os.Stdout, r.Phrase)
+		return "phrase"
+	}
+
+	opts := static.Options{
+		Theme:   static.ResolveTheme(f.theme),
+		NoColor: f.noColor,
+		Quiet:   f.quiet,
+	}
+	static.Boot(os.Stderr, opts)
+	static.RenderTable(os.Stdout, r, opts)
+	return "full"
 }
 
 func activeHashFlags(f *flags) []string {
