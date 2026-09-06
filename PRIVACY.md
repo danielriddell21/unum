@@ -114,6 +114,26 @@ Or set it directly in `~/.config/unum/config.json`:
 endpoint in use, and your stored client id. Set `UNUM_TELEMETRY_DEBUG=1` to log
 to stderr exactly what would be sent.
 
+## jq queries
+
+`unum json --query` and the query box in the web UI run your jq expression
+locally, through the [gojq](https://github.com/itchyny/gojq) library compiled
+into the binary. Nothing is sent anywhere to evaluate it.
+
+A query expression is itself sensitive — it records what you were looking for in
+the data, not just the data. So:
+
+* **The expression is never recorded.** Telemetry sees the flag *name* `query`
+  and, on failure, the error category `query`. Never the expression text, never
+  the error detail, never the result.
+* **Results are never retained.** Unlike an upload, a query is computed and
+  returned; nothing is cached, and nothing is written to disk.
+* **A query cannot read anything but your document.** gojq is compiled with no
+  environment loader, so `env` and `$ENV` evaluate to `{}` and cannot reach the
+  process environment. Module loading is disabled, so `import` and `include` are
+  refused, and jq has no file-reading builtin. The document you loaded is the
+  only thing in scope.
+
 ## Web UI mode
 
 `--web` binds to `localhost` on a random free port and opens your browser. The
