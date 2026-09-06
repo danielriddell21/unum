@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 const imageStartServerErr = "start server: %v"
@@ -220,6 +221,49 @@ func TestImageWebAPI_ErrorCodes(t *testing.T) {
 				t.Errorf("status %d, want %d", resp.StatusCode, tt.want)
 			}
 		})
+	}
+}
+
+// Ladder rows carry their quality in a closure rather than a data- attribute, so
+// clicking one has to be exercised to know the wiring still holds.
+func TestWebFrontend_ImageLadderRowSelectsQuality(t *testing.T) {
+	const port = "19900"
+	startImageServer(t, port)
+
+	browser := newBrowser(t)
+	page := browser.MustPage(fmt.Sprintf("http://localhost:%s/", port))
+	page.MustWaitLoad()
+	waitForElement(t, page, "#ladderBody tr")
+
+	rows := page.MustElements("#ladderBody tr")
+	if len(rows) < 2 {
+		t.Fatalf("got %d ladder rows, want several to pick from", len(rows))
+	}
+
+	// The last rung is the lowest quality, so it differs from the default.
+	last := rows[len(rows)-1]
+	want := last.MustElements("td")[0].MustText()
+
+	last.MustClick()
+
+	deadline := time.Now().Add(10 * time.Second)
+	var got string
+	for time.Now().Before(deadline) {
+		got = page.MustElement("#quality").MustProperty("value").String()
+		if got == want {
+			break
+		}
+		time.Sleep(150 * time.Millisecond)
+	}
+	if got != want {
+		t.Fatalf("quality slider = %q after clicking the %q rung, want %q", got, want, want)
+	}
+
+	if shown := page.MustElement("#qualityOut").MustText(); shown != want {
+		t.Errorf("quality readout = %q, want %q", shown, want)
+	}
+	if src := page.MustElement("#afterImg").MustProperty("src").String(); !strings.HasPrefix(src, "data:image/") {
+		t.Errorf("optimized preview src = %.30q, want it re-rendered as a data url", src)
 	}
 }
 

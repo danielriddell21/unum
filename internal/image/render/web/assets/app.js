@@ -147,23 +147,41 @@ async function loadLadder() {
   if (!res.ok) return;
 
   const data = await res.json();
-  ladderBody.innerHTML = (data.steps || []).map(step => {
-    const saving = current.bytes > 0 ? 1 - step.bytes / current.bytes : 0;
-    const active = String(step.quality) === quality.value ? ' class="active"' : '';
-    return '<tr' + active + ' data-quality="' + step.quality + '">' +
-      '<td>' + step.quality + '</td>' +
-      '<td>' + humanBytes(step.bytes) + '</td>' +
-      '<td class="' + (saving > 0 ? 'win' : 'loss') + '">' + pct(saving) + '</td></tr>';
-  }).join('');
+  ladderBody.replaceChildren();
 
-  ladderBody.querySelectorAll('tr[data-quality]').forEach(tr => {
-    tr.addEventListener('click', () => {
-      quality.value = tr.dataset.quality;
-      qualityOut.textContent = quality.value;
-      refresh();
-      loadLadder();
-    });
+  for (const step of data.steps || []) {
+    ladderBody.appendChild(ladderRow(step));
+  }
+}
+
+// Rows are built as DOM nodes rather than an HTML string, and each one closes
+// over its own quality rather than stashing it in a data- attribute to read back
+// out. Nothing is written as markup and nothing is read back from the DOM, so
+// there is no way for a value to be reinterpreted as HTML on the next render.
+function ladderRow(step) {
+  const saving = current.bytes > 0 ? 1 - step.bytes / current.bytes : 0;
+
+  const tr = document.createElement('tr');
+  if (String(step.quality) === quality.value) tr.className = 'active';
+
+  tr.appendChild(cell(step.quality));
+  tr.appendChild(cell(humanBytes(step.bytes)));
+  tr.appendChild(cell(pct(saving), saving > 0 ? 'win' : 'loss'));
+
+  tr.addEventListener('click', () => {
+    quality.value = step.quality;
+    qualityOut.textContent = quality.value;
+    refresh();
+    loadLadder();
   });
+  return tr;
+}
+
+function cell(text, className) {
+  const td = document.createElement('td');
+  td.textContent = text;
+  if (className) td.className = className;
+  return td;
 }
 
 // Clear back to the upload screen so another image can be loaded, matching the
