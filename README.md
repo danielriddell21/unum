@@ -43,6 +43,13 @@ just install
 
 Full documentation lives in the [unum wiki](https://github.com/danielriddell21/unum/wiki).
 
+## Privacy
+
+Your file contents never leave your machine. unum sends anonymous usage
+telemetry by default — counts and sizes only, never content — which you can
+disable with `--no-telemetry` or `DO_NOT_TRACK=1`. See [PRIVACY.md](PRIVACY.md)
+for what is collected, what is written to disk, and how to turn it off.
+
 ## Acknowledgements
 
 - The initial architecture and design of this project was conceived with the assistance of [Claude](https://claude.ai) (Anthropic), which was also used throughout development for identifying and fixing bugs.
