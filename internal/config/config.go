@@ -5,15 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/google/uuid"
 )
 
 type Config struct {
 	DarkTheme   string `json:"dark_theme"`
 	LightTheme  string `json:"light_theme"`
 	Telemetry   *bool  `json:"telemetry,omitempty"`
-	ClientID    string `json:"client_id,omitempty"`
 	HashHistory *bool  `json:"hash_history,omitempty"`
 	NoticeShown bool   `json:"notice_shown,omitempty"`
 }
@@ -87,16 +84,6 @@ func Save(cfg Config) error {
 		return fmt.Errorf("write: %w", err)
 	}
 	return nil
-}
-
-func EnsureClientID() Config {
-	cfg := Load()
-	if !cfg.TelemetryEnabled() || cfg.ClientID != "" {
-		return cfg
-	}
-	cfg.ClientID = uuid.NewString()
-	_ = Save(cfg)
-	return cfg
 }
 
 func MarkNoticeShown(cfg Config) Config {

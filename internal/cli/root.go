@@ -52,8 +52,8 @@ across terminal, TUI, and web interfaces.`,
 				return
 			}
 			// Telemetry starts here, not in Execute, so that --no-telemetry is
-			// known before any client ID is generated or endpoint contacted.
-			cfg := config.EnsureClientID()
+			// known before any endpoint is contacted.
+			cfg := config.Load()
 			if !cfg.TelemetryEnabled() {
 				return
 			}

@@ -75,12 +75,6 @@ func runTelemetryStatus(cmd *cobra.Command) error {
 	}
 	fmt.Fprintf(out, "endpoint:  %s\n", endpoint)
 
-	if cfg.ClientID == "" {
-		fmt.Fprintln(out, "client id: none stored")
-	} else {
-		fmt.Fprintf(out, "client id: %s\n", cfg.ClientID)
-	}
-
 	path, err := config.Path()
 	if err == nil {
 		fmt.Fprintf(out, "config:    %s\n", path)
@@ -104,9 +98,6 @@ func telemetrySource(cfg config.Config) string {
 func setTelemetry(cmd *cobra.Command, on bool) error {
 	cfg := config.Load()
 	cfg.Telemetry = &on
-	if !on {
-		cfg.ClientID = ""
-	}
 	if err := config.Save(cfg); err != nil {
 		return fmt.Errorf("save config: %w", err)
 	}
@@ -115,7 +106,7 @@ func setTelemetry(cmd *cobra.Command, on bool) error {
 	if on {
 		fmt.Fprintln(out, "telemetry enabled")
 	} else {
-		fmt.Fprintln(out, "telemetry disabled; stored client id removed")
+		fmt.Fprintln(out, "telemetry disabled")
 	}
 
 	if !cfg.TelemetryEnabled() && on {
