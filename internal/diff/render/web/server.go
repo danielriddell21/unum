@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -40,27 +39,12 @@ type Options struct {
 }
 
 func Start(d *node.Diff, opts Options) error {
-	host := "localhost"
-	autoOpen := true
-	if p := os.Getenv("PORT"); p != "" {
-		if n, err := strconv.Atoi(p); err == nil {
-			opts.Port = n
-		}
-		host = "0.0.0.0"
-		autoOpen = false
+	bind, err := shared.ResolveBind(opts.Port)
+	if err != nil {
+		return fmt.Errorf("web: %w", err)
 	}
-
-	port := opts.Port
-	if port == 0 {
-		var err error
-		port, err = shared.FreePort()
-		if err != nil {
-			return fmt.Errorf("web: cannot find free port: %w", err)
-		}
-	}
-
-	addr := host + ":" + strconv.Itoa(port)
-	url := "http://" + addr
+	addr := bind.Addr()
+	url := bind.URL()
 
 	payload := buildPayload(d)
 	payloadBytes, err := json.Marshal(payload)
@@ -83,14 +67,15 @@ func Start(d *node.Diff, opts Options) error {
 		_, _ = w.Write(payloadBytes)
 	})
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(idx))
-	shared.RegisterMetrics(mux)
+	shared.RegisterMetrics(mux, bind)
 	shared.RegisterUmamiProxy(mux)
 
 	srv := &http.Server{Addr: addr, Handler: otelhttp.NewHandler(mux, "unum-diff"), ReadHeaderTimeout: 10 * time.Second}
 
+	shared.PrintBindWarning(bind)
 	shared.PrintStartupBanner("diff viewer", url)
 
-	if autoOpen {
+	if bind.AutoOpen {
 		go shared.OpenBrowser(url)
 	}
 
@@ -219,27 +204,12 @@ type postDiffRequest struct {
 }
 
 func StartServer(opts Options) error {
-	host := "localhost"
-	autoOpen := true
-	if p := os.Getenv("PORT"); p != "" {
-		if n, err := strconv.Atoi(p); err == nil {
-			opts.Port = n
-		}
-		host = "0.0.0.0"
-		autoOpen = false
+	bind, err := shared.ResolveBind(opts.Port)
+	if err != nil {
+		return fmt.Errorf("web: %w", err)
 	}
-
-	port := opts.Port
-	if port == 0 {
-		var err error
-		port, err = shared.FreePort()
-		if err != nil {
-			return fmt.Errorf("web: cannot find free port: %w", err)
-		}
-	}
-
-	addr := host + ":" + strconv.Itoa(port)
-	url := "http://" + addr
+	addr := bind.Addr()
+	url := bind.URL()
 
 	d := shared.NewIndexData(opts.DarkTheme, opts.LightTheme, opts.Version)
 	mux := http.NewServeMux()
@@ -249,14 +219,15 @@ func StartServer(opts Options) error {
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", contentTypeJS))
 	mux.HandleFunc(apiDiffPath, handleServerDiff(opts.Tel))
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
-	shared.RegisterMetrics(mux)
+	shared.RegisterMetrics(mux, bind)
 	shared.RegisterUmamiProxy(mux)
 
 	srv := &http.Server{Addr: addr, Handler: otelhttp.NewHandler(mux, "unum-diff"), ReadHeaderTimeout: 10 * time.Second}
 
+	shared.PrintBindWarning(bind)
 	shared.PrintStartupBanner("diff viewer", url)
 
-	if autoOpen {
+	if bind.AutoOpen {
 		go shared.OpenBrowser(url)
 	}
 

@@ -70,6 +70,10 @@ func waitForServer(t *testing.T, url string) *http.Response {
 	return nil
 }
 
+func httpGet(url string) (*http.Response, error) {
+	return http.Get(url) //nolint:noctx // functional test fetch; context not threaded through
+}
+
 // keys returns the map keys as a slice for error messages.
 func keys(m map[string]any) []string {
 	ks := make([]string, 0, len(m))

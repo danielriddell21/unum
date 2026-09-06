@@ -9,9 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
-	"sync"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -53,27 +51,12 @@ type Options struct {
 }
 
 func Start(root *node.Node, opts Options) error {
-	host := "localhost"
-	autoOpen := true
-	if p := os.Getenv("PORT"); p != "" {
-		if n, err := strconv.Atoi(p); err == nil {
-			opts.Port = n
-		}
-		host = "0.0.0.0"
-		autoOpen = false
+	bind, err := shared.ResolveBind(opts.Port)
+	if err != nil {
+		return fmt.Errorf("web: %w", err)
 	}
-
-	port := opts.Port
-	if port == 0 {
-		var err error
-		port, err = shared.FreePort()
-		if err != nil {
-			return fmt.Errorf("web: cannot find free port: %w", err)
-		}
-	}
-
-	addr := host + ":" + strconv.Itoa(port)
-	url := "http://" + addr
+	addr := bind.Addr()
+	url := bind.URL()
 
 	// Pre-compute all analysis outputs once (not per-request)
 	payload, err := buildPayload(root, opts.Filename)
@@ -99,7 +82,7 @@ func Start(root *node.Node, opts Options) error {
 	mux.HandleFunc("/api/tree", handleTree(payloadBytes))
 	mux.HandleFunc(apiUploadPath, handleUpload(opts.Tel))
 	mux.HandleFunc("/api/query", handleQuery(root))
-	shared.RegisterMetrics(mux)
+	shared.RegisterMetrics(mux, bind)
 	shared.RegisterUmamiProxy(mux)
 
 	srv := &http.Server{
@@ -108,9 +91,10 @@ func Start(root *node.Node, opts Options) error {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
+	shared.PrintBindWarning(bind)
 	shared.PrintStartupBanner("json explorer", url)
 
-	if autoOpen {
+	if bind.AutoOpen {
 		go shared.OpenBrowser(url)
 	}
 
@@ -253,32 +237,13 @@ func maxDepth(n *node.Node) int {
 	return max + 1
 }
 
-var rootCache sync.Map
-
-var payloadCache sync.Map
-
 func StartServer(opts Options) error {
-	host := "localhost"
-	autoOpen := true
-	if p := os.Getenv("PORT"); p != "" {
-		if n, err := strconv.Atoi(p); err == nil {
-			opts.Port = n
-		}
-		host = "0.0.0.0"
-		autoOpen = false
+	bind, err := shared.ResolveBind(opts.Port)
+	if err != nil {
+		return fmt.Errorf("web: %w", err)
 	}
-
-	port := opts.Port
-	var err error
-	if port == 0 {
-		port, err = shared.FreePort()
-		if err != nil {
-			return fmt.Errorf("web: cannot find free port: %w", err)
-		}
-	}
-
-	addr := host + ":" + strconv.Itoa(port)
-	url := "http://" + addr
+	addr := bind.Addr()
+	url := bind.URL()
 
 	d := shared.NewIndexData(opts.DarkTheme, opts.LightTheme, opts.Version)
 	mux := http.NewServeMux()
@@ -290,14 +255,15 @@ func StartServer(opts Options) error {
 	mux.HandleFunc(apiUploadPath, handleUpload(opts.Tel))
 	mux.HandleFunc("/api/query", handleKeyedQuery())
 	mux.HandleFunc("/", shared.ServeTemplate(assets, "assets/index.html")(d))
-	shared.RegisterMetrics(mux)
+	shared.RegisterMetrics(mux, bind)
 	shared.RegisterUmamiProxy(mux)
 
 	srv := &http.Server{Addr: addr, Handler: otelhttp.NewHandler(mux, "unum-json"), ReadHeaderTimeout: 10 * time.Second}
 
+	shared.PrintBindWarning(bind)
 	shared.PrintStartupBanner("json explorer", url)
 
-	if autoOpen {
+	if bind.AutoOpen {
 		go shared.OpenBrowser(url)
 	}
 	if err := srv.ListenAndServe(); err != nil {
@@ -309,13 +275,13 @@ func StartServer(opts Options) error {
 func handleTree(payloadBytes []byte) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if key := r.URL.Query().Get("key"); key != "" {
-			v, ok := payloadCache.Load(key)
+			e, ok := uploads.get(key)
 			if !ok {
 				http.Error(w, errKeyNotFound, http.StatusNotFound)
 				return
 			}
 			w.Header().Set(contentTypeHdr, contentTypeJSON)
-			_, _ = w.Write(v.([]byte)) //nolint:gosec // v is always []byte; type assertion is safe
+			_, _ = w.Write(e.payload)
 			return
 		}
 		w.Header().Set(contentTypeHdr, contentTypeJSON)
@@ -330,13 +296,13 @@ func handleKeyedTree() http.HandlerFunc {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		v, ok := payloadCache.Load(key)
+		e, ok := uploads.get(key)
 		if !ok {
 			http.Error(w, errKeyNotFound, http.StatusNotFound)
 			return
 		}
 		w.Header().Set(contentTypeHdr, contentTypeJSON)
-		_, _ = w.Write(v.([]byte)) //nolint:gosec // v is always []byte; type assertion is safe
+		_, _ = w.Write(e.payload)
 	}
 }
 
@@ -347,12 +313,12 @@ func handleKeyedQuery() http.HandlerFunc {
 			writeJSON(w, queryResponse{Error: "no file context"})
 			return
 		}
-		v, ok := rootCache.Load(key)
+		e, ok := uploads.get(key)
 		if !ok {
 			writeJSON(w, queryResponse{Error: errKeyNotFound})
 			return
 		}
-		handleQuery(v.(*node.Node))(w, r) //nolint:gosec // v is always *node.Node; type assertion is safe
+		handleQuery(e.root)(w, r)
 	}
 }
 
@@ -425,8 +391,7 @@ func handleUpload(tel *telemetry.Telemetry) http.HandlerFunc {
 		})
 
 		key := generateKey()
-		rootCache.Store(key, root)
-		payloadCache.Store(key, payloadBytes)
+		uploads.put(key, root, payloadBytes)
 
 		w.Header().Set(contentTypeHdr, contentTypeJSON)
 		_ = json.NewEncoder(w).Encode(map[string]string{"key": key})

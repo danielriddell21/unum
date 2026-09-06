@@ -202,3 +202,43 @@ func TestConcurrentTrack(t *testing.T) {
 		t.Errorf(closeErrFmt, err)
 	}
 }
+
+func TestNew_NoopBeforeStart(t *testing.T) {
+	tel := New()
+	if tel.M.Invocations == nil {
+		t.Fatal("metrics must be usable before Start")
+	}
+
+	// Must not panic: commands hold this before PersistentPreRun runs Start.
+	tel.M.Invocations.Add(context.Background(), 1)
+	tel.Tracer()
+	tel.Meter()
+	tel.TrackEvent("test", "/test", nil)
+	if err := tel.Close(context.Background()); err != nil {
+		t.Errorf(closeErrFmt, err)
+	}
+}
+
+func TestStart_DisabledLeavesNoopUsable(t *testing.T) {
+	t.Setenv("DO_NOT_TRACK", "1")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
+
+	tel := New()
+	tel.Start(config.Config{}, "test", testVersion)
+	tel.M.Invocations.Add(context.Background(), 1)
+	if err := tel.Close(context.Background()); err != nil {
+		t.Errorf(closeErrFmt, err)
+	}
+}
+
+func TestEndpoint_PrefersEnv(t *testing.T) {
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://example.invalid:4318")
+	if got := Endpoint(); got != "http://example.invalid:4318" {
+		t.Errorf("Endpoint()=%q", got)
+	}
+
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+	if got := Endpoint(); got != otelEndpoint {
+		t.Errorf("Endpoint()=%q, want build-time default %q", got, otelEndpoint)
+	}
+}

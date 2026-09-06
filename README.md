@@ -46,9 +46,15 @@ Full documentation lives in the [unum wiki](https://github.com/danielriddell21/u
 ## Privacy
 
 Your file contents never leave your machine. unum sends anonymous usage
-telemetry by default — counts and sizes only, never content — which you can
-disable with `--no-telemetry` or `DO_NOT_TRACK=1`. See [PRIVACY.md](PRIVACY.md)
-for what is collected, what is written to disk, and how to turn it off.
+telemetry by default — counts and sizes only, never content:
+
+```bash
+unum telemetry status   # what is collected and whether it is on
+unum telemetry off      # turn it off for good
+```
+
+See [PRIVACY.md](PRIVACY.md) for the full list, what is written to disk, and how
+`unum hash` history and the `--web` servers handle your data.
 
 ## Acknowledgements
 

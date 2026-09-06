@@ -9,10 +9,12 @@ How unum handles your data, what it stores, and what it sends over the network.
   encoder runs in-process.
 * **Anonymous usage telemetry is on by default** and sends counts and sizes
   only — never file contents, filenames, paths, or arguments. Turn it off with
-  `--no-telemetry`, `DO_NOT_TRACK=1`, or a config setting.
-* **Two files are written to `~/.config/unum/`**, both `0600` inside a `0700`
-  directory. One of them, the `hash` history, stores the strings you passed to
-  `unum hash` in plaintext.
+  `unum telemetry off`, `--no-telemetry`, or `DO_NOT_TRACK`. A one-time notice
+  says so on first run.
+* **Up to two files are written to `~/.config/unum/`**, both `0600` inside a
+  `0700` directory. One of them, the `hash` history, stores the strings you
+  passed to `unum hash` in plaintext; `--no-history` skips it and
+  `--clear-history` deletes it.
 
 ## Where your data goes
 
@@ -50,10 +52,22 @@ directory:
 
   `unum hash` is a deterministic deriver — it maps a name like `staging-api` to
   a stable port, UUID, and colour. It is **not** a password tool and is not
-  intended for secrets. If you do pass something sensitive, it lands in this
-  file; delete `hash-history.json` to clear it.
+  intended for secrets.
 
-Delete either file at any time; both are regenerated with defaults.
+  To keep an input out of the file, or to get rid of what is already there:
+
+  ```bash
+  unum hash --no-history staging-api   # derive without recording
+  unum hash --clear-history            # delete the history file
+  export UNUM_NO_HASH_HISTORY=1        # never record
+  ```
+
+  Or turn it off permanently in `config.json` with `{ "hash_history": false }`.
+
+`config.json` is only written once there is something to store — a theme
+choice, a telemetry preference, or a client id. A user who opts out before
+their first run leaves nothing on disk. Delete either file at any time; both
+are regenerated with defaults.
 
 ### What telemetry sends
 
@@ -72,40 +86,59 @@ expressions, hostnames, usernames, or environment variables.
 
 Note that `client_id` is a stable identifier: it makes the data pseudonymous
 rather than strictly anonymous, since invocations from one machine can be
-correlated with each other. It is not linked to any account or identity.
+correlated with each other. It is not linked to any account or identity, it is
+only generated while telemetry is enabled, and `unum telemetry off` deletes it.
+
+Every span is exported — there is no sampling. For a CLI emitting one span per
+invocation, sampling would only reduce collector cost, not what a given run
+reveals; the opt-out is the privacy control.
 
 ### Turning telemetry off
 
 Any one of these disables it:
 
 ```bash
-unum json data.json --no-telemetry   # per invocation
-export DO_NOT_TRACK=1                # honours the consoledonottrack.com convention
-export UNUM_NO_TELEMETRY=1
+unum telemetry off                   # persists the choice, deletes the client id
+unum json data.json --no-telemetry   # this invocation only
+export DO_NOT_TRACK=1                # any non-empty value; consoledonottrack.com
+export UNUM_NO_TELEMETRY=1           # any non-empty value
 ```
 
-Or set it permanently in `~/.config/unum/config.json`:
+Or set it directly in `~/.config/unum/config.json`:
 
 ```json
 { "telemetry": false }
 ```
 
-Set `UNUM_TELEMETRY_DEBUG=1` to log to stderr exactly what would be sent.
+`unum telemetry status` shows the current state, which setting decided it, the
+endpoint in use, and your stored client id. Set `UNUM_TELEMETRY_DEBUG=1` to log
+to stderr exactly what would be sent.
 
 ## Web UI mode
 
 `--web` binds to `localhost` on a random free port and opens your browser. The
 data you loaded stays in that process's memory for its lifetime.
 
-**If the `PORT` environment variable is set, the server binds to `0.0.0.0`
-instead** — every interface, with no authentication. This is intended for the
-hosted deployment, but `PORT` is commonly exported by unrelated dev tooling, so
-check your environment before running `--web` on a shared or untrusted network.
-The Prometheus `/metrics` endpoint is exposed on the same listener.
+Binding beyond loopback is opt-in, and unum prints a warning to stderr whenever
+it happens:
 
-Uploads made through the JSON web UI are held in an in-memory cache for the
-lifetime of the process, addressed by a 64-bit random key. They are not written
-to disk, and are gone when the process exits.
+```bash
+UNUM_BIND=0.0.0.0 unum json data.json --web   # explicit, every interface
+```
+
+`PORT` on its own only chooses the port — it does not change the interface,
+because unrelated dev tooling exports it and a stray value must never publish
+your data to the network. The hosted deployment binds publicly by setting
+`PORT` together with `UNUM_ENV`.
+
+The Prometheus `/metrics` endpoint is registered only where something scrapes
+it: a public bind, or an explicit local `UNUM_METRICS=1`. Note that any server
+reachable beyond loopback is unauthenticated — anyone who can reach the port can
+read the document you loaded.
+
+Uploads made through the JSON web UI are held in an in-memory cache addressed by
+a 64-bit random key, capped at 32 documents and expiring 30 minutes after
+upload. They are never written to disk, and are gone when the process exits.
 
 ## Image metadata
 
@@ -123,12 +156,10 @@ the local server.
 
 Tracked, not yet fixed:
 
-* `unum hash` writes its history unconditionally — there is no `--no-history`
-  flag and no built-in command to clear it.
-* The JSON web upload cache has no expiry or size limit; it grows for the
-  lifetime of the process.
-* The `0.0.0.0` bind is triggered by the presence of `PORT` alone, which is
-  easy to hit by accident.
+* Release binaries carry the telemetry collector's bearer token, injected at
+  build time. Anyone with a binary can extract it and write to the collector.
+  This affects the integrity of our metrics, not your data — nothing about you
+  is readable from the token.
 
 ## Questions
 

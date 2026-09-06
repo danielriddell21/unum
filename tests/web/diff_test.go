@@ -36,7 +36,7 @@ const (
 func TestDiffWebContainerMode(t *testing.T) {
 	const port = "19877"
 	cmd := exec.Command(unumBin, "diff", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(diffStartServerErr, err)
 	}
@@ -55,7 +55,7 @@ func TestDiffWebContainerMode(t *testing.T) {
 func TestDiffWebAPI_PostTextDiffReturnsPayload(t *testing.T) {
 	const port = "19867"
 	cmd := exec.Command(unumBin, "diff", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(diffStartServerErr, err)
 	}
@@ -126,7 +126,7 @@ func TestDiffWebAPI_PostTextDiffReturnsPayload(t *testing.T) {
 func TestDiffWebAPI_PostJSONDiffReturnsSemanticTree(t *testing.T) {
 	const port = "19866"
 	cmd := exec.Command(unumBin, "diff", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(diffStartServerErr, err)
 	}
@@ -190,7 +190,7 @@ func TestDiffWebAPI_PostJSONDiffReturnsSemanticTree(t *testing.T) {
 func TestDiffWebAPI_PostMissingContentReturns400(t *testing.T) {
 	const port = "19865"
 	cmd := exec.Command(unumBin, "diff", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(diffStartServerErr, err)
 	}
@@ -221,7 +221,7 @@ func TestDiffWebAPI_PostMissingContentReturns400(t *testing.T) {
 func TestDiffWebAPI_PostTerraformDiffReturnsSemanticTree(t *testing.T) {
 	const port = "19856"
 	cmd := exec.Command(unumBin, "diff", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(diffStartServerErr, err)
 	}
@@ -283,7 +283,7 @@ func TestDiffWebAPI_PostTerraformDiffReturnsSemanticTree(t *testing.T) {
 func TestWebFrontend_DiffUIRendersAndToggles(t *testing.T) {
 	const port = "19859"
 	cmd := exec.Command(unumBin, "diff", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(diffStartServerErr, err)
 	}

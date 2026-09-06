@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
@@ -77,6 +78,64 @@ func ServeTemplate(fs embed.FS, path string) func(d IndexData) http.HandlerFunc 
 	}
 }
 
+type Bind struct {
+	Host     string
+	Port     int
+	Public   bool
+	AutoOpen bool
+}
+
+func ResolveBind(port int) (Bind, error) {
+	b := Bind{Host: "localhost", Port: port, AutoOpen: true}
+
+	envPort := os.Getenv("PORT")
+	if envPort != "" {
+		if n, err := strconv.Atoi(envPort); err == nil {
+			b.Port = n
+		}
+	}
+
+	// Binding beyond loopback is opt-in. UNUM_BIND names the interface
+	// explicitly; PORT alone is not enough, since unrelated dev tooling exports
+	// it and a stray value must never publish the user's data to the network.
+	switch {
+	case os.Getenv("UNUM_BIND") != "":
+		b.Host = os.Getenv("UNUM_BIND")
+	case envPort != "" && os.Getenv("UNUM_ENV") != "":
+		b.Host = "0.0.0.0"
+	}
+
+	b.Public = !isLoopbackHost(b.Host)
+	if b.Public {
+		b.AutoOpen = false
+	}
+
+	if b.Port == 0 {
+		n, err := FreePort()
+		if err != nil {
+			return Bind{}, err
+		}
+		b.Port = n
+	}
+	return b, nil
+}
+
+func (b Bind) Addr() string {
+	return net.JoinHostPort(b.Host, strconv.Itoa(b.Port))
+}
+
+func (b Bind) URL() string {
+	return "http://" + b.Addr()
+}
+
+func isLoopbackHost(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
 func FreePort() (int, error) {
 	l, err := net.Listen("tcp", "localhost:0") //nolint:noctx // net.Listen has no context-aware variant; localhost-only binding, not user-controlled
 	if err != nil {
@@ -110,6 +169,16 @@ func PrintStartupBanner(toolName, url string) {
 	_, _ = fmt.Fprintf(os.Stderr, "%s\n", muted.Render("Press Ctrl+C to stop"))
 }
 
+func PrintBindWarning(b Bind) {
+	if !b.Public {
+		return
+	}
+	warn := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFAF00"))
+	_, _ = fmt.Fprintf(os.Stderr, "%s\n", warn.Render(
+		"[ UNUM ] warning: listening on "+b.Host+" — reachable from the network, with no authentication",
+	))
+}
+
 func ServeAsset(fs embed.FS, path, contentType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, err := fs.ReadFile(path)
@@ -139,6 +208,11 @@ func RegisterUmamiProxy(mux *http.ServeMux) {
 	mux.Handle("/umami/", http.StripPrefix("/umami", proxy))
 }
 
-func RegisterMetrics(mux *http.ServeMux) {
+func RegisterMetrics(mux *http.ServeMux, b Bind) {
+	// Only where something actually scrapes it: the hosted deployment, or an
+	// explicit local opt-in. A loopback dev server has no scraper.
+	if !b.Public && os.Getenv("UNUM_METRICS") == "" {
+		return
+	}
 	mux.Handle("/metrics", promhttp.Handler())
 }

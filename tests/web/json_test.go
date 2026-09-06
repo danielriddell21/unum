@@ -26,7 +26,7 @@ const (
 func TestJSONWebContainerMode(t *testing.T) {
 	const port = "19883"
 	cmd := exec.Command(unumBin, "json", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(jsonStartServerErr, err)
 	}
@@ -45,7 +45,7 @@ func TestJSONWebContainerMode(t *testing.T) {
 func TestJSONWebAPI_TreeBodyHasExpectedFields(t *testing.T) {
 	const port = "19870"
 	cmd := exec.Command(unumBin, "json", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(jsonStartServerErr, err)
 	}
@@ -123,7 +123,7 @@ func TestJSONWebAPI_TreeBodyHasExpectedFields(t *testing.T) {
 func TestJSONWebAPI_Upload(t *testing.T) {
 	const port = "19869"
 	cmd := exec.Command(unumBin, "json", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(jsonStartServerErr, err)
 	}
@@ -183,7 +183,7 @@ func TestJSONWebAPI_Upload(t *testing.T) {
 func TestJSONWebAPI_IndexHTML(t *testing.T) {
 	const port = "19868"
 	cmd := exec.Command(unumBin, "json", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(jsonStartServerErr, err)
 	}
@@ -204,7 +204,7 @@ func TestJSONWebAPI_IndexHTML(t *testing.T) {
 func TestWebFrontend_JSONUIExploreLoads(t *testing.T) {
 	const port = "19858"
 	cmd := exec.Command(unumBin, "json", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(jsonStartServerErr, err)
 	}

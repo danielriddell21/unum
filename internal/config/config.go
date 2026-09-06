@@ -10,17 +10,20 @@ import (
 )
 
 type Config struct {
-	DarkTheme  string `json:"dark_theme"`
-	LightTheme string `json:"light_theme"`
-	Telemetry  *bool  `json:"telemetry,omitempty"`
-	ClientID   string `json:"client_id,omitempty"`
+	DarkTheme   string `json:"dark_theme"`
+	LightTheme  string `json:"light_theme"`
+	Telemetry   *bool  `json:"telemetry,omitempty"`
+	ClientID    string `json:"client_id,omitempty"`
+	HashHistory *bool  `json:"hash_history,omitempty"`
+	NoticeShown bool   `json:"notice_shown,omitempty"`
 }
 
 func (c Config) TelemetryEnabled() bool {
-	if os.Getenv("DO_NOT_TRACK") == "1" {
+	// Any non-empty value opts out, matching the NO_COLOR convention.
+	if os.Getenv("DO_NOT_TRACK") != "" {
 		return false
 	}
-	if os.Getenv("UNUM_NO_TELEMETRY") == "1" {
+	if os.Getenv("UNUM_NO_TELEMETRY") != "" {
 		return false
 	}
 	if c.Telemetry != nil {
@@ -29,15 +32,33 @@ func (c Config) TelemetryEnabled() bool {
 	return true
 }
 
+func (c Config) HashHistoryEnabled() bool {
+	if os.Getenv("UNUM_NO_HASH_HISTORY") != "" {
+		return false
+	}
+	if c.HashHistory != nil {
+		return *c.HashHistory
+	}
+	return true
+}
+
+func Path() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("config dir: %w", err)
+	}
+	return filepath.Join(dir, "unum", "config.json"), nil
+}
+
 func Load() Config {
 	cfg := Config{DarkTheme: "cyber", LightTheme: "clean"}
 
-	dir, err := os.UserConfigDir()
+	path, err := Path()
 	if err != nil {
 		return cfg
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "unum", "config.json"))
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return cfg // file absent — use defaults
 	}
@@ -70,10 +91,16 @@ func Save(cfg Config) error {
 
 func EnsureClientID() Config {
 	cfg := Load()
-	if cfg.ClientID != "" {
+	if !cfg.TelemetryEnabled() || cfg.ClientID != "" {
 		return cfg
 	}
 	cfg.ClientID = uuid.NewString()
+	_ = Save(cfg)
+	return cfg
+}
+
+func MarkNoticeShown(cfg Config) Config {
+	cfg.NoticeShown = true
 	_ = Save(cfg)
 	return cfg
 }

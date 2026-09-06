@@ -34,6 +34,10 @@ type flags struct {
 	version string
 	tel     *telemetry.Telemetry
 
+	noHistory    bool
+	clearHistory bool
+	historyOn    bool
+
 	portOnly   bool
 	uuidOnly   bool
 	colorOnly  bool
@@ -49,6 +53,7 @@ func Command(globalNoColor *bool, globalQuiet *bool, version string, tel *teleme
 	cfg := config.Load()
 	f.theme = cfg.DarkTheme
 	f.lightTheme = cfg.LightTheme
+	f.historyOn = cfg.HashHistoryEnabled()
 
 	cmd := &cobra.Command{
 		Use:   "hash [text]",
@@ -79,6 +84,8 @@ Single-field flags (pipe-friendly, skips the table):
 	cmd.Flags().BoolVar(&f.web, "web", false, "launch web UI in browser")
 	cmd.Flags().IntVar(&f.webPort, "web-port", 0, "port for --web (default: random free port)")
 	cmd.Flags().BoolVar(&f.quiet, "quiet", false, "suppress the boot line")
+	cmd.Flags().BoolVar(&f.noHistory, "no-history", false, "do not record this input in the local history file")
+	cmd.Flags().BoolVar(&f.clearHistory, "clear-history", false, "delete the local history file and exit")
 	cmd.Flags().BoolVar(&f.portOnly, "port", false, "print derived port only")
 	cmd.Flags().BoolVar(&f.uuidOnly, "uuid", false, "print UUID only")
 	cmd.Flags().BoolVar(&f.colorOnly, "color", false, "print hex color only")
@@ -90,6 +97,14 @@ Single-field flags (pipe-friendly, skips the table):
 }
 
 func runHash(f *flags, args []string) error {
+	if f.clearHistory {
+		if err := history.Clear(); err != nil {
+			return fmt.Errorf("clear history: %w", err)
+		}
+		fmt.Fprintln(os.Stdout, "hash history cleared")
+		return nil
+	}
+
 	mode := "cli"
 	if f.ui {
 		mode = "tui"
@@ -117,7 +132,7 @@ func runHash(f *flags, args []string) error {
 		))
 		static.Boot(os.Stderr, static.Options{Theme: static.ResolveTheme(f.theme), Quiet: f.quiet})
 		hashTUI.ApplyPalette(panels.ResolvePalette(f.theme))
-		deps := hashTUI.Deps{Derive: derive.Derive, AppendHistory: history.Append, LoadHistory: history.Load}
+		deps := hashTUI.Deps{Derive: derive.Derive, AppendHistory: f.recordHistory, LoadHistory: history.Load}
 		p := tea.NewProgram(hashTUI.NewModel(f.version, deps), tea.WithAltScreen())
 		_, err := p.Run()
 		if err != nil {
@@ -147,7 +162,9 @@ func runHash(f *flags, args []string) error {
 	input := args[0]
 
 	r := derive.Derive(input)
-	_ = history.Append(input)
+	if err := f.recordHistory(input); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not write hash history: %v\n", err)
+	}
 
 	outputField := "full"
 	switch {
@@ -191,6 +208,13 @@ func runHash(f *flags, args []string) error {
 	return nil
 }
 
+func (f *flags) recordHistory(input string) error {
+	if f.noHistory || !f.historyOn {
+		return nil
+	}
+	return history.Append(input)
+}
+
 func activeHashFlags(f *flags) []string {
 	var flags []string
 	if f.portOnly {
@@ -210,6 +234,9 @@ func activeHashFlags(f *flags) []string {
 	}
 	if f.phraseOnly {
 		flags = append(flags, "phrase")
+	}
+	if f.noHistory {
+		flags = append(flags, "no-history")
 	}
 	return flags
 }

@@ -15,7 +15,7 @@ const Max = 50
 
 type HistoryEntry = types.HistoryEntry
 
-func historyPath() (string, error) {
+func Path() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("config dir: %w", err)
@@ -23,8 +23,19 @@ func historyPath() (string, error) {
 	return filepath.Join(dir, "unum", "hash-history.json"), nil
 }
 
+func Clear() error {
+	path, err := Path()
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove history: %w", err)
+	}
+	return nil
+}
+
 func Load() []HistoryEntry {
-	path, err := historyPath()
+	path, err := Path()
 	if err != nil {
 		return nil
 	}
@@ -40,7 +51,7 @@ func Load() []HistoryEntry {
 }
 
 func Append(input string) error {
-	path, err := historyPath()
+	path, err := Path()
 	if err != nil {
 		return err
 	}

@@ -15,7 +15,7 @@ const renderStartServerErr = "start server: %v"
 func startRenderServer(t *testing.T, port string) {
 	t.Helper()
 	cmd := exec.Command(unumBin, "diagram", "testdata/sample.d2", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(renderStartServerErr, err)
 	}
@@ -37,7 +37,7 @@ func TestDiagramWebNoFile(t *testing.T) {
 	// dropped, pasted, or browsed in the browser.
 	const port = "19574"
 	cmd := exec.Command(unumBin, "diagram", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(renderStartServerErr, err)
 	}
