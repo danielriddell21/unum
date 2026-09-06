@@ -11,6 +11,7 @@ import (
 	diagramtool "github.com/danielriddell21/unum/internal/diagram"
 	difftool "github.com/danielriddell21/unum/internal/diff"
 	hashtool "github.com/danielriddell21/unum/internal/hash"
+	imagetool "github.com/danielriddell21/unum/internal/image"
 	jsontool "github.com/danielriddell21/unum/internal/json"
 	"github.com/danielriddell21/unum/internal/telemetry"
 )
@@ -54,6 +55,7 @@ across terminal, TUI, and web interfaces.`,
 	root.AddCommand(difftool.Command(&noColor, &quiet, version, tel))
 	root.AddCommand(hashtool.Command(&noColor, &quiet, version, tel))
 	root.AddCommand(diagramtool.Command(&noColor, &quiet, version, tel))
+	root.AddCommand(imagetool.Command(&noColor, &quiet, version, tel))
 	root.AddCommand(completionCmd())
 
 	if err := root.Execute(); err != nil {

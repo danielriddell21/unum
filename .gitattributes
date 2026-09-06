@@ -3,3 +3,10 @@
 
 # Testdata fixtures must always be LF so embedded bytes are predictable.
 testdata/** text eol=lf
+
+# Binary image fixtures are exempt: eol normalisation would corrupt them.
+testdata/*.jpg -text
+testdata/*.jpeg -text
+testdata/*.png -text
+testdata/*.gif -text
+testdata/*.webp -text

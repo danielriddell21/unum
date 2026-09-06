@@ -18,6 +18,7 @@ A unified developer tool suite, built in Go.
 | `unum diff` | Diff visualizer — text, JSON, YAML, and Terraform plans; static, TUI, and web output |
 | `unum hash` | Deterministic deriver — maps any string to a stable port, UUID, color, short ID, emoji, and passphrase |
 | `unum diagram` | Diagram renderer — mermaid and d2 to SVG, PNG, and editable draw.io; static, TUI, and web output |
+| `unum image` | Image optimizer — trade quality and scale against file size; jpeg, png, gif, and lossless webp output |
 
 ## Install
 

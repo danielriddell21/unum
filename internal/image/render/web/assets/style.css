@@ -1,0 +1,289 @@
+/* unum image optimizer */
+
+.layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow: auto;
+}
+
+.sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  background: var(--bg-panel);
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+
+.sidebar-title {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 10px;
+}
+
+.ladder-title { margin-top: 20px; }
+
+.hidden { display: none !important; }
+
+/* ── Upload screen ───────────────────────────────────────────────────────────── */
+/* Ported from the diagram web UI so the empty state reads identically across
+   tools. The only change is that .paste-area is a div here rather than a
+   textarea, since an image cannot be typed into one. */
+
+#upload-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.upload-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.paste-area {
+  flex: 1;
+  min-height: 160px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-active);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 10px 12px;
+  outline: none;
+  transition: background 0.15s;
+  cursor: pointer;
+}
+
+.paste-area.drag-over { background: var(--bg-hover); }
+
+.paste-placeholder { color: var(--muted); }
+
+.paste-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.paste-filename {
+  color: var(--border-active);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browse-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 3px 10px;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.browse-btn:hover {
+  border-color: var(--border-active);
+  color: var(--border-active);
+}
+
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  min-height: 18px;
+}
+
+.upload-error {
+  color: #ff6b6b;
+  font-size: 12px;
+}
+
+#new-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  margin-left: auto;
+  margin-right: 6px;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+#new-btn:hover { color: var(--border-active); }
+
+/* ── Before / after ─────────────────────────────────────────────────────────── */
+
+.panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  min-height: 0;
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pane figcaption {
+  color: var(--border-active);
+  font-size: 12px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta { color: var(--muted); }
+
+.shot {
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  min-height: 120px;
+}
+
+.shot img {
+  max-width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+}
+
+/* ── Controls ───────────────────────────────────────────────────────────────── */
+
+.control { margin-bottom: 16px; }
+
+.control label {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.control output { color: var(--text); }
+
+.control input[type=range] {
+  width: 100%;
+  accent-color: var(--border-active);
+}
+
+.control select {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+/* ── Stats ──────────────────────────────────────────────────────────────────── */
+
+.stats {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-bottom: 12px;
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.stat span { color: var(--muted); }
+.stat strong { font-weight: normal; color: var(--text); }
+
+.win { color: var(--diff-added); }
+.loss { color: var(--diff-removed); }
+
+.download {
+  display: block;
+  text-align: center;
+  border: 1px solid var(--border-active);
+  color: var(--border-active);
+  padding: 5px;
+  text-decoration: none;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.download:hover {
+  background: var(--border-active);
+  color: var(--bg);
+}
+
+/* ── Ladder ─────────────────────────────────────────────────────────────────── */
+
+.ladder {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.ladder th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: normal;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ladder td {
+  padding: 3px 0;
+  color: var(--text);
+}
+
+.ladder tr[data-quality] { cursor: pointer; }
+.ladder tr[data-quality]:hover td { color: var(--border-active); }
+.ladder tr.active td { color: var(--border-active); font-weight: bold; }
+
+/* ── Status bar ─────────────────────────────────────────────────────────────── */
+
+#status-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+#status-info { color: var(--text); }
+#status-hints { margin-left: auto; color: var(--muted); }

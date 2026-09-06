@@ -1,0 +1,27 @@
+package panels
+
+import (
+	"github.com/charmbracelet/lipgloss"
+
+	tuipanels "github.com/danielriddell21/unum/internal/tui/panels"
+)
+
+func ApplyPalette(p tuipanels.Palette) {
+	styleLabel = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary))
+	styleValue = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Text))
+	styleHint = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Muted))
+	styleWin = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Added))
+	styleErr = lipgloss.NewStyle().Foreground(lipgloss.Color(p.Error))
+	styleActive = lipgloss.NewStyle().Foreground(lipgloss.Color(p.AccentPrimary)).Bold(true)
+}
+
+func init() { ApplyPalette(tuipanels.PaletteCyber) }
+
+var (
+	styleLabel  lipgloss.Style
+	styleValue  lipgloss.Style
+	styleHint   lipgloss.Style
+	styleWin    lipgloss.Style
+	styleErr    lipgloss.Style
+	styleActive lipgloss.Style
+)

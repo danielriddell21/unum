@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>unum — Image Optimizer</title>
+  <link rel="stylesheet" href="/shared.css" />
+  <link rel="stylesheet" href="/style.css" />
+  <script>window.UNUM_CONFIG={darkTheme:"{{.DarkTheme}}",lightTheme:"{{.LightTheme}}",version:"{{.Version}}",themes:{{.ThemeData}}};</script>
+  <script src="/shared.js"></script>
+  {{if .UmamiEnabled}}<script defer src="/umami/script.js" data-website-id="{{.UmamiWebsiteID}}"></script>{{end}}
+</head>
+<body>
+
+  <div id="header">
+    <span class="brand">[ UNUM ]</span>
+    <span class="hdr-tool">image optimizer</span>
+    <span class="hdr-sep" id="sep-file" style="display:none">·</span>
+    <span class="hdr-info" id="hdr-filename"></span>
+  </div>
+
+  <!-- Upload screen: the initial empty state, consistent with the json, diff and
+       diagram web UIs -->
+  <div id="upload-panel" style="display:none">
+    <div class="upload-field">
+      <!-- The sibling tools make this drop target a <textarea>, because their
+           input is text you can also paste into it. An image is binary, so the
+           target is a div wearing the same class; clipboard images arrive via a
+           paste listener on the document instead. -->
+      <div class="paste-area" id="drop-area" role="button" tabindex="0"
+           aria-label="Drop an image here, paste, or browse for a file">
+        <span class="paste-placeholder">drop an image here, paste, or click browse...</span>
+      </div>
+      <div class="paste-meta">
+        <span class="paste-filename" id="paste-filename"></span>
+        <button class="browse-btn" id="browse-btn">browse...</button>
+        <input id="file-input" type="file" accept="image/*" aria-label="Load an image file" style="display:none" />
+      </div>
+    </div>
+    <div class="upload-controls">
+      <span id="up-error" class="upload-error"></span>
+    </div>
+  </div>
+
+  <!-- Optimizer: the live view once an image is loaded -->
+  <div class="layout" id="layout" style="display:none">
+    <div class="main">
+      <div id="panes" class="panes">
+        <figure class="pane">
+          <figcaption>original <span id="beforeMeta" class="meta"></span></figcaption>
+          <div class="shot"><img id="beforeImg" alt="original image" /></div>
+        </figure>
+        <figure class="pane">
+          <figcaption>optimized <span id="afterMeta" class="meta"></span></figcaption>
+          <div class="shot"><img id="afterImg" alt="optimized image" /></div>
+        </figure>
+      </div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="sidebar-title">settings</div>
+
+      <div class="control">
+        <label for="quality">quality <output id="qualityOut">80</output></label>
+        <input id="quality" type="range" min="1" max="100" value="80" />
+      </div>
+
+      <div class="control">
+        <label for="scale">scale <output id="scaleOut">100%</output></label>
+        <input id="scale" type="range" min="5" max="100" value="100" />
+      </div>
+
+      <div class="control">
+        <label for="format">format</label>
+        <select id="format">
+          <option value="">match source</option>
+          <option value="jpeg">jpeg</option>
+          <option value="png">png</option>
+          <option value="gif">gif</option>
+          <option value="webp">webp</option>
+        </select>
+      </div>
+
+      <div id="stats" class="stats">
+        <div class="stat"><span>saving</span><strong id="statSaving">—</strong></div>
+        <div class="stat"><span>size</span><strong id="statSize">—</strong></div>
+        <div class="stat"><span>output</span><strong id="statDims">—</strong></div>
+      </div>
+
+      <a id="download" class="download" download>download</a>
+
+      <div class="sidebar-title ladder-title">quality vs size</div>
+      <table class="ladder">
+        <thead><tr><th scope="col">quality</th><th scope="col">size</th><th scope="col">saving</th></tr></thead>
+        <tbody id="ladderBody"></tbody>
+      </table>
+    </aside>
+  </div>
+
+  <div id="status-bar">
+    <span id="status-info"></span>
+    <span id="status-hints">drop, paste, or browse an image</span>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
