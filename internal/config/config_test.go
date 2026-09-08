@@ -153,6 +153,7 @@ func TestSave_RoundTrip(t *testing.T) {
 		DarkTheme:  "nord",
 		LightTheme: "solarized",
 		Telemetry:  boolPtr(false),
+		ClientID:   "test-uuid",
 	}
 	if err := Save(original); err != nil {
 		t.Fatalf("Save: %v", err)
@@ -167,6 +168,37 @@ func TestSave_RoundTrip(t *testing.T) {
 	}
 	if loaded.Telemetry == nil || *loaded.Telemetry != false {
 		t.Error("Telemetry should be false after round-trip")
+	}
+	if loaded.ClientID != original.ClientID {
+		t.Errorf("ClientID=%q, want %q", loaded.ClientID, original.ClientID)
+	}
+}
+
+func TestEnsureClientID_Generates(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("APPDATA", dir)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	cfg := EnsureClientID()
+	if cfg.ClientID == "" {
+		t.Fatal("EnsureClientID should generate a UUID")
+	}
+	if len(cfg.ClientID) != 36 {
+		t.Errorf("ClientID=%q, want UUID format (36 chars)", cfg.ClientID)
+	}
+}
+
+func TestEnsureClientID_Idempotent(t *testing.T) {
+	dir := writeConfig(t, map[string]string{
+		"dark_theme": "cyber",
+		"client_id":  "existing-id",
+	})
+	t.Setenv("APPDATA", dir)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	cfg := EnsureClientID()
+	if cfg.ClientID != "existing-id" {
+		t.Errorf("ClientID=%q, want \"existing-id\" (should not overwrite)", cfg.ClientID)
 	}
 }
 
@@ -232,6 +264,25 @@ func TestHashHistoryEnabled(t *testing.T) {
 				t.Errorf("HashHistoryEnabled()=%v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestEnsureClientID_NotGeneratedWhenTelemetryDisabled(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("DO_NOT_TRACK", "1")
+
+	cfg := EnsureClientID()
+	if cfg.ClientID != "" {
+		t.Errorf("ClientID=%q, want empty when telemetry is disabled", cfg.ClientID)
+	}
+
+	path, err := Path()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Error("config file should not be written when telemetry is disabled")
 	}
 }
 

@@ -43,8 +43,8 @@ Both live in `os.UserConfigDir()/unum` (`~/.config/unum` on Linux,
 `~/Library/Application Support/unum` on macOS), mode `0600` in a `0700`
 directory:
 
-* **`config.json`** — theme preferences and your telemetry and history
-  preferences. No identifier of any kind.
+* **`config.json`** — theme preferences, your telemetry preference, and a
+  randomly generated `client_id` (a UUID, created on first run).
 * **`hash-history.json`** — the **50 most recent inputs to `unum hash`, stored
   in plaintext** alongside timestamps, so the TUI and web UI can offer history.
   Every `unum hash <text>` invocation appends to this file, including plain
@@ -65,9 +65,8 @@ directory:
   Or turn it off permanently in `config.json` with `{ "hash_history": false }`.
 
 `config.json` is only written once there is something to store — a theme
-choice, a telemetry or history preference, or the fact that the first-run
-notice has been shown. A user who opts out before their first run leaves
-nothing on disk at all. Delete either file at any time; both
+choice, a telemetry preference, or a client id. A user who opts out before
+their first run leaves nothing on disk. Delete either file at any time; both
 are regenerated with defaults.
 
 ### What telemetry sends
@@ -80,15 +79,20 @@ baked in at release build time. Each invocation reports:
 * the **names** of the flags you used — never their values
 * input size in bytes, node/line counts, and processing duration
 * an error *category* (`read`, `parse`, `render`, `query`) on failure
-* `deployment.environment`
+* the `client_id` from your config file, and `deployment.environment`
 
 It does **not** send file contents, filenames, paths, argument values, query
 expressions, hostnames, usernames, or environment variables.
 
-There is no client, machine, or install identifier — nothing ties two
-invocations together, so the data cannot be grouped back into individual users
-even in principle. The cost of that is deliberate: we can see which tools and
-flags get used, but not how many people use them.
+`client_id` is a random UUID generated on your machine. It is not derived from
+your hardware, username, network address, or anything else about you, and there
+are no accounts for it to be joined to — its only purpose is to let one
+install's runs be counted together rather than as separate users.
+
+It does mean runs from the same install are linkable to each other, which is
+worth stating plainly. It is only generated while telemetry is enabled, and
+`unum telemetry off` deletes it — re-enabling later generates a fresh one, so
+an opt-out is a clean break rather than a pause.
 
 Every span is exported — there is no sampling. For a CLI emitting one span per
 invocation, sampling would only reduce collector cost, not what a given run
@@ -99,7 +103,7 @@ reveals; the opt-out is the privacy control.
 Any one of these disables it:
 
 ```bash
-unum telemetry off                   # persists the choice
+unum telemetry off                   # persists the choice, deletes the client id
 unum json data.json --no-telemetry   # this invocation only
 export DO_NOT_TRACK=1                # any non-empty value; consoledonottrack.com
 export UNUM_NO_TELEMETRY=1           # any non-empty value
@@ -111,8 +115,8 @@ Or set it directly in `~/.config/unum/config.json`:
 { "telemetry": false }
 ```
 
-`unum telemetry status` shows the current state, which setting decided it, and
-the endpoint in use. Set `UNUM_TELEMETRY_DEBUG=1` to log
+`unum telemetry status` shows the current state, which setting decided it, the
+endpoint in use, and your stored client id. Set `UNUM_TELEMETRY_DEBUG=1` to log
 to stderr exactly what would be sent.
 
 ## jq queries

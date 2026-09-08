@@ -19,7 +19,11 @@ func telemetryCmd() *cobra.Command {
 
 Telemetry is anonymous usage data — tool name, output mode, OS, flag names,
 input size, and duration. It never includes file contents, filenames, paths,
-or flag values. See PRIVACY.md for the full list.`,
+or flag values.
+
+A randomly generated client id is sent alongside it so runs from one install
+can be counted together. It identifies nothing about you or your machine, and
+"telemetry off" deletes it. See PRIVACY.md for the full list.`,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runTelemetryStatus(cmd)
@@ -75,6 +79,12 @@ func runTelemetryStatus(cmd *cobra.Command) error {
 	}
 	fmt.Fprintf(out, "endpoint:  %s\n", endpoint)
 
+	if cfg.ClientID == "" {
+		fmt.Fprintln(out, "client id: none stored")
+	} else {
+		fmt.Fprintf(out, "client id: %s\n", cfg.ClientID)
+	}
+
 	path, err := config.Path()
 	if err == nil {
 		fmt.Fprintf(out, "config:    %s\n", path)
@@ -98,6 +108,9 @@ func telemetrySource(cfg config.Config) string {
 func setTelemetry(cmd *cobra.Command, on bool) error {
 	cfg := config.Load()
 	cfg.Telemetry = &on
+	if !on {
+		cfg.ClientID = ""
+	}
 	if err := config.Save(cfg); err != nil {
 		return fmt.Errorf("save config: %w", err)
 	}
@@ -106,7 +119,7 @@ func setTelemetry(cmd *cobra.Command, on bool) error {
 	if on {
 		fmt.Fprintln(out, "telemetry enabled")
 	} else {
-		fmt.Fprintln(out, "telemetry disabled")
+		fmt.Fprintln(out, "telemetry disabled; stored client id removed")
 	}
 
 	if !cfg.TelemetryEnabled() && on {

@@ -19,6 +19,10 @@ import (
 const noticeText = `unum sends anonymous usage telemetry: tool name, output mode, OS, flag names,
 input size, and duration. Never file contents, names, paths, or flag values.
 
+It includes a randomly generated id so one install's runs can be counted
+together. It is not derived from you or your machine, and is deleted when you
+turn telemetry off.
+
   Turn it off:  unum telemetry off   (or --no-telemetry, or DO_NOT_TRACK=1)
   Full detail:  https://github.com/danielriddell21/unum/blob/trunk/PRIVACY.md
 
@@ -52,8 +56,8 @@ across terminal, TUI, and web interfaces.`,
 				return
 			}
 			// Telemetry starts here, not in Execute, so that --no-telemetry is
-			// known before any endpoint is contacted.
-			cfg := config.Load()
+			// known before any client ID is generated or endpoint contacted.
+			cfg := config.EnsureClientID()
 			if !cfg.TelemetryEnabled() {
 				return
 			}

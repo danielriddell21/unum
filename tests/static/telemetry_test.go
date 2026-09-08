@@ -64,7 +64,26 @@ func TestTelemetry_OffThenOnPersists(t *testing.T) {
 	}
 }
 
-func TestTelemetry_NothingWrittenWhenOptedOut(t *testing.T) {
+func TestTelemetry_OffRemovesClientID(t *testing.T) {
+	dir := t.TempDir()
+	env := []string{"XDG_CONFIG_HOME=" + dir, "APPDATA=" + dir, "DO_NOT_TRACK="}
+
+	// A normal run with telemetry on generates and stores the client id.
+	runEnv(env, "hash", "some-service")
+	if _, _, code := runEnv(env, "telemetry", "off"); code != 0 {
+		t.Fatalf("telemetry off: exit %d", code)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "unum", "config.json"))
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	if strings.Contains(string(data), "client_id") {
+		t.Errorf("client_id should be removed when telemetry is disabled: %s", data)
+	}
+}
+
+func TestTelemetry_NoClientIDWhenOptedOut(t *testing.T) {
 	dir := t.TempDir()
 	env := []string{"XDG_CONFIG_HOME=" + dir, "APPDATA=" + dir, "DO_NOT_TRACK=1"}
 
