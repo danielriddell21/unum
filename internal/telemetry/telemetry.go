@@ -23,16 +23,23 @@ type Telemetry struct {
 	disabled atomic.Bool
 }
 
-func Init(cfg config.Config, serviceName, version string) *Telemetry {
+func New() *Telemetry {
 	t := &Telemetry{}
+	t.noop("unum")
+	return t
+}
 
+func Init(cfg config.Config, serviceName, version string) *Telemetry {
+	t := New()
+	t.Start(cfg, serviceName, version)
+	return t
+}
+
+func (t *Telemetry) Start(cfg config.Config, serviceName, version string) {
 	shutdown, err := initOTel(cfg, serviceName, version)
 	if err != nil {
-		t.meter = noop.NewMeterProvider().Meter(serviceName)
-		t.tracer = nooptrace.NewTracerProvider().Tracer(serviceName)
-		t.M = newMetrics(t.meter)
-		t.shutdown = func(context.Context) error { return nil }
-		return t
+		t.noop(serviceName)
+		return
 	}
 
 	t.shutdown = shutdown
@@ -46,8 +53,13 @@ func Init(cfg config.Config, serviceName, version string) *Telemetry {
 		os.Getenv("UMAMI_WEBSITE_ID"),
 		os.Getenv("UMAMI_HOSTNAME"),
 	)
+}
 
-	return t
+func (t *Telemetry) noop(serviceName string) {
+	t.meter = noop.NewMeterProvider().Meter(serviceName)
+	t.tracer = nooptrace.NewTracerProvider().Tracer(serviceName)
+	t.M = newMetrics(t.meter)
+	t.shutdown = func(context.Context) error { return nil }
 }
 
 func (t *Telemetry) Tracer() otrace.Tracer {

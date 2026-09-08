@@ -20,7 +20,7 @@ func startImageServer(t *testing.T, port string) {
 	t.Helper()
 
 	cmd := exec.Command(unumBin, "image", filepath.Join("testdata", "sample.jpg"), "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(imageStartServerErr, err)
 	}
@@ -273,7 +273,7 @@ func TestWebFrontend_ImageUploadScreen(t *testing.T) {
 	const port = "19899"
 
 	cmd := exec.Command(unumBin, "image", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(imageStartServerErr, err)
 	}

@@ -12,6 +12,8 @@ import (
 
 var unumBin string
 
+var configDir string
+
 func TestMain(m *testing.M) {
 	if err := os.Chdir("../.."); err != nil {
 		fmt.Fprintf(os.Stderr, "chdir to repo root: %v\n", err)
@@ -25,7 +27,14 @@ func TestMain(m *testing.M) {
 	}
 	unumBin = bin
 
+	configDir, err = os.MkdirTemp("", "unum-cli-config-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "temp config dir: %v\n", err)
+		os.Exit(1)
+	}
+
 	code := m.Run()
+	_ = os.RemoveAll(configDir)
 	_ = os.Remove(unumBin)
 	os.Exit(code)
 }
@@ -49,7 +58,23 @@ func buildBinary() (string, error) {
 }
 
 func run(args ...string) (stdout, stderr string, code int) {
+	return runEnv(nil, args...)
+}
+
+// runEnv keeps every invocation pointed at a throwaway config dir with
+// telemetry off, so tests never touch the developer's own unum config or
+// hash history.
+func runEnv(extraEnv []string, args ...string) (stdout, stderr string, code int) {
 	cmd := exec.Command(unumBin, args...) //nolint:noctx // test runner invoking compiled binary; context not threaded through functional tests
+	cmd.Env = append(os.Environ(),
+		"XDG_CONFIG_HOME="+configDir,
+		"APPDATA="+configDir,
+		"DO_NOT_TRACK=1",
+		"PORT=",
+		"UNUM_BIND=",
+		"UNUM_ENV=",
+	)
+	cmd.Env = append(cmd.Env, extraEnv...)
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf

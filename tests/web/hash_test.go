@@ -23,7 +23,7 @@ const hashStartServerErr = "start server: %v"
 func TestHashWebContainerMode(t *testing.T) {
 	const port = "19882"
 	cmd := exec.Command(unumBin, "hash", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(hashStartServerErr, err)
 	}
@@ -42,7 +42,7 @@ func TestHashWebContainerMode(t *testing.T) {
 func TestHashWebAPI_DeriveReturnsAllFields(t *testing.T) {
 	const port = "19864"
 	cmd := exec.Command(unumBin, "hash", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(hashStartServerErr, err)
 	}
@@ -78,7 +78,7 @@ func TestHashWebAPI_DeriveReturnsAllFields(t *testing.T) {
 func TestHashWebAPI_DeriveFieldFormats(t *testing.T) {
 	const port = "19863"
 	cmd := exec.Command(unumBin, "hash", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(hashStartServerErr, err)
 	}
@@ -129,7 +129,7 @@ func TestHashWebAPI_DeriveFieldFormats(t *testing.T) {
 func TestHashWebAPI_DeriveNoInputReturns400(t *testing.T) {
 	const port = "19862"
 	cmd := exec.Command(unumBin, "hash", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(hashStartServerErr, err)
 	}
@@ -154,7 +154,7 @@ func TestHashWebAPI_DeriveNoInputReturns400(t *testing.T) {
 func TestHashWebAPI_DeriveIsDeterministic(t *testing.T) {
 	const port = "19861"
 	cmd := exec.Command(unumBin, "hash", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(hashStartServerErr, err)
 	}
@@ -185,7 +185,7 @@ func TestHashWebAPI_DeriveIsDeterministic(t *testing.T) {
 func TestWebFrontend_HashUIDerivesOnSubmit(t *testing.T) {
 	const port = "19860"
 	cmd := exec.Command(unumBin, "hash", "--web")
-	cmd.Env = append(os.Environ(), "PORT="+port)
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf(hashStartServerErr, err)
 	}

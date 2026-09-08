@@ -38,10 +38,7 @@ func debugf(format string, args ...any) {
 }
 
 func initOTel(cfg config.Config, serviceName, version string) (func(context.Context) error, error) {
-	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-	if endpoint == "" {
-		endpoint = otelEndpoint // fall back to build-time default (set by GoReleaser)
-	}
+	endpoint := Endpoint() // env, else the build-time default set by GoReleaser
 	if !cfg.TelemetryEnabled() {
 		debugf("disabled (config/env)")
 		return func(context.Context) error { return nil }, nil
@@ -148,6 +145,13 @@ func initOTel(cfg config.Config, serviceName, version string) (func(context.Cont
 		debugf("flush ok")
 		return nil
 	}, nil
+}
+
+func Endpoint() string {
+	if e := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); e != "" {
+		return e
+	}
+	return otelEndpoint
 }
 
 func authToken() string {

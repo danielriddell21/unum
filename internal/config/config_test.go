@@ -222,3 +222,93 @@ func TestLoad_MalformedJSON(t *testing.T) {
 		t.Errorf("malformed JSON: DarkTheme=%q, want 'cyber' (default)", cfg.DarkTheme)
 	}
 }
+
+func TestTelemetryEnabled_DONotTrackAnyValue(t *testing.T) {
+	for _, v := range []string{"1", "true", "yes", "0"} {
+		t.Run(v, func(t *testing.T) {
+			t.Setenv("DO_NOT_TRACK", v)
+			t.Setenv("UNUM_NO_TELEMETRY", "")
+			if (Config{}).TelemetryEnabled() {
+				t.Errorf("DO_NOT_TRACK=%q should disable telemetry", v)
+			}
+		})
+	}
+}
+
+func TestTelemetryEnabled_UnumNoTelemetryAnyValue(t *testing.T) {
+	t.Setenv("DO_NOT_TRACK", "")
+	t.Setenv("UNUM_NO_TELEMETRY", "true")
+	if (Config{}).TelemetryEnabled() {
+		t.Error("UNUM_NO_TELEMETRY=true should disable telemetry")
+	}
+}
+
+func TestHashHistoryEnabled(t *testing.T) {
+	tests := []struct {
+		name string
+		env  string
+		cfg  *bool
+		want bool
+	}{
+		{"default", "", nil, true},
+		{"config false", "", boolPtr(false), false},
+		{"config true", "", boolPtr(true), true},
+		{"env overrides", "1", boolPtr(true), false},
+		{"env any value", "no", nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("UNUM_NO_HASH_HISTORY", tt.env)
+			got := Config{HashHistory: tt.cfg}.HashHistoryEnabled()
+			if got != tt.want {
+				t.Errorf("HashHistoryEnabled()=%v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEnsureClientID_NotGeneratedWhenTelemetryDisabled(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("DO_NOT_TRACK", "1")
+
+	cfg := EnsureClientID()
+	if cfg.ClientID != "" {
+		t.Errorf("ClientID=%q, want empty when telemetry is disabled", cfg.ClientID)
+	}
+
+	path, err := Path()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Error("config file should not be written when telemetry is disabled")
+	}
+}
+
+func TestMarkNoticeShown(t *testing.T) {
+	t.Setenv("APPDATA", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	if Load().NoticeShown {
+		t.Fatal("NoticeShown should start false")
+	}
+	MarkNoticeShown(Load())
+	if !Load().NoticeShown {
+		t.Error("NoticeShown should persist as true")
+	}
+}
+
+func TestPath(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("APPDATA", dir)
+	t.Setenv("XDG_CONFIG_HOME", dir)
+
+	path, err := Path()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Base(path) != "config.json" {
+		t.Errorf("Path()=%q, want it to end in config.json", path)
+	}
+}

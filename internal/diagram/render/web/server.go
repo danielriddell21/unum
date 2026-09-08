@@ -7,8 +7,6 @@ import (
 	"html/template"
 	"io"
 	"net/http"
-	"os"
-	"strconv"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -39,27 +37,12 @@ type server struct {
 }
 
 func Start(opts Options) error {
-	host := "localhost"
-	autoOpen := true
-	if p := os.Getenv("PORT"); p != "" {
-		if n, err := strconv.Atoi(p); err == nil {
-			opts.Port = n
-		}
-		host = "0.0.0.0"
-		autoOpen = false
+	bind, err := shared.ResolveBind(opts.Port)
+	if err != nil {
+		return fmt.Errorf("web: %w", err)
 	}
-
-	port := opts.Port
-	if port == 0 {
-		var err error
-		port, err = shared.FreePort()
-		if err != nil {
-			return fmt.Errorf("web: cannot find free port: %w", err)
-		}
-	}
-
-	addr := host + ":" + strconv.Itoa(port)
-	url := "http://" + addr
+	addr := bind.Addr()
+	url := bind.URL()
 
 	s := &server{opts: opts}
 	mux := http.NewServeMux()
@@ -69,13 +52,14 @@ func Start(opts Options) error {
 	mux.HandleFunc("/app.js", shared.ServeAsset(assets, "assets/app.js", "application/javascript"))
 	mux.HandleFunc("/api/render", s.handleRender)
 	mux.HandleFunc("/", s.handleIndex)
-	shared.RegisterMetrics(mux)
+	shared.RegisterMetrics(mux, bind)
 	shared.RegisterUmamiProxy(mux)
 
 	srv := &http.Server{Addr: addr, Handler: otelhttp.NewHandler(mux, "unum-diagram"), ReadHeaderTimeout: 10 * time.Second}
 
+	shared.PrintBindWarning(bind)
 	shared.PrintStartupBanner("diagram renderer", url)
-	if autoOpen {
+	if bind.AutoOpen {
 		go shared.OpenBrowser(url)
 	}
 	if err := srv.ListenAndServe(); err != nil {

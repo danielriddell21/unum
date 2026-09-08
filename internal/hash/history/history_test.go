@@ -102,3 +102,36 @@ func TestHistory_MalformedJSON(t *testing.T) {
 		t.Errorf("malformed JSON should return empty slice, got %d entries", len(entries))
 	}
 }
+
+func TestHistory_Clear(t *testing.T) {
+	withTempHistory(t)
+
+	if err := history.Append(svcA); err != nil {
+		t.Fatalf("Append: %v", err)
+	}
+	if len(history.Load()) == 0 {
+		t.Fatal("history should have an entry before clearing")
+	}
+
+	if err := history.Clear(); err != nil {
+		t.Fatalf("Clear: %v", err)
+	}
+	if got := history.Load(); len(got) != 0 {
+		t.Errorf("history should be empty after Clear, got %d entries", len(got))
+	}
+
+	path, err := history.Path()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Error("history file should be removed")
+	}
+}
+
+func TestHistory_ClearWhenAbsent(t *testing.T) {
+	withTempHistory(t)
+	if err := history.Clear(); err != nil {
+		t.Errorf("Clear on a missing file should succeed, got %v", err)
+	}
+}
