@@ -1,12 +1,16 @@
 package hash
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"github.com/danielriddell21/unum/internal/hash/history"
 	"github.com/danielriddell21/unum/internal/hash/types"
+	"github.com/danielriddell21/unum/internal/telemetry"
 )
 
 func tempConfig(t *testing.T) string {
@@ -144,5 +148,80 @@ func TestRunHash_ClearHistoryWhenAbsent(t *testing.T) {
 	tempConfig(t)
 	if err := runHash(&flags{clearHistory: true}, nil); err != nil {
 		t.Errorf("clearing an absent history should succeed, got %v", err)
+	}
+}
+
+func newHashCommand(t *testing.T) *cobra.Command {
+	t.Helper()
+	noColor, quiet := true, true
+	return Command(&noColor, &quiet, "v0.0.1", telemetry.New())
+}
+
+func TestCommand_RegistersFlags(t *testing.T) {
+	tempConfig(t)
+	cmd := newHashCommand(t)
+
+	for _, name := range []string{
+		"ui", "web", "web-port", "quiet", "no-history", "clear-history",
+		"port", "uuid", "color", "short", "emoji", "phrase",
+	} {
+		if cmd.Flags().Lookup(name) == nil {
+			t.Errorf("flag --%s should be registered", name)
+		}
+	}
+	if cmd.Use != "hash [text]" {
+		t.Errorf("Use=%q", cmd.Use)
+	}
+}
+
+func TestCommand_DerivesAndRecords(t *testing.T) {
+	dir := tempConfig(t)
+	cmd := newHashCommand(t)
+	cmd.SetArgs([]string{"--port", "my-service"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !historyExists(t, dir) {
+		t.Error("a normal run should record history")
+	}
+}
+
+func TestCommand_NoHistoryFlag(t *testing.T) {
+	dir := tempConfig(t)
+	cmd := newHashCommand(t)
+	cmd.SetArgs([]string{"--no-history", "--uuid", "my-service"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if historyExists(t, dir) {
+		t.Error("--no-history should not record")
+	}
+}
+
+func TestCommand_RequiresInput(t *testing.T) {
+	tempConfig(t)
+	cmd := newHashCommand(t)
+	cmd.SetArgs(nil)
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+
+	if err := cmd.Execute(); err == nil {
+		t.Error("no argument should be an error")
+	}
+}
+
+func TestCommand_HonoursConfigHistoryOff(t *testing.T) {
+	dir := tempConfig(t)
+	t.Setenv("UNUM_NO_HASH_HISTORY", "1")
+
+	cmd := newHashCommand(t)
+	cmd.SetArgs([]string{"--short", "my-service"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if historyExists(t, dir) {
+		t.Error("UNUM_NO_HASH_HISTORY should stop the write")
 	}
 }

@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -44,5 +46,54 @@ func TestNoticeTextDisclosesTheClientID(t *testing.T) {
 		if !strings.Contains(noticeText, want) {
 			t.Errorf("notice should mention %q", want)
 		}
+	}
+}
+
+func TestExecute_RunsACommand(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("APPDATA", dir)
+	t.Setenv("DO_NOT_TRACK", "")
+	t.Setenv("UNUM_NO_TELEMETRY", "")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+
+	origArgs := os.Args
+	t.Cleanup(func() { os.Args = origArgs })
+	os.Args = []string{"unum", "telemetry", "status"}
+
+	if err := Execute("v0.0.1-test"); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+}
+
+func TestExecute_NoTelemetryFlagSkipsClientID(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("APPDATA", dir)
+	t.Setenv("DO_NOT_TRACK", "")
+	t.Setenv("UNUM_NO_TELEMETRY", "")
+
+	origArgs := os.Args
+	t.Cleanup(func() { os.Args = origArgs })
+	os.Args = []string{"unum", "--no-telemetry", "hash", "--no-history", "--port", "svc"}
+
+	if err := Execute("v0.0.1-test"); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "unum", "config.json")); !os.IsNotExist(err) {
+		t.Error("--no-telemetry should not write a config or generate a client id")
+	}
+}
+
+func TestExecute_UnknownCommandErrors(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("DO_NOT_TRACK", "1")
+
+	origArgs := os.Args
+	t.Cleanup(func() { os.Args = origArgs })
+	os.Args = []string{"unum", "definitely-not-a-command"}
+
+	if err := Execute("v0.0.1-test"); err == nil {
+		t.Error("unknown command should return an error")
 	}
 }
