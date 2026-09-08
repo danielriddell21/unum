@@ -18,7 +18,7 @@ require (
 	github.com/sergi/go-diff v1.4.0
 	github.com/sethvargo/go-diceware v0.5.0
 	github.com/spf13/cobra v1.10.2
-	github.com/zkrebbekx/go-mermaid v0.1.3
+	github.com/zkrebbekx/go-mermaid v0.1.4
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
 	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.43.0
