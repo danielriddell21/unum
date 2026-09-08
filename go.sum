@@ -190,8 +190,8 @@ github.com/ysmood/leakless v0.9.0/go.mod h1:R8iAXPRaG97QJwqxs74RdwzcRHT1SWCGTNqY
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 github.com/yuin/goldmark v1.7.4 h1:BDXOHExt+A7gwPCJgPIIq7ENvceR7we7rOS9TNoLZeg=
 github.com/yuin/goldmark v1.7.4/go.mod h1:uzxRWxtg69N339t3louHJ7+O03ezfj6PlliRlaOzY1E=
-github.com/zkrebbekx/go-mermaid v0.1.3 h1:FwZoPevbDlUQsEcJZ16icR83vbH0TXP74FjkDluJyYs=
-github.com/zkrebbekx/go-mermaid v0.1.3/go.mod h1:QyaHQJfxlwRAosq8Nh245XMHj+XcvuL3oCK40qC0xp8=
+github.com/zkrebbekx/go-mermaid v0.1.4 h1:Uygwta0kR5VinnN9g0w3PKvmtmRdTwWTJjkeL4GP1t4=
+github.com/zkrebbekx/go-mermaid v0.1.4/go.mod h1:dYMHWNQ7sxHN1qpZT20JhVv89sUrG6XaqELnD7eWM30=
 go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
 go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0 h1:CqXxU8VOmDefoh0+ztfGaymYbhdB/tT3zs79QaZTNGY=
