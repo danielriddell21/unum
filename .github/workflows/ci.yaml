@@ -8,9 +8,11 @@ on:
 
 jobs:
   ci:
-    uses: danielriddell21/github-actions/.github/workflows/ci.yaml@v1
+    uses: danielriddell21/github-actions/.github/workflows/ci.yaml@v2
+    # Read is enough now. The tag job checks out and pushes with tag-token, so
+    # the workflow token no longer needs to write anything here.
     permissions:
-      contents: write
+      contents: read
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
       tag-token: ${{ secrets.UNUM_TOKEN }}
