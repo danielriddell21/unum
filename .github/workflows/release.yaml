@@ -4,65 +4,17 @@ on:
   push:
     tags: ["v*"]
 
-permissions:
-  contents: write
-  packages: write
-
 jobs:
   release:
-    name: letsgo
-    runs-on: ubuntu-latest
-    steps:
-      # No fetch-depth: 0. letsgo falls back to the GitHub compare API when the
-      # changelog needs history a shallow clone does not have. fetch-tags is
-      # still needed: the tag being released has to be present for letsgo to
-      # read the version from it.
-      - uses: actions/checkout@v7
-        with:
-          fetch-tags: true
-
-      # The Go version changes the bytes of the binaries, so it is pinned by
-      # go.mod rather than floating on `stable`.
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-          check-latest: false
-
-      # letsgo.mod pins this by digest and refuses to run anything else, so it
-      # is fetched from the release rather than `go install`ed: a `go install`
-      # binary carries the build directory, and its digest differs per machine.
-      - name: Install letsgo-env
-        run: |
-          set -euo pipefail
-          version=v0.2.0
-          base=https://github.com/danielriddell21/letsgo-plugins/releases/download/$version
-          curl --proto '=https' --tlsv1.2 -fsSL "$base/letsgo-env_${version#v}_linux_amd64.tar.gz" \
-            | sudo tar -xz -C /usr/local/bin letsgo-env
-
-      # letsgo publishes the release, the tap formula and the image with one
-      # token, and a workflow token cannot write to another repository at all.
-      # The App token therefore has to be scoped to this repository as well as
-      # the tap.
-      - uses: actions/create-github-app-token@v3
-        id: token
-        with:
-          app-id: ${{ vars.TAP_APP_ID }}
-          private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: |
-            ${{ github.event.repository.name }}
-            homebrew-tap
-
-      # The letsgo version is pinned rather than left to the action's default:
-      # letsgo decides the archive layout and the linker flags, so it is a
-      # build input, and a release built by a version nobody chose is a
-      # release nobody can reproduce.
-      - uses: danielriddell21/letsgo-action@v1
-        with:
-          version: v0.5.0
-          token: ${{ steps.token.outputs.token }}
-        env:
-          # Read by letsgo-env, which fails the release rather than compiling
-          # an empty string if either is unset.
-          OTEL_AUTH_TOKEN: ${{ secrets.OTEL_AUTH_TOKEN }}
-          OTEL_ENDPOINT: ${{ vars.OTEL_ENDPOINT }}
+    uses: danielriddell21/github-actions/.github/workflows/release.yaml@v2
+    permissions:
+      contents: write
+      packages: write
+    with:
+      # Answers the ldflags hook; letsgo.mod pins it by digest.
+      plugins: letsgo-env
+    secrets:
+      tap-app-private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
+      # Read by letsgo-env, which fails the release rather than compiling in an
+      # empty value.
+      otel-auth-token: ${{ secrets.OTEL_AUTH_TOKEN }}
