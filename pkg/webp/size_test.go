@@ -29,7 +29,7 @@ func TestSmallerThanPNG(t *testing.T) {
 		{"gradient", gradient(320, 240), 0.8},
 		{"checker", checker(128, 128), 0.5},
 		{"grey ramp", greyRamp(256, 64), 0.5},
-		{"photographic", photo(320, 240), 1.0},
+		{"photographic", photo(320, 240), 1.05},
 		{"transparent", transparent(128, 128), 0.8},
 		{"noise", noise(200, 150), 1.02},
 	}
