@@ -112,8 +112,24 @@ function showError(err) {
   statusInfo.textContent = (err && err.message) || String(err);
 }
 
+const IMAGE_DATA_URL = /^data:(image\/(?:png|jpeg|webp|gif|avif));base64,([A-Za-z0-9+/]+={0,2})$/;
+
 function isImageDataUrl(url) {
-  return typeof url === 'string' && /^data:image\/[a-z0-9.+-]+;base64,/i.test(url);
+  return typeof url === 'string' && IMAGE_DATA_URL.test(url);
+}
+
+// The preview and the download are served from a blob rebuilt from the bytes
+// and a fixed image type, never from the response's own string, so nothing the
+// server sends can become a URL the page navigates to.
+let previewUrl = null;
+function imageBlobUrl(dataUrl) {
+  const [, type, b64] = IMAGE_DATA_URL.exec(dataUrl);
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = URL.createObjectURL(new Blob([bytes], { type }));
+  return previewUrl;
 }
 
 function params() {
@@ -145,14 +161,15 @@ async function refresh() {
     statusInfo.textContent = 'unexpected response from the server';
     return;
   }
-  afterImg.src = data.dataUrl;
+  const url = imageBlobUrl(data.dataUrl);
+  afterImg.src = url;
   afterMeta.textContent = data.format + ' q' + data.quality + ' · ' + data.width + ' × ' +
     data.height + ' · ' + humanBytes(data.bytes);
   statSaving.textContent = pct(data.saving);
   statSaving.className = data.saving > 0 ? 'win' : 'loss';
   statSize.textContent = humanBytes(data.bytes);
   statDims.textContent = data.width + ' × ' + data.height;
-  download.href = data.dataUrl;
+  download.href = url;
   download.download = current.name.replace(/\.[^.]+$/, '') + '-small.' +
     (data.format === 'jpeg' ? 'jpg' : data.format);
   statusInfo.textContent = humanBytes(current.bytes) + ' → ' + humanBytes(data.bytes) +
@@ -224,9 +241,7 @@ function addNewButton() {
 
 browseBtn.addEventListener('click', () => fileInput.click());
 dropArea.addEventListener('click', () => fileInput.click());
-dropArea.addEventListener('keydown', e => {
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
-});
+// Enter and Space activate the drop area through its onkeydown attribute.
 fileInput.addEventListener('change', () => {
   if (fileInput.files.length) upload(fileInput.files[0]).catch(showError);
 });

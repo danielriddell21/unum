@@ -27,7 +27,7 @@
            input is text you can also paste into it. An image is binary, so the
            target is a div wearing the same class; clipboard images arrive via a
            paste listener on the document instead. -->
-      <div class="paste-area" id="drop-area" role="button" tabindex="0"
+      <div class="paste-area" id="drop-area" role="button" tabindex="0" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }"
            aria-label="Drop an image here, paste, or browse for a file">
         <span class="paste-placeholder">drop an image here, paste, or click browse...</span>
       </div>
@@ -48,11 +48,11 @@
       <div id="panes" class="panes">
         <figure class="pane">
           <figcaption>original <span id="beforeMeta" class="meta"></span></figcaption>
-          <div class="shot"><img id="beforeImg" alt="original image" /></div>
+          <div class="shot"><img id="beforeImg" alt="original" /></div>
         </figure>
         <figure class="pane">
           <figcaption>optimized <span id="afterMeta" class="meta"></span></figcaption>
-          <div class="shot"><img id="afterImg" alt="optimized image" /></div>
+          <div class="shot"><img id="afterImg" alt="optimized" /></div>
         </figure>
       </div>
     </div>
