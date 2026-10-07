@@ -1,14 +1,57 @@
 name: Promote Release
 
+# Promoting a pre-release in the GitHub UI fires `released`. The image it
+# shipped becomes latest, and the new version is pinned in the GitOps repo.
+
 on:
   release:
     types: [released]
 
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+  VERSION: ${{ github.event.release.tag_name }}
+
 jobs:
-  promote:
-    uses: danielriddell21/github-actions/.github/workflows/promote.yaml@v1
-    permissions:
-      contents: read
-      packages: write
-    secrets:
-      manifests-token: ${{ secrets.RIDDELLIOUS_DEV_TOKEN }}
+  retag:
+    name: Retag image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Retag as latest
+        run: |
+          docker pull "${IMAGE}:${VERSION}"
+          docker tag  "${IMAGE}:${VERSION}" "${IMAGE}:latest"
+          docker push "${IMAGE}:latest"
+
+  update-manifests:
+    name: Pin version in manifests
+    needs: retag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: danielriddell21/riddellious-dev
+          ref: trunk
+          token: ${{ secrets.RIDDELLIOUS_DEV_TOKEN }}
+
+      - name: Update image tag in deployments
+        run: |
+          find . -name "deployment.yaml" \
+            -exec sed -i "s|${IMAGE}:.*|${IMAGE}:${VERSION}|g" {} \;
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add manifests/
+          git diff --staged --quiet || git commit -m "chore: deploy ${GITHUB_REPOSITORY#*/} ${VERSION}"
+          git push

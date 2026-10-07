@@ -4,17 +4,33 @@ on:
   push:
     tags: ["v*"]
 
+permissions:
+  contents: write
+  packages: write
 jobs:
   release:
-    uses: danielriddell21/github-actions/.github/workflows/release.yaml@v2
-    permissions:
-      contents: write
-      packages: write
-    with:
-      # Answers the ldflags hook; letsgo.mod pins it by digest.
-      plugins: letsgo-env
-    secrets:
-      tap-app-private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
-      # Read by letsgo-env, which fails the release rather than compiling in an
-      # empty value.
-      otel-auth-token: ${{ secrets.OTEL_AUTH_TOKEN }}
+    name: letsgo
+    runs-on: ubuntu-latest
+    steps:
+      # No fetch-depth: 0. letsgo reads the history from the API when a shallow
+      # clone lacks it; the tag being released still has to be present.
+      - uses: actions/checkout@v7
+        with:
+          fetch-tags: true
+
+      # The compiler is a build input, so it is pinned by go.mod.
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: false
+
+      # What is built, the tap, any cask and every plugin are letsgo.mod's to say.
+      - uses: danielriddell21/letsgo-action@v1
+        with:
+          tap-app-id: ${{ vars.TAP_APP_ID }}
+          tap-app-private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
+        # Read by letsgo-env, which fails the release rather than compiling in
+        # an empty value.
+        env:
+          OTEL_AUTH_TOKEN: ${{ secrets.OTEL_AUTH_TOKEN }}
+          OTEL_ENDPOINT: ${{ vars.OTEL_ENDPOINT }}
