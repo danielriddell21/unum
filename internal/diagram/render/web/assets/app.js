@@ -59,6 +59,11 @@ function currentTheme() {
   return mode === 'light' ? (c.lightTheme || 'clean') : (c.darkTheme || 'cyber');
 }
 
+function showRenderError(err) {
+  errorBox.textContent = (err && err.message) || String(err);
+  errorBox.classList.remove('hidden');
+}
+
 async function render() {
   const lang = langSel.value;
   statusLang.textContent = '[ ' + lang + ' ]';
@@ -153,7 +158,7 @@ function enterEditor(src, lang, filename) {
   source.value = src || '';
   if (lang === 'mermaid' || lang === 'd2') langSel.value = lang;
   setHeaderFile(filename || '');
-  render();
+  render().catch(showRenderError);
   source.focus();
 }
 

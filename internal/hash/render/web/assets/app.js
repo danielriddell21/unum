@@ -72,7 +72,7 @@ function loadHistory(activeInput) {
   historyList.querySelectorAll('li[data-input]').forEach(li => {
     li.addEventListener('click', () => {
       input.value = li.dataset.input;
-      derive(li.dataset.input);
+      derive(li.dataset.input).catch(console.error);
     });
   });
 }
@@ -90,7 +90,7 @@ function escAttr(s) {
 
 // Derive on Enter key
 input.addEventListener('keydown', e => {
-  if (e.key === 'Enter') derive(input.value);
+  if (e.key === 'Enter') derive(input.value).catch(console.error);
 });
 
 // Derive button click
