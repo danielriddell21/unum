@@ -125,7 +125,8 @@ func (b Bind) Addr() string {
 }
 
 func (b Bind) URL() string {
-	return "http://" + b.Addr()
+	// The local server speaks plain HTTP; this is its address, not a choice.
+	return "http://" + b.Addr() // NOSONAR
 }
 
 func isLoopbackHost(host string) bool {

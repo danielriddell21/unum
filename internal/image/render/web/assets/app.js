@@ -102,8 +102,18 @@ async function upload(file) {
   setHeaderFile(current.name);
   enterViewer();
 
-  refresh();
-  loadLadder();
+  refresh().catch(showError);
+  loadLadder().catch(showError);
+}
+
+// A failed background request is reported where the user is already looking,
+// rather than becoming an unhandled rejection in the console.
+function showError(err) {
+  statusInfo.textContent = (err && err.message) || String(err);
+}
+
+function isImageDataUrl(url) {
+  return typeof url === 'string' && /^data:image\/[a-z0-9.+-]+;base64,/i.test(url);
 }
 
 function params() {
@@ -129,6 +139,12 @@ async function refresh() {
   }
 
   const data = await res.json();
+  // The server only ever answers with an image data URL; refuse anything else
+  // rather than hand an arbitrary URL to the page.
+  if (!isImageDataUrl(data.dataUrl)) {
+    statusInfo.textContent = 'unexpected response from the server';
+    return;
+  }
   afterImg.src = data.dataUrl;
   afterMeta.textContent = data.format + ' q' + data.quality + ' · ' + data.width + ' × ' +
     data.height + ' · ' + humanBytes(data.bytes);
@@ -173,8 +189,8 @@ function ladderRow(step) {
   tr.addEventListener('click', () => {
     quality.value = step.quality;
     qualityOut.textContent = quality.value;
-    refresh();
-    loadLadder();
+    refresh().catch(showError);
+    loadLadder().catch(showError);
   });
   return tr;
 }
@@ -212,7 +228,7 @@ dropArea.addEventListener('keydown', e => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
 });
 fileInput.addEventListener('change', () => {
-  if (fileInput.files.length) upload(fileInput.files[0]);
+  if (fileInput.files.length) upload(fileInput.files[0]).catch(showError);
 });
 
 dropArea.addEventListener('dragover', e => {
@@ -229,7 +245,7 @@ window.addEventListener('drop', e => {
   e.preventDefault();
   dropArea.classList.remove('drag-over');
   const file = e.dataTransfer && e.dataTransfer.files[0];
-  if (file) upload(file);
+  if (file) upload(file).catch(showError);
 });
 
 // An image on the clipboard arrives as a file on the paste event rather than as
@@ -237,15 +253,15 @@ window.addEventListener('drop', e => {
 window.addEventListener('paste', e => {
   const items = (e.clipboardData && e.clipboardData.files) || [];
   for (const file of items) {
-    if (file.type.startsWith('image/')) { upload(file); return; }
+    if (file.type.startsWith('image/')) { upload(file).catch(showError); return; }
   }
 });
 
-quality.addEventListener('input', () => { qualityOut.textContent = quality.value; refresh(); });
-quality.addEventListener('change', loadLadder);
-scale.addEventListener('input', () => { scaleOut.textContent = scale.value + '%'; refresh(); });
-scale.addEventListener('change', loadLadder);
-format.addEventListener('change', () => { refresh(); loadLadder(); });
+quality.addEventListener('input', () => { qualityOut.textContent = quality.value; refresh().catch(showError); });
+quality.addEventListener('change', () => loadLadder().catch(showError));
+scale.addEventListener('input', () => { scaleOut.textContent = scale.value + '%'; refresh().catch(showError); });
+scale.addEventListener('change', () => loadLadder().catch(showError));
+format.addEventListener('change', () => { refresh().catch(showError); loadLadder().catch(showError); });
 
 // Boot: open straight into the optimizer when launched with a file, otherwise
 // show the upload screen the same way the sibling tools do.
@@ -255,5 +271,5 @@ format.addEventListener('change', () => { refresh(); loadLadder(); });
   if (!res.ok) return;
   const blob = await res.blob();
   const name = res.headers.get('X-Unum-Name') || 'image';
-  upload(new File([blob], name, { type: blob.type }));
-})();
+  await upload(new File([blob], name, { type: blob.type }));
+})().catch(showError);
