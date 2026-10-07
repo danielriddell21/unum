@@ -6,7 +6,7 @@ on:
 
 jobs:
   promote:
-    uses: danielriddell21/github-actions/.github/workflows/promote.yaml@v1
+    uses: danielriddell21/github-actions/.github/workflows/promote.yaml@v2
     permissions:
       contents: read
       packages: write
