@@ -262,8 +262,8 @@ func TestWebFrontend_ImageLadderRowSelectsQuality(t *testing.T) {
 	if shown := page.MustElement("#qualityOut").MustText(); shown != want {
 		t.Errorf("quality readout = %q, want %q", shown, want)
 	}
-	if src := page.MustElement("#afterImg").MustProperty("src").String(); !strings.HasPrefix(src, "data:image/") {
-		t.Errorf("optimized preview src = %.30q, want it re-rendered as a data url", src)
+	if src := page.MustElement("#afterImg").MustProperty("src").String(); !strings.HasPrefix(src, "blob:") {
+		t.Errorf("optimized preview src = %.30q, want it re-rendered as a blob url", src)
 	}
 }
 
@@ -333,8 +333,11 @@ func TestWebFrontend_ImageUILoadsAndOptimizes(t *testing.T) {
 
 	after := waitForElement(t, page, "#afterImg")
 	src := after.MustProperty("src").String()
-	if !strings.HasPrefix(src, "data:image/") {
-		t.Errorf("optimized preview src = %.40q, want a data url", src)
+	if !strings.HasPrefix(src, "blob:") {
+		t.Errorf("optimized preview src = %.40q, want a blob url", src)
+	}
+	if w := after.MustEval(`() => this.naturalWidth`).Int(); w == 0 {
+		t.Error("optimized preview did not load from its blob")
 	}
 
 	// [ new ] appears once loaded and returns to the upload screen, matching the
