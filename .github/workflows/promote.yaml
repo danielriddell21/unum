@@ -1,43 +1,78 @@
-name: Promote Release
+name: Promote
 
-# Promoting a pre-release in the GitHub UI fires `released`. The image it
-# shipped becomes latest, and the new version is pinned in the GitOps repo.
+# Unticking "Set as a pre-release" on a release candidate in the GitHub UI
+# fires `released`. letsgo promote rebuilds the candidate, refuses if it does
+# not match, tags the stable version and publishes it: the release, the
+# Homebrew tap and the image's latest tags. The new version is then pinned in
+# the GitOps repo.
 
 on:
   release:
     types: [released]
 
-permissions: {}
+  # A failed promotion can be replayed by hand. Promoting is idempotent: it
+  # refuses once the stable tag already exists.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release candidate to promote, such as v1.4.0-rc.1
+        required: true
 
-env:
-  IMAGE: ghcr.io/${{ github.repository }}
-  VERSION: ${{ github.event.release.tag_name }}
+permissions:
+  contents: write
+  packages: write
 
 jobs:
-  retag:
-    name: Retag image
+  promote:
+    name: letsgo
+    # `released` also fires for a stable release; only a candidate, a tag
+    # with a "-", is something to promote.
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.release.tag_name, '-')
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
+    outputs:
+      # The stable tag: the candidate's with its prerelease suffix dropped.
+      version: ${{ steps.stable.outputs.version }}
     steps:
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      # Full history: the stable release's notes cover every candidate since
+      # the last stable tag.
+      - uses: actions/checkout@v7
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
+          fetch-depth: 0
 
-      - name: Retag as latest
-        run: |
-          docker pull "${IMAGE}:${VERSION}"
-          docker tag  "${IMAGE}:${VERSION}" "${IMAGE}:latest"
-          docker push "${IMAGE}:latest"
+      # The compiler is a build input, so it is pinned by go.mod.
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: false
+
+      - uses: danielriddell21/letsgo-action@v1
+        with:
+          command: promote
+          args: --yes --work dist ${{ inputs.tag || github.event.release.tag_name }}
+          tap-app-id: ${{ vars.TAP_APP_ID }}
+          tap-app-private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
+        # Read by letsgo-env, which fails the rebuild rather than compiling in
+        # an empty value.
+        env:
+          OTEL_AUTH_TOKEN: ${{ secrets.OTEL_AUTH_TOKEN }}
+          OTEL_ENDPOINT: ${{ vars.OTEL_ENDPOINT }}
+
+      - name: Stable version
+        id: stable
+        env:
+          CANDIDATE: ${{ inputs.tag || github.event.release.tag_name }}
+        run: echo "version=${CANDIDATE%%-*}" >> "$GITHUB_OUTPUT"
 
   update-manifests:
     name: Pin version in manifests
-    needs: retag
+    needs: promote
     runs-on: ubuntu-latest
     # The manifests repo is written with its own token.
     permissions: {}
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}
+      VERSION: ${{ needs.promote.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:

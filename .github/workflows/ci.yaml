@@ -13,6 +13,9 @@ jobs:
     # the workflow token no longer needs to write anything here.
     permissions:
       contents: read
+    with:
+      # A release candidate; promote.yaml publishes the stable version.
+      pre: true
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
       tag-token: ${{ secrets.UNUM_TOKEN }}

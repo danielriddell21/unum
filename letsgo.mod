@@ -32,8 +32,3 @@ image base gcr.io/distroless/static-debian12@sha256:afa5c872c891853ca7fcf1f12c3e
 
 // What the deleted Dockerfile declared. It set no CMD, so there is none here.
 image expose 8080
-
-// The shared GoReleaser workflow marked releases as pre-releases after
-// publishing; letsgo does it while publishing, so promote.yaml still fires on
-// manual promotion.
-release prerelease=true
