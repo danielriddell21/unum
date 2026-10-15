@@ -16,7 +16,7 @@ require (
 	github.com/prometheus/client_golang v1.24.1
 	github.com/sammcj/mermaid-check v0.0.4
 	github.com/sergi/go-diff v1.4.0
-	github.com/sethvargo/go-diceware v0.5.0
+	github.com/sethvargo/go-diceware v0.6.0
 	github.com/spf13/cobra v1.10.2
 	github.com/zkrebbekx/go-mermaid v0.1.4
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.70.0
