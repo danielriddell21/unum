@@ -147,8 +147,8 @@ github.com/sammcj/mermaid-check v0.0.4 h1:RxjFHezaMog+SlrB+CR4HuCOT0uVPvsb3hY5ze
 github.com/sammcj/mermaid-check v0.0.4/go.mod h1:zdYcoYCdyd+MTkkSOPDzEZkvhkn28OMH/KcGsFjmePQ=
 github.com/sergi/go-diff v1.4.0 h1:n/SP9D5ad1fORl+llWyN+D6qoUETXNZARKjyY2/KVCw=
 github.com/sergi/go-diff v1.4.0/go.mod h1:A0bzQcvG0E7Rwjx0REVgAGH58e96+X0MeOfepqsbeW4=
-github.com/sethvargo/go-diceware v0.5.0 h1:exrQ7GpaBo00GqRVM1N8ChXSsi3oS7tjQiIehsD+yR0=
-github.com/sethvargo/go-diceware v0.5.0/go.mod h1:Lg1SyPS7yQO6BBgTN5r4f2MUDkqGfLWsOjHPY0kA8iw=
+github.com/sethvargo/go-diceware v0.6.0 h1:B3nhMhbBP7KwtTQ7hHRIOmv5FqeD8bJs77RFrV24iWk=
+github.com/sethvargo/go-diceware v0.6.0/go.mod h1:lHmdB0xuWaJ06KCraW6bztRT+71Dp+lsXQvborhhsBc=
 github.com/smarty/assertions v1.15.0 h1:cR//PqUBUiQRakZWqBiFFQ9wb8emQGDb0HeGdqGByCY=
 github.com/smarty/assertions v1.15.0/go.mod h1:yABtdzeQs6l1brC900WlRNwj6ZR55d7B+E8C6HtKdec=
 github.com/smartystreets/goconvey v1.8.1 h1:qGjIddxOk4grTu9JPOU31tVfq3cNdBlNa5sSznIX1xY=
