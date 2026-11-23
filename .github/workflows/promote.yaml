@@ -18,9 +18,7 @@ on:
         description: Release candidate to promote, such as v1.4.0-rc.1
         required: true
 
-permissions:
-  contents: write
-  packages: write
+permissions: {}
 
 jobs:
   promote:
@@ -29,6 +27,9 @@ jobs:
     # with a "-", is something to promote.
     if: github.event_name == 'workflow_dispatch' || contains(github.event.release.tag_name, '-')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     outputs:
       # The stable tag: the candidate's with its prerelease suffix dropped.
       version: ${{ steps.stable.outputs.version }}
