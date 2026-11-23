@@ -60,7 +60,7 @@ function currentTheme() {
 }
 
 function showRenderError(err) {
-  errorBox.textContent = (err && err.message) || String(err);
+  errorBox.textContent = err?.message || String(err);
   errorBox.classList.remove('hidden');
 }
 
@@ -163,17 +163,14 @@ function enterEditor(src, lang, filename) {
 }
 
 function loadUploadFile(file) {
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    pasteArea.value = e.target.result;
+  file.text().then((text) => {
+    pasteArea.value = text;
     pasteArea._fileName = file.name;
-    pasteArea._fileContent = e.target.result;
+    pasteArea._fileContent = text;
     pasteFilename.textContent = file.name;
     const lang = langFromName(file.name);
     if (lang) upLang.value = lang;
-  };
-  reader.onerror = () => { upError.textContent = '✗ failed to read ' + file.name; };
-  reader.readAsText(file);
+  }).catch(() => { upError.textContent = '✗ failed to read ' + file.name; });
 }
 
 browseBtn.addEventListener('click', () => fileInput.click());
@@ -220,7 +217,7 @@ function addNewButton() {
   const toggle = document.getElementById('mode-toggle');
   if (toggle) {
     toggle.style.marginLeft = '0';
-    header.insertBefore(btn, toggle);
+    toggle.before(btn);
   } else {
     header.appendChild(btn);
   }

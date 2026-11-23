@@ -109,7 +109,7 @@ async function upload(file) {
 // A failed background request is reported where the user is already looking,
 // rather than becoming an unhandled rejection in the console.
 function showError(err) {
-  statusInfo.textContent = (err && err.message) || String(err);
+  statusInfo.textContent = err?.message || String(err);
 }
 
 const IMAGE_DATA_URL = /^data:(image\/(?:png|jpeg|webp|gif|avif));base64,([A-Za-z0-9+/]+={0,2})$/;
@@ -126,7 +126,7 @@ function imageBlobUrl(dataUrl) {
   const [, type, b64] = IMAGE_DATA_URL.exec(dataUrl);
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.codePointAt(i);
   if (previewUrl) URL.revokeObjectURL(previewUrl);
   previewUrl = URL.createObjectURL(new Blob([bytes], { type }));
   return previewUrl;
@@ -231,7 +231,7 @@ function addNewButton() {
   const toggle = document.getElementById('mode-toggle');
   if (toggle) {
     toggle.style.marginLeft = '0';
-    header.insertBefore(btn, toggle);
+    toggle.before(btn);
   } else {
     header.appendChild(btn);
   }
@@ -259,14 +259,14 @@ dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-ove
 window.addEventListener('drop', e => {
   e.preventDefault();
   dropArea.classList.remove('drag-over');
-  const file = e.dataTransfer && e.dataTransfer.files[0];
+  const file = e.dataTransfer?.files[0];
   if (file) upload(file).catch(showError);
 });
 
 // An image on the clipboard arrives as a file on the paste event rather than as
 // text, which is why the drop target is not a textarea.
 window.addEventListener('paste', e => {
-  const items = (e.clipboardData && e.clipboardData.files) || [];
+  const items = e.clipboardData?.files || [];
   for (const file of items) {
     if (file.type.startsWith('image/')) { upload(file).catch(showError); return; }
   }
@@ -280,11 +280,14 @@ format.addEventListener('change', () => { refresh().catch(showError); loadLadder
 
 // Boot: open straight into the optimizer when launched with a file, otherwise
 // show the upload screen the same way the sibling tools do.
-(async function boot() {
-  showUploadPanel();
+showUploadPanel();
+try {
   const res = await fetch('/api/source');
-  if (!res.ok) return;
-  const blob = await res.blob();
-  const name = res.headers.get('X-Unum-Name') || 'image';
-  await upload(new File([blob], name, { type: blob.type }));
-})().catch(showError);
+  if (res.ok) {
+    const blob = await res.blob();
+    const name = res.headers.get('X-Unum-Name') || 'image';
+    await upload(new File([blob], name, { type: blob.type }));
+  }
+} catch (err) {
+  showError(err);
+}

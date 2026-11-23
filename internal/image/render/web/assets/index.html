@@ -27,10 +27,10 @@
            input is text you can also paste into it. An image is binary, so the
            target is a div wearing the same class; clipboard images arrive via a
            paste listener on the document instead. -->
-      <div class="paste-area" id="drop-area" role="button" tabindex="0" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }"
+      <button type="button" class="paste-area" id="drop-area" style="text-align:left;display:block"
            aria-label="Drop an image here, paste, or browse for a file">
         <span class="paste-placeholder">drop an image here, paste, or click browse...</span>
-      </div>
+      </button>
       <div class="paste-meta">
         <span class="paste-filename" id="paste-filename"></span>
         <button class="browse-btn" id="browse-btn">browse...</button>
@@ -102,6 +102,6 @@
     <span id="status-hints">drop, paste, or browse an image</span>
   </div>
 
-  <script src="/app.js"></script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

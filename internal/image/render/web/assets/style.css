@@ -38,7 +38,7 @@
 
 /* ── Upload screen ───────────────────────────────────────────────────────────── */
 /* Ported from the diagram web UI so the empty state reads identically across
-   tools. The only change is that .paste-area is a div here rather than a
+   tools. The only change is that .paste-area is a button here rather than a
    textarea, since an image cannot be typed into one. */
 
 #upload-panel {
