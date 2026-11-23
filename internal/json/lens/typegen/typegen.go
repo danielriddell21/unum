@@ -3,7 +3,10 @@ package typegen
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/danielriddell21/unum/internal/json/node"
 	"github.com/danielriddell21/unum/internal/json/typeinfo"
@@ -65,23 +68,67 @@ func collectGoStructs(out *strings.Builder, name string, ti *typeinfo.TypeInfo, 
 	}
 	seen[name] = true
 
+	names := uniqueGoNames(ti.Fields)
+
 	fmt.Fprintf(out, "type %s struct {\n", name)
-	for _, f := range ti.Fields {
-		nestedName := name + f.GoName
+	for i, f := range ti.Fields {
+		nestedName := name + names[i]
 		goType := goTypeName(nestedName, f.Type, f.Nullable)
-		fmt.Fprintf(out, "\t%s %s `json:\"%s\"`\n", f.GoName, goType, f.Name)
+		fmt.Fprintf(out, "\t%s %s `json:%s`\n", names[i], goType, strconv.Quote(f.Name))
 	}
 	out.WriteString("}\n\n")
 
 	// Recurse for nested objects
-	for _, f := range ti.Fields {
-		nestedName := name + f.GoName
+	for i, f := range ti.Fields {
+		nestedName := name + names[i]
 		if f.Type.Kind == typeinfo.TypeObject {
 			collectGoStructs(out, nestedName, f.Type, seen)
 		} else if f.Type.Kind == typeinfo.TypeArray && f.Type.Elem != nil && f.Type.Elem.Kind == typeinfo.TypeObject {
 			collectGoStructs(out, nestedName, f.Type.Elem, seen)
 		}
 	}
+}
+
+func uniqueGoNames(fields []*typeinfo.FieldInfo) []string {
+	names := make([]string, len(fields))
+	used := make(map[string]bool, len(fields))
+	for i, f := range fields {
+		base := validGoIdent(f.GoName)
+		name := base
+		for n := 2; used[name]; n++ {
+			name = base + strconv.Itoa(n)
+		}
+		used[name] = true
+		names[i] = name
+	}
+	return names
+}
+
+func validGoIdent(s string) string {
+	var sb strings.Builder
+	for _, r := range s {
+		if r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r) {
+			sb.WriteRune(r)
+		} else {
+			sb.WriteRune('_')
+		}
+	}
+	out := sb.String()
+	first := []rune(out)
+	if len(first) == 0 || (first[0] != '_' && !unicode.IsLetter(first[0])) {
+		return "Field" + out
+	}
+	return out
+}
+
+var tsIdentRe = regexp.MustCompile("^[A-Za-z_$][A-Za-z0-9_$]*$")
+
+func tsKey(name string) string {
+	if tsIdentRe.MatchString(name) {
+		return name
+	}
+	b, _ := json.Marshal(name)
+	return string(b)
 }
 
 func goTypeName(fullName string, ti *typeinfo.TypeInfo, nullable bool) string {
@@ -127,20 +174,22 @@ func collectTSInterfaces(out *strings.Builder, name string, ti *typeinfo.TypeInf
 	}
 	seen[name] = true
 
+	names := uniqueGoNames(ti.Fields)
+
 	fmt.Fprintf(out, "interface %s {\n", name)
-	for _, f := range ti.Fields {
+	for i, f := range ti.Fields {
 		optional := ""
 		if f.Nullable {
 			optional = "?"
 		}
-		nestedName := name + f.GoName
+		nestedName := name + names[i]
 		tsType := tsTypeName(nestedName, f.Type)
-		fmt.Fprintf(out, "  %s%s: %s;\n", f.Name, optional, tsType)
+		fmt.Fprintf(out, "  %s%s: %s;\n", tsKey(f.Name), optional, tsType)
 	}
 	out.WriteString("}\n\n")
 
-	for _, f := range ti.Fields {
-		nestedName := name + f.GoName
+	for i, f := range ti.Fields {
+		nestedName := name + names[i]
 		if f.Type.Kind == typeinfo.TypeObject {
 			collectTSInterfaces(out, nestedName, f.Type, seen)
 		} else if f.Type.Kind == typeinfo.TypeArray && f.Type.Elem != nil && f.Type.Elem.Kind == typeinfo.TypeObject {

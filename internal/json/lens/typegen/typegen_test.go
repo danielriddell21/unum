@@ -1,6 +1,9 @@
 package typegen_test
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"strings"
 	"testing"
 
@@ -281,5 +284,83 @@ func TestGenerateTS_MixedTypeField(t *testing.T) {
 	})
 	if !strings.Contains(out, "unknown") {
 		t.Errorf("mixed-type field should be 'unknown' in TS, got:\n%s", out)
+	}
+}
+
+func TestGenerateTSQuotesNonIdentifierKeys(t *testing.T) {
+	tests := []struct {
+		name string
+		src  string
+		want string
+	}{
+		{"hyphen", `{"content-type":"x"}`, `  "content-type": string;`},
+		{"space", `{"a b":1}`, `  "a b": number;`},
+		{"leading digit", `{"2fa_enabled":true}`, `  "2fa_enabled": boolean;`},
+		{"empty", `{"":2}`, `  "": number;`},
+		{"quote", `{"a\"b":1}`, `  "a\"b": number;`},
+		{"reserved word", `{"class":1}`, `  class: number;`},
+		{"plain", `{"_a$1":1}`, `  _a$1: number;`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			out := generate(t, tc.src, typegen.Options{Target: typegen.TargetTypeScript})
+			if !strings.Contains(out, tc.want+"\n") {
+				t.Errorf("want line %q in:\n%s", tc.want, out)
+			}
+		})
+	}
+}
+
+func TestGenerateGoValidUniqueFieldNames(t *testing.T) {
+	tests := []struct {
+		name string
+		src  string
+	}{
+		{"digit leading", `{"2fa_enabled":true}`},
+		{"collisions", `{"a b":1,"a-b":2,"a_b":3}`},
+		{"user id", `{"user-id":1,"user_id":2,"userId":3}`},
+		{"empty keys", `{"":1,"-":2}`},
+		{"digits only", `{"123":1}`},
+		{"suffix clash", `{"a b":1,"a-b":2,"AB2":3}`},
+		{"nested collisions", `{"x-y":{"a-b":{"k-1":1,"k_1":2},"a b":{"q":1}},"x y":[{"z":1}]}`},
+		{"punctuation", `{"a.b":1,"a/b":2}`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := typegen.Options{Target: typegen.TargetGo}
+			out := generate(t, tc.src, opts)
+			if again := generate(t, tc.src, opts); again != out {
+				t.Errorf("non-deterministic output:\n%s\nvs\n%s", out, again)
+			}
+			f, err := parser.ParseFile(token.NewFileSet(), "gen.go", out, parser.AllErrors)
+			if err != nil {
+				t.Fatalf("generated Go does not parse: %v\n%s", err, out)
+			}
+			ast.Inspect(f, func(n ast.Node) bool {
+				st, ok := n.(*ast.StructType)
+				if !ok {
+					return true
+				}
+				seen := map[string]bool{}
+				for _, fld := range st.Fields.List {
+					for _, id := range fld.Names {
+						if seen[id.Name] {
+							t.Errorf("duplicate field %s in:\n%s", id.Name, out)
+						}
+						seen[id.Name] = true
+					}
+				}
+				return true
+			})
+		})
+	}
+}
+
+func TestGenerateGoCollisionNamesDeterministic(t *testing.T) {
+	out := generate(t, `{"a b":1,"a-b":2,"a_b":3}`, typegen.Options{Target: typegen.TargetGo})
+	for _, want := range []string{"\tAB float64 `json:\"a b\"`", "\tAB2 float64 `json:\"a-b\"`", "\tAB3 float64 `json:\"a_b\"`"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
 	}
 }
