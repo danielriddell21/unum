@@ -130,7 +130,7 @@ func objectBody(before, after, unknown, sensitive map[string]any, indent int) ([
 		if !bok && !aok && valueAt(unknown, k) != true {
 			continue
 		}
-		ls, ch := attribute(k, bv, bok, av, aok, valueAt(unknown, k), valueAt(sensitive, k), width, indent)
+		ls, ch := attribute(k, attrValues{bv, bok, av, aok, valueAt(unknown, k), valueAt(sensitive, k)}, width, indent)
 		if !ch {
 			hidden++
 			continue
@@ -148,7 +148,17 @@ func objectBody(before, after, unknown, sensitive map[string]any, indent int) ([
 	return lines, changed
 }
 
-func attribute(key string, bv any, bok bool, av any, aok bool, unknown, sensitive any, width, indent int) ([]planLine, bool) { //nolint:cyclop // branching on presence/type/equality is inherent to a per-attribute diff
+type attrValues struct {
+	before    any
+	beforeOK  bool
+	after     any
+	afterOK   bool
+	unknown   any
+	sensitive any
+}
+
+func attribute(key string, v attrValues, width, indent int) ([]planLine, bool) { //nolint:cyclop // branching on presence/type/equality is inherent to a per-attribute diff
+	bv, bok, av, aok, unknown, sensitive := v.before, v.beforeOK, v.after, v.afterOK, v.unknown, v.sensitive
 	pad := padKey(key, width)
 
 	if isTrue(unknown) {
