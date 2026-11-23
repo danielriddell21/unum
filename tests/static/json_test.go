@@ -206,3 +206,35 @@ func TestJSONQueryNestedPath(t *testing.T) {
 		t.Errorf("--query .curator.nomen: expected 'Iohannes', got:\n%s", stdout)
 	}
 }
+
+func TestJSONQueryInvalidExpressionExitsTwo(t *testing.T) {
+	stdout, stderr, code := run("json", sampleFile, flagQuery, "!!invalid!!", flagNoColor)
+	if code != 2 {
+		t.Fatalf("invalid --query: exit %d, want 2", code)
+	}
+	if stdout != "" {
+		t.Errorf("a failed query should print nothing to stdout, got:\n%s", stdout)
+	}
+	if !strings.Contains(stderr, "jq parse") {
+		t.Errorf("stderr should explain the failure, got:\n%s", stderr)
+	}
+	if strings.Contains(stderr, "\x1b[") {
+		t.Errorf("--no-color stderr contains ANSI escapes:\n%q", stderr)
+	}
+	if strings.Count(stderr, "jq parse") != 1 {
+		t.Errorf("the failure should be reported once, got:\n%s", stderr)
+	}
+}
+
+func TestJSONQueryOutputTruncatedExitsTwo(t *testing.T) {
+	stdout, stderr, code := run("json", sampleFile, flagQuery, `"x" * 20000000`, flagNoColor)
+	if code != 2 {
+		t.Fatalf("oversized --query output: exit %d, want 2", code)
+	}
+	if stdout != "" {
+		t.Errorf("a truncated query should print no partial output, got %d bytes", len(stdout))
+	}
+	if !strings.Contains(stderr, "output truncated at 10485760 bytes") {
+		t.Errorf("stderr should state the cap, got:\n%s", stderr)
+	}
+}

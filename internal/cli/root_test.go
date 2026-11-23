@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -95,5 +97,49 @@ func TestExecute_UnknownCommandErrors(t *testing.T) {
 
 	if err := Execute("v0.0.1-test"); err == nil {
 		t.Error("unknown command should return an error")
+	}
+}
+
+type codedError int
+
+func (c codedError) Error() string { return "coded" }
+func (c codedError) ExitCode() int { return int(c) }
+
+func TestExitCode(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want int
+	}{
+		{"plain error", errors.New("boom"), 1},
+		{"coded error", codedError(2), 2},
+		{"wrapped coded error", fmt.Errorf("execute: %w", codedError(2)), 2},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := ExitCode(tc.err); got != tc.want {
+				t.Errorf("ExitCode = %d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestExecute_QueryFailureReturnsExitCodeTwo(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("DO_NOT_TRACK", "1")
+
+	origArgs := os.Args
+	t.Cleanup(func() { os.Args = origArgs })
+	sample := filepath.Join("..", "..", "testdata", "sample.json")
+	os.Args = []string{"unum", "json", sample, "--query", "!!invalid!!", "--no-color"}
+
+	// Reaching the assertion at all proves Execute returned instead of
+	// calling os.Exit, so its deferred telemetry flush ran.
+	err := Execute("v0.0.1-test")
+	if err == nil {
+		t.Fatal("a failed query should return an error")
+	}
+	if got := ExitCode(err); got != 2 {
+		t.Errorf("ExitCode = %d, want 2", got)
 	}
 }

@@ -81,7 +81,7 @@ func Start(root *node.Node, opts Options) error {
 	// API
 	mux.HandleFunc("/api/tree", handleTree(payloadBytes))
 	mux.HandleFunc(apiUploadPath, handleUpload(opts.Tel))
-	mux.HandleFunc("/api/query", handleQuery(root))
+	mux.HandleFunc("/api/query", handleQuery(newQueryDoc(root)))
 	shared.RegisterMetrics(mux, bind)
 	shared.RegisterUmamiProxy(mux)
 
@@ -318,7 +318,7 @@ func handleKeyedQuery() http.HandlerFunc {
 			writeJSON(w, queryResponse{Error: errKeyNotFound})
 			return
 		}
-		handleQuery(e.root)(w, r)
+		handleQuery(e.doc)(w, r)
 	}
 }
 
@@ -391,7 +391,7 @@ func handleUpload(tel *telemetry.Telemetry) http.HandlerFunc {
 		})
 
 		key := generateKey()
-		uploads.put(key, root, payloadBytes)
+		uploads.put(key, newQueryDoc(root), payloadBytes)
 
 		w.Header().Set(contentTypeHdr, contentTypeJSON)
 		_ = json.NewEncoder(w).Encode(map[string]string{"key": key})

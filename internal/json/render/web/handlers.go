@@ -1,12 +1,15 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/danielriddell21/unum/internal/json/lens/query"
-	"github.com/danielriddell21/unum/internal/json/node"
 )
+
+const queryTimeout = 5 * time.Second
 
 type queryRequest struct {
 	Expr string `json:"expr"`
@@ -17,7 +20,7 @@ type queryResponse struct {
 	Error  string `json:"error,omitempty"`
 }
 
-func handleQuery(root *node.Node) http.HandlerFunc {
+func handleQuery(doc *queryDoc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -30,7 +33,10 @@ func handleQuery(root *node.Node) http.HandlerFunc {
 			return
 		}
 
-		result, err := query.Execute(root, req.Expr)
+		ctx, cancel := context.WithTimeout(r.Context(), queryTimeout)
+		defer cancel()
+
+		result, err := query.ExecuteAny(ctx, doc.anyForm(), req.Expr)
 		if err != nil {
 			writeJSON(w, queryResponse{Error: err.Error()})
 			return

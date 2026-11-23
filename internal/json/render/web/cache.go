@@ -8,12 +8,31 @@ import (
 )
 
 const (
-	cacheMaxEntries = 32
+	// Each entry can retain the node tree, the marshalled payload and, once
+	// queried, the any-form copy gojq runs on, so the cap is kept modest.
+	cacheMaxEntries = 16
 	cacheTTL        = 30 * time.Minute
 )
 
+type queryDoc struct {
+	root  *node.Node
+	once  sync.Once
+	input any
+}
+
+func newQueryDoc(root *node.Node) *queryDoc {
+	return &queryDoc{root: root}
+}
+
+// anyForm converts lazily so documents that are never queried do not pay for
+// the extra copy; concurrent first queries share one conversion.
+func (d *queryDoc) anyForm() any {
+	d.once.Do(func() { d.input = d.root.ToAny() })
+	return d.input
+}
+
 type cacheEntry struct {
-	root    *node.Node
+	doc     *queryDoc
 	payload []byte
 	stored  time.Time
 }
@@ -26,12 +45,12 @@ type docCache struct {
 
 var uploads = &docCache{items: make(map[string]cacheEntry)}
 
-func (c *docCache) put(key string, root *node.Node, payload []byte) {
+func (c *docCache) put(key string, doc *queryDoc, payload []byte) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.evictExpired()
-	c.items[key] = cacheEntry{root: root, payload: payload, stored: time.Now()}
+	c.items[key] = cacheEntry{doc: doc, payload: payload, stored: time.Now()}
 	c.order = append(c.order, key)
 
 	for len(c.order) > cacheMaxEntries {

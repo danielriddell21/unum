@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 const (
@@ -230,5 +231,76 @@ func TestWebFrontend_JSONUIExploreLoads(t *testing.T) {
 	nodes := page.MustElements(".tree-node")
 	if len(nodes) == 0 {
 		t.Error("expected tree nodes to render after upload")
+	}
+}
+
+func postJSONQuery(t *testing.T, port, key, expr string) (resp struct{ Result, Error string }, elapsed time.Duration) {
+	t.Helper()
+	body, _ := json.Marshal(map[string]string{"expr": expr})
+	start := time.Now()
+	r, err := http.Post( //nolint:noctx // integration test hitting local server; context not needed in tests
+		fmt.Sprintf("http://localhost:%s/api/query?key=%s", port, key),
+		jsonContentType,
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		t.Fatalf("POST /api/query: %v", err)
+	}
+	defer func() { _ = r.Body.Close() }()
+	raw, _ := io.ReadAll(r.Body)
+	elapsed = time.Since(start)
+	var decoded struct {
+		Result string `json:"result"`
+		Error  string `json:"error"`
+	}
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("query response not JSON: %v\nbody: %s", err, raw)
+	}
+	resp.Result, resp.Error = decoded.Result, decoded.Error
+	return resp, elapsed
+}
+
+// TestJSONWebAPI_QueryBoundedAndReusable checks runaway queries are cut off
+// with a distinct error and the server keeps answering afterwards.
+func TestJSONWebAPI_QueryBoundedAndReusable(t *testing.T) {
+	const port = "19871"
+	cmd := exec.Command(unumBin, "json", "--web")
+	cmd.Env = append(os.Environ(), "PORT="+port, "UNUM_ENV=test")
+	if err := cmd.Start(); err != nil {
+		t.Fatalf(jsonStartServerErr, err)
+	}
+	defer func() { _ = cmd.Process.Kill() }()
+	_ = waitForServer(t, fmt.Sprintf(jsonTreeURLFmt, port))
+
+	uploadPayload, _ := json.Marshal(map[string]string{"filename": "a.json", "content": `{"a": [1, 2, 3]}`})
+	upResp, err := http.Post( //nolint:noctx // integration test hitting local server; context not needed in tests
+		fmt.Sprintf(jsonUploadURLFmt, port), jsonContentType, bytes.NewReader(uploadPayload))
+	if err != nil {
+		t.Fatalf("POST /api/upload: %v", err)
+	}
+	upBody, _ := io.ReadAll(upResp.Body)
+	_ = upResp.Body.Close()
+	var up map[string]string
+	if err := json.Unmarshal(upBody, &up); err != nil || up["key"] == "" {
+		t.Fatalf(jsonUploadNotJSON, err, upBody)
+	}
+	key := up["key"]
+
+	resp, elapsed := postJSONQuery(t, port, key, "[repeat(1)]")
+	if resp.Error != "query timed out" {
+		t.Errorf("runaway query error=%q, want %q", resp.Error, "query timed out")
+	}
+	if elapsed > 15*time.Second {
+		t.Errorf("runaway query took %s, want it cut off near 5s", elapsed)
+	}
+
+	resp, _ = postJSONQuery(t, port, key, `"x" * 20000000`)
+	if !strings.Contains(resp.Error, "output truncated") {
+		t.Errorf("oversized query error=%q, want output truncated", resp.Error)
+	}
+
+	resp, _ = postJSONQuery(t, port, key, ".a | length")
+	if resp.Error != "" || strings.TrimSpace(resp.Result) != "3" {
+		t.Errorf("follow-up query result=%q error=%q, want 3", resp.Result, resp.Error)
 	}
 }

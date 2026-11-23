@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -95,4 +96,12 @@ func isMetaCommand(cmd *cobra.Command) bool {
 		}
 	}
 	return false
+}
+
+func ExitCode(err error) int {
+	var ec interface{ ExitCode() int }
+	if errors.As(err, &ec) {
+		return ec.ExitCode()
+	}
+	return 1
 }

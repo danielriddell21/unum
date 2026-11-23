@@ -2,9 +2,11 @@ package panels
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/viewport"
 
@@ -15,6 +17,8 @@ import (
 	"github.com/danielriddell21/unum/internal/json/lens/typegen"
 	"github.com/danielriddell21/unum/internal/json/node"
 )
+
+const queryTimeout = 5 * time.Second
 
 type LensID int
 
@@ -267,7 +271,9 @@ func (p *LensPanel) refresh(contextNode *node.Node) {
 			out = styleSearchPrompt.Render("[ SCANNING > ]") + "\n\nEnter a jq expression below.\n\n" +
 				styleMuted.Render("Examples:\n  .users[].name\n  .[] | select(.active == true)\n  keys")
 		} else {
-			result, qErr := query.Execute(p.root, p.queryInput)
+			ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
+			result, qErr := query.Execute(ctx, p.root, p.queryInput)
+			cancel()
 			if qErr != nil {
 				out = styleError.Render("✗ "+qErr.Error()) + "\n\nExpression: " + styleSearchPrompt.Render(p.queryInput)
 			} else {

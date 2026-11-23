@@ -10,13 +10,13 @@ import (
 func TestDocCache_PutGet(t *testing.T) {
 	c := &docCache{items: make(map[string]cacheEntry)}
 	root := &node.Node{}
-	c.put("k", root, []byte("payload"))
+	c.put("k", newQueryDoc(root), []byte("payload"))
 
 	e, ok := c.get("k")
 	if !ok {
 		t.Fatal("entry should be present")
 	}
-	if e.root != root {
+	if e.doc.root != root {
 		t.Error("root should round-trip")
 	}
 	if string(e.payload) != "payload" {
@@ -34,7 +34,7 @@ func TestDocCache_MissingKey(t *testing.T) {
 func TestDocCache_EvictsOldestBeyondMax(t *testing.T) {
 	c := &docCache{items: make(map[string]cacheEntry)}
 	for i := range cacheMaxEntries + 5 {
-		c.put(string(rune('a'+i)), &node.Node{}, []byte{byte(i)})
+		c.put(string(rune('a'+i)), newQueryDoc(&node.Node{}), []byte{byte(i)})
 	}
 
 	if len(c.items) != cacheMaxEntries {
@@ -50,7 +50,7 @@ func TestDocCache_EvictsOldestBeyondMax(t *testing.T) {
 
 func TestDocCache_EvictsExpired(t *testing.T) {
 	c := &docCache{items: make(map[string]cacheEntry)}
-	c.put("stale", &node.Node{}, []byte("x"))
+	c.put("stale", newQueryDoc(&node.Node{}), []byte("x"))
 
 	c.mu.Lock()
 	e := c.items["stale"]
@@ -71,8 +71,8 @@ func TestDocCache_EvictsExpired(t *testing.T) {
 
 func TestDocCache_FreshEntrySurvivesEviction(t *testing.T) {
 	c := &docCache{items: make(map[string]cacheEntry)}
-	c.put("old", &node.Node{}, []byte("x"))
-	c.put("new", &node.Node{}, []byte("y"))
+	c.put("old", newQueryDoc(&node.Node{}), []byte("x"))
+	c.put("new", newQueryDoc(&node.Node{}), []byte("y"))
 
 	c.mu.Lock()
 	e := c.items["old"]

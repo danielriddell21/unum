@@ -3,6 +3,7 @@ package jsontool
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -28,6 +29,35 @@ import (
 	"github.com/danielriddell21/unum/internal/json/render/web"
 	"github.com/danielriddell21/unum/internal/telemetry"
 )
+
+const (
+	queryTimeoutDefault = 30 * time.Second
+	exitQueryFailed     = 2
+)
+
+var queryTimeout = queryTimeoutDefault
+
+type exitError struct {
+	code int
+	err  error
+}
+
+func (e *exitError) Error() string { return e.err.Error() }
+
+func (e *exitError) Unwrap() error { return e.err }
+
+func (e *exitError) ExitCode() int { return e.code }
+
+type invocation struct {
+	f          *flags
+	root       *node.Node
+	renderOpts static.Options
+	span       trace.Span
+	start      time.Time
+	mode       string
+	sizeBytes  int
+	filename   string
+}
 
 type flags struct {
 	ui  bool
@@ -85,7 +115,13 @@ Config file (~/.config/unum/config.json):
 			if len(args) == 0 {
 				return runJSONNoFile(f)
 			}
-			return runJSON(f, args[0])
+			err := runJSON(f, args[0])
+			var ee *exitError
+			if errors.As(err, &ee) {
+				// The failure was already rendered; keep cobra from printing it again.
+				cmd.SilenceErrors = true
+			}
+			return err
 		},
 		SilenceUsage: true,
 	}
@@ -216,14 +252,27 @@ func runJSON(f *flags, filename string) error {
 	)
 	f.tel.M.JSONNodes.Record(ctx, int64(nodeCount))
 
-	if handled, err := dispatchLensMode(ctx, f, root, renderOpts, span, start, mode, len(data)); handled || err != nil {
+	inv := &invocation{
+		f:          f,
+		root:       root,
+		renderOpts: renderOpts,
+		span:       span,
+		start:      start,
+		mode:       mode,
+		sizeBytes:  len(data),
+		filename:   filename,
+	}
+	if handled, err := dispatchLensMode(ctx, inv); handled || err != nil {
 		return err
 	}
 
-	return dispatchRenderMode(ctx, f, root, renderOpts, span, start, mode, len(data), filename)
+	return dispatchRenderMode(ctx, inv)
 }
 
-func dispatchRenderMode(ctx context.Context, f *flags, root *node.Node, renderOpts static.Options, span trace.Span, start time.Time, mode string, sizeBytes int, filename string) error {
+func dispatchRenderMode(ctx context.Context, inv *invocation) error {
+	f, root, renderOpts, span := inv.f, inv.root, inv.renderOpts, inv.span
+	start, mode, sizeBytes, filename := inv.start, inv.mode, inv.sizeBytes, inv.filename
+
 	analyzeOpts := analyze.Options{
 		RunStats:  f.showStats,
 		RunMerkle: f.showMerkle || f.hashOnly,
@@ -289,10 +338,19 @@ func dispatchRenderMode(ctx context.Context, f *flags, root *node.Node, renderOp
 	return nil
 }
 
-func dispatchLensMode(ctx context.Context, f *flags, root *node.Node, renderOpts static.Options, span trace.Span, start time.Time, mode string, sizeBytes int) (bool, error) {
+func dispatchLensMode(ctx context.Context, inv *invocation) (bool, error) {
+	f, root, renderOpts, span := inv.f, inv.root, inv.renderOpts, inv.span
+	start, mode, sizeBytes := inv.start, inv.mode, inv.sizeBytes
+
 	if f.jqExpr != "" {
-		result, err := query.Execute(root, f.jqExpr)
+		qctx, cancel := context.WithTimeout(ctx, queryTimeout)
+		defer cancel()
+
+		result, err := query.Execute(qctx, root, f.jqExpr)
 		if err != nil {
+			if errors.Is(err, query.ErrTimeout) {
+				err = fmt.Errorf("%w after %s", err, queryTimeout)
+			}
 			static.RenderError(os.Stderr, err, renderOpts)
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "query")
@@ -300,8 +358,7 @@ func dispatchLensMode(ctx context.Context, f *flags, root *node.Node, renderOpts
 				attribute.String("tool", "json"),
 				attribute.String("error_type", "query"),
 			))
-			span.End()
-			os.Exit(2) //nolint:gocritic // query failure requires hard exit with distinct code
+			return false, &exitError{code: exitQueryFailed, err: err}
 		}
 		recordSuccess(ctx, f, mode, sizeBytes, time.Since(start))
 		fmt.Println(result)
