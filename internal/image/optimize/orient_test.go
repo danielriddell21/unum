@@ -57,7 +57,7 @@ func TestApplyOrientation(t *testing.T) {
 func TestApplyOrientationIgnoresOutOfRange(t *testing.T) {
 	src := quad()
 	for _, n := range []int{0, 1, 9, -3} {
-		if got := applyOrientation(src, n); got != image.Image(src) {
+		if applyOrientation(src, n) != image.Image(src) {
 			t.Errorf("applyOrientation(n=%d) should return the source untouched", n)
 		}
 	}

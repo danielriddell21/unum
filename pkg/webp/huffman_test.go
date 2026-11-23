@@ -62,14 +62,19 @@ func TestBuildHuffmanIsComplete(t *testing.T) {
 				t.Errorf("Kraft sum = %v, want exactly 1 (lengths %v)", got, h.lengths)
 			}
 			for sym, f := range tt.freq {
-				if f > 0 && h.lengths[sym] == 0 {
-					t.Errorf("symbol %d has frequency %d but no code", sym, f)
-				}
-				if f == 0 && h.lengths[sym] != 0 {
-					t.Errorf("symbol %d is unused but got length %d", sym, h.lengths[sym])
-				}
+				checkSymbolCoded(t, sym, f, h.lengths[sym])
 			}
 		})
+	}
+}
+
+func checkSymbolCoded(t *testing.T, sym, freq int, length uint8) {
+	t.Helper()
+	if freq > 0 && length == 0 {
+		t.Errorf("symbol %d has frequency %d but no code", sym, freq)
+	}
+	if freq == 0 && length != 0 {
+		t.Errorf("symbol %d is unused but got length %d", sym, length)
 	}
 }
 

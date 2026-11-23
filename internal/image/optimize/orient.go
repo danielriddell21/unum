@@ -18,8 +18,7 @@ func jpegOrientation(data []byte) int {
 			return 1
 		}
 		marker := data[i+1]
-		// Padding and standalone markers carry no length field.
-		if marker == 0xFF || marker == 0x01 || (marker >= 0xD0 && marker <= 0xD9) {
+		if isStandaloneMarker(marker) {
 			i += 2
 			continue
 		}
@@ -27,18 +26,31 @@ func jpegOrientation(data []byte) int {
 		if marker == 0xDA {
 			return 1
 		}
-		segLen := int(binary.BigEndian.Uint16(data[i+2:]))
-		if segLen < 2 || i+2+segLen > len(data) {
+		seg, next, ok := readSegment(data, i)
+		if !ok {
 			return 1
 		}
 		if marker == 0xE1 {
-			if n, ok := exifOrientation(data[i+4 : i+2+segLen]); ok {
+			if n, ok := exifOrientation(seg); ok {
 				return n
 			}
 		}
-		i += 2 + segLen
+		i = next
 	}
 	return 1
+}
+
+func isStandaloneMarker(marker byte) bool {
+	// Padding and standalone markers carry no length field.
+	return marker == 0xFF || marker == 0x01 || (marker >= 0xD0 && marker <= 0xD9)
+}
+
+func readSegment(data []byte, i int) (seg []byte, next int, ok bool) {
+	segLen := int(binary.BigEndian.Uint16(data[i+2:]))
+	if segLen < 2 || i+2+segLen > len(data) {
+		return nil, 0, false
+	}
+	return data[i+4 : i+2+segLen], i + 2 + segLen, true
 }
 
 func exifOrientation(seg []byte) (int, bool) {

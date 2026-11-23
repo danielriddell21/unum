@@ -327,7 +327,7 @@ func TestWebFrontend_ImageUILoadsAndOptimizes(t *testing.T) {
 	if src := before.MustProperty("src").String(); !strings.Contains(src, "/api/original?id=") {
 		t.Errorf("original preview src = %q, want it served from /api/original", src)
 	}
-	if w := before.MustEval(`() => this.naturalWidth`).Int(); w == 0 {
+	if before.MustEval(`() => this.naturalWidth`).Int() == 0 {
 		t.Error("original preview did not load")
 	}
 
@@ -336,7 +336,7 @@ func TestWebFrontend_ImageUILoadsAndOptimizes(t *testing.T) {
 	if !strings.HasPrefix(src, "blob:") {
 		t.Errorf("optimized preview src = %.40q, want a blob url", src)
 	}
-	if w := after.MustEval(`() => this.naturalWidth`).Int(); w == 0 {
+	if after.MustEval(`() => this.naturalWidth`).Int() == 0 {
 		t.Error("optimized preview did not load from its blob")
 	}
 

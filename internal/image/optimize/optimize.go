@@ -6,13 +6,13 @@ import (
 	"image"
 	"sync"
 
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
+	_ "image/gif"  // registers the GIF decoder
+	_ "image/jpeg" // registers the JPEG decoder
+	_ "image/png"  // registers the PNG decoder
 
-	_ "golang.org/x/image/bmp"
-	_ "golang.org/x/image/tiff"
-	_ "golang.org/x/image/webp"
+	_ "golang.org/x/image/bmp"  // registers the BMP decoder
+	_ "golang.org/x/image/tiff" // registers the TIFF decoder
+	_ "golang.org/x/image/webp" // registers the WebP decoder
 )
 
 type Source struct {
@@ -60,7 +60,8 @@ func Decode(name string, data []byte) (Source, error) {
 	if err != nil {
 		return Source{}, fmt.Errorf("unsupported or corrupt image: %w", err)
 	}
-	if pixels := cfg.Width * cfg.Height; pixels > MaxPixels {
+	// int64 so the product cannot wrap on 32-bit platforms.
+	if pixels := int64(cfg.Width) * int64(cfg.Height); pixels > int64(MaxPixels) {
 		return Source{}, fmt.Errorf("image is %d × %d (%d megapixels), over the %d megapixel limit",
 			cfg.Width, cfg.Height, pixels/1_000_000, MaxPixels/1_000_000)
 	}

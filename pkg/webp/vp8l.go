@@ -158,11 +158,11 @@ func chooseCacheBits(argb []uint32) uint {
 	if len(argb) < 512 {
 		return 0
 	}
-	const cap = 1 << 12
+	const maxDistinct = 1 << 12
 	seen := make(map[uint32]struct{}, 1024)
 	for _, p := range argb {
 		seen[p] = struct{}{}
-		if len(seen) >= cap {
+		if len(seen) >= maxDistinct {
 			break
 		}
 	}

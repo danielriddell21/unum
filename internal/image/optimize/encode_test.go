@@ -160,10 +160,10 @@ func TestEncodePNGAtFullQualityStaysTruecolor(t *testing.T) {
 func TestQuantizedForPassesThroughAtFullQuality(t *testing.T) {
 	img := gradientImage(8, 8)
 
-	if got := quantizedFor(img, 100); got != image.Image(img) {
+	if quantizedFor(img, 100) != image.Image(img) {
 		t.Error("quality 100 should hand back the original image untouched")
 	}
-	if got := quantizedFor(img, 99); got == image.Image(img) {
+	if quantizedFor(img, 99) == image.Image(img) {
 		t.Error("quality below 100 should palettize the image")
 	}
 }

@@ -309,3 +309,16 @@ func TestDecodeRejectsBombBeforeAllocating(t *testing.T) {
 		t.Errorf("bomb should be caught by the pixel limit, got %v", err)
 	}
 }
+
+func TestDecodeRejectsDimensionsThatOverflowInt32(t *testing.T) {
+	// 65536x65536 is 2^32 pixels, which is zero when multiplied in a 32-bit int.
+	bomb := pngHeaderClaiming(t, 65536, 65536)
+
+	_, err := Decode("wrap.png", bomb)
+	if err == nil {
+		t.Fatal("expected 65536x65536 to be rejected")
+	}
+	if !strings.Contains(err.Error(), "megapixel") {
+		t.Errorf("65536x65536 should be caught by the pixel limit, got %v", err)
+	}
+}
