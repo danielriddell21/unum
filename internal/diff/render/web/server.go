@@ -86,14 +86,16 @@ func Start(d *node.Diff, opts Options) error {
 }
 
 type diffPayload struct {
-	FileA    string       `json:"fileA"`
-	FileB    string       `json:"fileB"`
-	Format   string       `json:"format"`
-	Added    int          `json:"added"`
-	Removed  int          `json:"removed"`
-	Modified int          `json:"modified"`
-	Hunks    []webHunk    `json:"hunks"`
-	Tree     *webDiffNode `json:"tree,omitempty"`
+	FileA       string       `json:"fileA"`
+	FileB       string       `json:"fileB"`
+	Format      string       `json:"format"`
+	Added       int          `json:"added"`
+	Removed     int          `json:"removed"`
+	Modified    int          `json:"modified"`
+	Approximate bool         `json:"approximate,omitempty"`
+	Notice      string       `json:"notice,omitempty"`
+	Hunks       []webHunk    `json:"hunks"`
+	Tree        *webDiffNode `json:"tree,omitempty"`
 }
 
 type webDiffNode struct {
@@ -129,6 +131,10 @@ func buildPayload(d *node.Diff) *diffPayload {
 		Added:    d.Added,
 		Removed:  d.Removed,
 		Modified: d.Modified,
+	}
+	if d.Approximate {
+		p.Approximate = true
+		p.Notice = node.ApproximateNotice
 	}
 	if d.Root != nil {
 		p.Tree = toWebDiffNode(d.Root)

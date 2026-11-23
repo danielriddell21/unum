@@ -104,6 +104,7 @@ func renderHunks(w io.Writer, d *node.Diff, opts Options) error {
 		}
 		_, _ = fmt.Fprintf(w, "%s  %s\n", addedStr, removedStr)
 	}
+	renderNotice(w, d, opts)
 
 	if opts.Stat || len(d.Hunks) == 0 {
 		return nil
@@ -148,6 +149,7 @@ func renderTree(w io.Writer, d *node.Diff, opts Options) error {
 		}
 		_, _ = fmt.Fprintf(w, "%s  %s  %s\n", addedStr, removedStr, modifiedStr)
 	}
+	renderNotice(w, d, opts)
 
 	if opts.Stat {
 		return nil
@@ -160,6 +162,17 @@ func renderTree(w io.Writer, d *node.Diff, opts Options) error {
 
 	walkTreeStatic(w, d.Root, t, opts.NoColor)
 	return nil
+}
+
+func renderNotice(w io.Writer, d *node.Diff, opts Options) {
+	if !d.Approximate {
+		return
+	}
+	if opts.NoColor {
+		_, _ = fmt.Fprintln(w, node.ApproximateNotice)
+		return
+	}
+	_, _ = fmt.Fprintln(w, opts.Theme.Modified.Render(node.ApproximateNotice))
 }
 
 func walkTreeStatic(w io.Writer, dn *node.DiffNode, t Theme, noColor bool) {

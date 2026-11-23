@@ -1,9 +1,12 @@
 package parse
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/danielriddell21/unum/internal/diff/node"
+	jsonparse "github.com/danielriddell21/unum/internal/json/parse"
 )
 
 const modifiedWant1 = "modified=%d, want 1"
@@ -272,5 +275,69 @@ func TestJSON_NestedArrayElementsAlign(t *testing.T) {
 	}
 	if d.Added != 1 || d.Removed != 0 || d.Modified != 0 {
 		t.Errorf("added=%d removed=%d modified=%d, want 1 0 0", d.Added, d.Removed, d.Modified)
+	}
+}
+
+func TestJSON_DeepNesting_Bounded(t *testing.T) {
+	nested := func(depth int, leaf string) []byte {
+		return []byte(strings.Repeat("[", depth) + leaf + strings.Repeat("]", depth))
+	}
+	tests := []struct {
+		name         string
+		depth        int
+		leafA, leafB string
+		wantModified int
+	}{
+		{"identical depth 9000", 9000, "1", "1", 0},
+		{"changed leaf depth 9000", 9000, "1", "2", 1},
+		{"identical depth 2000", 2000, "1", "1", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a, b := nested(tt.depth, tt.leafA), nested(tt.depth, tt.leafB)
+			start := time.Now()
+			d, err := JSON(a, b)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// the 18 KB depth-9000 repro took over a minute before keys were memoised
+			if elapsed := time.Since(start); elapsed > 2*time.Second {
+				t.Errorf("took %v, want well under a second", elapsed)
+			}
+			if d.Modified != tt.wantModified {
+				t.Errorf("modified=%d, want %d", d.Modified, tt.wantModified)
+			}
+		})
+	}
+}
+
+func TestJSONKeys(t *testing.T) {
+	key := func(src string) string {
+		n, err := jsonparse.Parse([]byte(src))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return newJSONKeys().key(n)
+	}
+	tests := []struct {
+		name string
+		a, b string
+		same bool
+	}{
+		{"identical array", `[1,2]`, `[1,2]`, true},
+		{"object key order ignored", `{"a":1,"b":2}`, `{"b":2,"a":1}`, true},
+		{"array order matters", `[1,2]`, `[2,1]`, false},
+		{"different leaf", `[[1]]`, `[[2]]`, false},
+		{"array vs object", `[]`, `{}`, false},
+		{"leaf vs container", `"[]"`, `[]`, false},
+		{"regrouped elements", `[[1,2],3]`, `[1,[2,3]]`, false},
+		{"key boundary", `{"a:1":2}`, `{"a":"1:2"}`, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := key(tt.a) == key(tt.b); got != tt.same {
+				t.Errorf("key(%s)==key(%s) is %v, want %v", tt.a, tt.b, got, tt.same)
+			}
+		})
 	}
 }

@@ -321,31 +321,36 @@ func (p *SplitPanel) build() {
 		hdr := diffHunkHdr.Render(fmt.Sprintf("@@ -%d,%d +%d,%d @@", h.OldStart, h.OldCount, h.NewStart, h.NewCount))
 		leftLines = append(leftLines, hdr)
 		rightLines = append(rightLines, hdr)
-
-		var removed, added, unchanged []node.Line
-		for _, l := range h.Lines {
-			switch l.Kind {
-			case node.Removed:
-				if len(unchanged) > 0 {
-					p.flushHunk(removed, added, unchanged, &leftLines, &rightLines, q)
-					removed, added, unchanged = removed[:0], added[:0], unchanged[:0]
-				}
-				removed = append(removed, l)
-			case node.Added:
-				added = append(added, l)
-			default:
-				if len(removed) > 0 || len(added) > 0 {
-					p.flushHunk(removed, added, unchanged, &leftLines, &rightLines, q)
-					removed, added, unchanged = removed[:0], added[:0], unchanged[:0]
-				}
-				unchanged = append(unchanged, l)
-			}
-		}
-		p.flushHunk(removed, added, unchanged, &leftLines, &rightLines, q)
+		p.buildHunk(h.Lines, &leftLines, &rightLines, q)
 	}
 
 	p.left.SetContent(strings.Join(leftLines, "\n"))
 	p.right.SetContent(strings.Join(rightLines, "\n"))
+}
+
+func (p *SplitPanel) buildHunk(lines []node.Line, leftLines, rightLines *[]string, q string) {
+	var removed, added, unchanged []node.Line
+	flush := func() {
+		p.flushHunk(removed, added, unchanged, leftLines, rightLines, q)
+		removed, added, unchanged = removed[:0], added[:0], unchanged[:0]
+	}
+	for _, l := range lines {
+		switch l.Kind {
+		case node.Removed:
+			if len(unchanged) > 0 {
+				flush()
+			}
+			removed = append(removed, l)
+		case node.Added:
+			added = append(added, l)
+		default:
+			if len(removed) > 0 || len(added) > 0 {
+				flush()
+			}
+			unchanged = append(unchanged, l)
+		}
+	}
+	p.flushHunk(removed, added, unchanged, leftLines, rightLines, q)
 }
 
 func (p *SplitPanel) flushHunk(removed, added, unchanged []node.Line, leftLines, rightLines *[]string, q string) {

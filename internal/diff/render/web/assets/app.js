@@ -175,6 +175,13 @@
     let stats = `<span style="color:var(--diff-added)">+${diffData.added}</span> · <span style="color:var(--diff-removed)">-${diffData.removed}</span>`;
     if (diffData.modified > 0) stats += ` · <span style="color:var(--search)">~${diffData.modified}</span>`;
     document.getElementById('hdr-stats').innerHTML = stats;
+    if (diffData.notice) {
+      const notice = document.createElement('span');
+      notice.id = 'hdr-notice';
+      notice.style.color = 'var(--search)';
+      notice.textContent = ' · ' + diffData.notice;
+      document.getElementById('hdr-stats').appendChild(notice);
+    }
     document.getElementById('sep-stats').style.display = '';
     document.getElementById('status-format').textContent =
       diffData.format !== 'text' ? '[' + diffData.format + ']' : '';

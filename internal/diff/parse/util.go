@@ -9,11 +9,15 @@ func objPath(parent, key string) string {
 	return parent + "." + key
 }
 
-func alignByKey(aKeys, bKeys []string) []lcs.Op {
+func alignByKey(aKeys, bKeys []string, approx *bool) []lcs.Op {
 	if ops := alignReordered(aKeys, bKeys); ops != nil {
 		return ops
 	}
-	return pairReplacements(lcs.Align(aKeys, bKeys))
+	res := lcs.Compute(aKeys, bKeys)
+	if res.Approximate {
+		*approx = true
+	}
+	return pairReplacements(res.Ops)
 }
 
 func alignReordered(aKeys, bKeys []string) []lcs.Op {

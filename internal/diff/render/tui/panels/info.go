@@ -79,6 +79,10 @@ func (p *InfoPanel) refresh() {
 		)
 	}
 
+	if p.diff.Approximate {
+		fmt.Fprintf(&sb, "%s\n\n", sbModified.Width(p.width).Render(node.ApproximateNotice))
+	}
+
 	// Hunk info (text diffs only)
 	if len(p.diff.Hunks) > 0 {
 		fmt.Fprintf(&sb, "%s\n", sbMuted.Render(fmt.Sprintf("Hunk %d of %d", p.hunkIdx+1, len(p.diff.Hunks))))

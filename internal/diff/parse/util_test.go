@@ -93,7 +93,7 @@ func TestAlignByKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := fmt.Sprint(alignByKey(tt.aKeys, tt.bKeys)); got != tt.want {
+			if got := fmt.Sprint(alignByKey(tt.aKeys, tt.bKeys, new(bool))); got != tt.want {
 				t.Errorf("alignByKey(%v, %v) = %s, want %s", tt.aKeys, tt.bKeys, got, tt.want)
 			}
 		})

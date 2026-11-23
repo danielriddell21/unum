@@ -95,7 +95,7 @@ func diffTFResource(rc terraform.ResourceChange, path string, counts *[3]int) *d
 		return fallback()
 	}
 
-	inner := compareNodes(beforeNode, afterNode, path, rc.Address, -1, counts)
+	inner := compareNodes(beforeNode, afterNode, newJSONKeys(), path, rc.Address, -1, counts)
 	inner.Path = path
 	inner.Key = rc.Address
 	return inner

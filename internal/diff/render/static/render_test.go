@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/danielriddell21/unum/internal/diff/node"
 	"github.com/danielriddell21/unum/internal/diff/parse"
 )
 
@@ -197,6 +198,37 @@ func TestRender_NoStat_SuppressesStatLine(t *testing.T) {
 	out := buf.String()
 	if strings.Contains(out, "+1") || strings.Contains(out, "-1") {
 		t.Errorf("NoStat should suppress stat line, got:\n%s", out)
+	}
+}
+
+func TestRender_ApproximateNotice(t *testing.T) {
+	tree := &node.Diff{Root: &node.DiffNode{}, Added: 1}
+	hunks := &node.Diff{Hunks: []node.Hunk{{Lines: []node.Line{{Kind: node.Added, NewNum: 1, Content: "x"}}}}, Added: 1}
+
+	tests := []struct {
+		name string
+		diff *node.Diff
+		opts Options
+	}{
+		{name: "tree", diff: tree, opts: Options{Theme: Cyber, NoColor: true}},
+		{name: "tree stat only", diff: tree, opts: Options{Theme: Cyber, NoColor: true, Stat: true}},
+		{name: "hunks", diff: hunks, opts: Options{Theme: Cyber, NoColor: true}},
+		{name: "hunks without stat line", diff: hunks, opts: Options{Theme: Cyber, NoColor: true, NoStat: true}},
+		{name: "hunks coloured", diff: hunks, opts: Options{Theme: Cyber}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, approximate := range []bool{false, true} {
+				d := *tt.diff
+				d.Approximate = approximate
+				var buf bytes.Buffer
+				_ = Render(&buf, &d, tt.opts)
+				if got := strings.Contains(buf.String(), node.ApproximateNotice); got != approximate {
+					t.Errorf("Approximate=%v: notice shown = %v in:\n%s", approximate, got, buf.String())
+				}
+			}
+		})
 	}
 }
 

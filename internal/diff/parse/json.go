@@ -1,9 +1,10 @@
 package parse
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"slices"
-	"strings"
+	"strconv"
 
 	diffnode "github.com/danielriddell21/unum/internal/diff/node"
 	jsonnode "github.com/danielriddell21/unum/internal/json/node"
@@ -21,14 +22,16 @@ func JSON(a, b []byte) (*diffnode.Diff, error) {
 	}
 
 	var counts [3]int // [added, removed, modified]
-	root := compareNodes(rootA, rootB, ".", "", -1, &counts)
+	keys := newJSONKeys()
+	root := compareNodes(rootA, rootB, keys, ".", "", -1, &counts)
 
 	d := &diffnode.Diff{
-		Format:   diffnode.FormatJSON,
-		Root:     root,
-		Added:    counts[0],
-		Removed:  counts[1],
-		Modified: counts[2],
+		Format:      diffnode.FormatJSON,
+		Root:        root,
+		Added:       counts[0],
+		Removed:     counts[1],
+		Modified:    counts[2],
+		Approximate: keys.approx,
 	}
 	if td, err := Text(a, b, 3); err == nil {
 		d.Hunks = td.Hunks
@@ -36,7 +39,7 @@ func JSON(a, b []byte) (*diffnode.Diff, error) {
 	return d, nil
 }
 
-func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]int) *diffnode.DiffNode { //nolint:cyclop,gocognit,dupl // NOSONAR: recursive tree comparison; branching on node kind/array bounds is inherent to the diff algorithm
+func compareNodes(a, b *jsonnode.Node, keys *jsonKeys, path, key string, index int, counts *[3]int) *diffnode.DiffNode { //nolint:cyclop,gocognit,dupl // NOSONAR: recursive tree comparison; branching on node kind/array bounds is inherent to the diff algorithm
 	dn := &diffnode.DiffNode{Path: path, Key: key, Index: index}
 
 	if a.Kind != b.Kind {
@@ -61,7 +64,7 @@ func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]i
 			seen[bc.Key] = true
 			childPath := objPath(path, bc.Key)
 			if ac, ok := aMap[bc.Key]; ok {
-				dn.Children = append(dn.Children, compareNodes(ac, bc, childPath, bc.Key, -1, counts))
+				dn.Children = append(dn.Children, compareNodes(ac, bc, keys, childPath, bc.Key, -1, counts))
 			} else {
 				counts[0]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
@@ -90,12 +93,12 @@ func compareNodes(a, b *jsonnode.Node, path, key string, index int, counts *[3]i
 
 	case jsonnode.KindArray: //nolint:dupl // mirrors yaml.go SequenceNode case; parallel parsers share structure but not types
 		dn.Kind = diffnode.Unchanged
-		for _, op := range alignByKey(jsonNodeKeys(a.Children), jsonNodeKeys(b.Children)) {
+		for _, op := range alignByKey(keys.keys(a.Children), keys.keys(b.Children), &keys.approx) {
 			switch {
 			case op.A >= 0 && op.B >= 0:
 				childPath := fmt.Sprintf("%s[%d]", path, op.B)
 				dn.Children = append(dn.Children,
-					compareNodes(a.Children[op.A], b.Children[op.B], childPath, "", op.B, counts))
+					compareNodes(a.Children[op.A], b.Children[op.B], keys, childPath, "", op.B, counts))
 			case op.B >= 0:
 				counts[0]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
@@ -146,30 +149,54 @@ func nodeRepr(n *jsonnode.Node) string {
 	}
 }
 
-func jsonNodeKeys(nodes []*jsonnode.Node) []string {
-	keys := make([]string, len(nodes))
-	for i, n := range nodes {
-		keys[i] = jsonNodeKey(n)
-	}
-	return keys
+type jsonKeys struct {
+	m      map[*jsonnode.Node]string
+	approx bool
 }
 
-func jsonNodeKey(n *jsonnode.Node) string {
-	switch n.Kind {
-	case jsonnode.KindObject:
-		parts := make([]string, 0, len(n.Children))
-		for _, c := range n.Children {
-			parts = append(parts, c.Key+":"+jsonNodeKey(c))
-		}
-		slices.Sort(parts)
-		return "{" + strings.Join(parts, ",") + "}"
-	case jsonnode.KindArray:
-		parts := make([]string, 0, len(n.Children))
-		for _, c := range n.Children {
-			parts = append(parts, jsonNodeKey(c))
-		}
-		return "[" + strings.Join(parts, ",") + "]"
-	default:
+func newJSONKeys() *jsonKeys {
+	return &jsonKeys{m: map[*jsonnode.Node]string{}}
+}
+
+func (k *jsonKeys) keys(nodes []*jsonnode.Node) []string {
+	out := make([]string, len(nodes))
+	for i, n := range nodes {
+		out[i] = k.key(n)
+	}
+	return out
+}
+
+func (k *jsonKeys) key(n *jsonnode.Node) string {
+	if n.Kind != jsonnode.KindObject && n.Kind != jsonnode.KindArray {
 		return n.Raw
 	}
+	if v, ok := k.m[n]; ok {
+		return v
+	}
+
+	parts := make([]string, 0, len(n.Children))
+	prefix := "["
+	if n.Kind == jsonnode.KindObject {
+		prefix = "{"
+		for _, c := range n.Children {
+			parts = append(parts, lengthPrefixed(c.Key)+k.key(c))
+		}
+		slices.Sort(parts)
+	} else {
+		for _, c := range n.Children {
+			parts = append(parts, k.key(c))
+		}
+	}
+
+	h := sha256.New()
+	for _, p := range parts {
+		h.Write([]byte(lengthPrefixed(p)))
+	}
+	v := prefix + string(h.Sum(nil))
+	k.m[n] = v
+	return v
+}
+
+func lengthPrefixed(s string) string {
+	return strconv.Itoa(len(s)) + ":" + s
 }

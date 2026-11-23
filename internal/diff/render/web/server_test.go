@@ -247,6 +247,41 @@ func TestBuildPayload_TerraformDiff(t *testing.T) {
 	}
 }
 
+func TestBuildPayload_ApproximateNotice(t *testing.T) {
+	tests := []struct {
+		name        string
+		approximate bool
+		wantJSON    string
+	}{
+		{name: "exact diff omits the notice", approximate: false},
+		{
+			name:        "approximate diff carries the notice",
+			approximate: true,
+			wantJSON:    `"approximate":true,"notice":"` + node.ApproximateNotice + `"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := jsonDiff()
+			d.Approximate = tt.approximate
+			out, err := json.Marshal(buildPayload(d))
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+			if tt.wantJSON == "" {
+				if bytes.Contains(out, []byte("approximate")) || bytes.Contains(out, []byte("notice")) {
+					t.Errorf("payload mentions approximation: %s", out)
+				}
+				return
+			}
+			if !bytes.Contains(out, []byte(tt.wantJSON)) {
+				t.Errorf("payload = %s, want it to contain %s", out, tt.wantJSON)
+			}
+		})
+	}
+}
+
 func TestBuildPayload_HunkLineKinds(t *testing.T) {
 	d := textDiff()
 	p := buildPayload(d)

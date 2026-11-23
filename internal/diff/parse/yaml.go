@@ -1,13 +1,18 @@
 package parse
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"slices"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 
 	diffnode "github.com/danielriddell21/unum/internal/diff/node"
+)
+
+const (
+	maxYAMLNodes = 1_000_000
+	maxYAMLDepth = 10_000
 )
 
 func YAML(a, b []byte) (*diffnode.Diff, error) {
@@ -21,14 +26,19 @@ func YAML(a, b []byte) (*diffnode.Diff, error) {
 	}
 
 	var counts [3]int // [added, removed, modified]
-	root := compareYAMLNodes(nodeA, nodeB, ".", "", -1, &counts)
+	st := &yamlState{keys: map[*yaml.Node]string{}, budget: maxYAMLNodes}
+	root, err := compareYAMLNodes(nodeA, nodeB, st, ".", "", -1, &counts)
+	if err != nil {
+		return nil, err
+	}
 
 	d := &diffnode.Diff{
-		Format:   diffnode.FormatYAML,
-		Root:     root,
-		Added:    counts[0],
-		Removed:  counts[1],
-		Modified: counts[2],
+		Format:      diffnode.FormatYAML,
+		Root:        root,
+		Added:       counts[0],
+		Removed:     counts[1],
+		Modified:    counts[2],
+		Approximate: st.approx,
 	}
 	if td, err := Text(a, b, 3); err == nil {
 		d.Hunks = td.Hunks
@@ -48,7 +58,22 @@ func parseYAMLDoc(data []byte) (*yaml.Node, error) {
 	return &doc, nil
 }
 
-func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]int) *diffnode.DiffNode { //nolint:cyclop,gocognit,dupl // NOSONAR: recursive tree comparison; branching on node kind/sequence bounds is inherent to the diff algorithm
+func compareYAMLNodes(a, b *yaml.Node, st *yamlState, path, key string, index int, counts *[3]int) (*diffnode.DiffNode, error) { //nolint:cyclop,gocognit,dupl // NOSONAR: recursive tree comparison; branching on node kind/sequence bounds is inherent to the diff algorithm
+	// only nodes reached through an alias spend budget: a plain document is bounded by its own size
+	if a.Kind == yaml.AliasNode || b.Kind == yaml.AliasNode {
+		st.inAlias++
+		defer func() { st.inAlias-- }()
+	}
+	if st.inAlias > 0 {
+		if st.budget--; st.budget < 0 {
+			return nil, fmt.Errorf("yaml alias expansion exceeds %d nodes", maxYAMLNodes)
+		}
+	}
+	if st.depth++; st.depth > maxYAMLDepth {
+		return nil, fmt.Errorf("yaml alias expansion exceeds depth %d (recursive alias?)", maxYAMLDepth)
+	}
+	defer func() { st.depth-- }()
+
 	// Resolve aliases before comparing
 	a = resolveAlias(a)
 	b = resolveAlias(b)
@@ -60,7 +85,7 @@ func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]i
 		dn.OldValue = yamlNodeRepr(a)
 		dn.NewValue = yamlNodeRepr(b)
 		counts[2]++
-		return dn
+		return dn, nil
 	}
 
 	switch a.Kind {
@@ -78,7 +103,11 @@ func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]i
 			seen[k] = true
 			childPath := objPath(path, k)
 			if aVal, ok := aMap[k]; ok {
-				dn.Children = append(dn.Children, compareYAMLNodes(aVal, bVal, childPath, k, -1, counts))
+				child, err := compareYAMLNodes(aVal, bVal, st, childPath, k, -1, counts)
+				if err != nil {
+					return nil, err
+				}
+				dn.Children = append(dn.Children, child)
 			} else {
 				counts[0]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
@@ -107,12 +136,15 @@ func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]i
 
 	case yaml.SequenceNode: //nolint:dupl // mirrors json.go KindArray case; parallel parsers share structure but not types
 		dn.Kind = diffnode.Unchanged
-		for _, op := range alignByKey(yamlNodeKeys(a.Content), yamlNodeKeys(b.Content)) {
+		for _, op := range alignByKey(st.nodeKeys(a.Content), st.nodeKeys(b.Content), &st.approx) {
 			switch {
 			case op.A >= 0 && op.B >= 0:
 				childPath := fmt.Sprintf("%s[%d]", path, op.B)
-				dn.Children = append(dn.Children,
-					compareYAMLNodes(a.Content[op.A], b.Content[op.B], childPath, "", op.B, counts))
+				child, err := compareYAMLNodes(a.Content[op.A], b.Content[op.B], st, childPath, "", op.B, counts)
+				if err != nil {
+					return nil, err
+				}
+				dn.Children = append(dn.Children, child)
 			case op.B >= 0:
 				counts[0]++
 				dn.Children = append(dn.Children, &diffnode.DiffNode{
@@ -143,7 +175,7 @@ func compareYAMLNodes(a, b *yaml.Node, path, key string, index int, counts *[3]i
 		}
 	}
 
-	return dn
+	return dn, nil
 }
 
 func resolveAlias(n *yaml.Node) *yaml.Node {
@@ -182,31 +214,53 @@ func yamlScalarDisplay(n *yaml.Node) string {
 	}
 }
 
-func yamlNodeKeys(nodes []*yaml.Node) []string {
-	keys := make([]string, len(nodes))
-	for i, n := range nodes {
-		keys[i] = yamlNodeKey(n)
-	}
-	return keys
+type yamlState struct {
+	keys    map[*yaml.Node]string
+	budget  int
+	depth   int
+	approx  bool
+	inAlias int
 }
 
-func yamlNodeKey(n *yaml.Node) string {
+func (st *yamlState) nodeKeys(nodes []*yaml.Node) []string {
+	out := make([]string, len(nodes))
+	for i, n := range nodes {
+		out[i] = st.key(n)
+	}
+	return out
+}
+
+func (st *yamlState) key(n *yaml.Node) string {
 	n = resolveAlias(n)
-	switch n.Kind {
-	case yaml.MappingNode:
-		parts := make([]string, 0, len(n.Content)/2)
-		for i := 0; i+1 < len(n.Content); i += 2 {
-			parts = append(parts, n.Content[i].Value+":"+yamlNodeKey(n.Content[i+1]))
-		}
-		slices.Sort(parts)
-		return "{" + strings.Join(parts, ",") + "}"
-	case yaml.SequenceNode:
-		parts := make([]string, 0, len(n.Content))
-		for _, c := range n.Content {
-			parts = append(parts, yamlNodeKey(c))
-		}
-		return "[" + strings.Join(parts, ",") + "]"
-	default:
+	if n.Kind != yaml.MappingNode && n.Kind != yaml.SequenceNode {
 		return n.Tag + ":" + n.Value
 	}
+	if v, ok := st.keys[n]; ok {
+		return v
+	}
+
+	// placeholder so an alias that points back at an ancestor terminates
+	st.keys[n] = "cycle"
+
+	parts := make([]string, 0, len(n.Content))
+	prefix := "["
+	if n.Kind == yaml.MappingNode {
+		prefix = "{"
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			parts = append(parts, lengthPrefixed(n.Content[i].Value)+st.key(n.Content[i+1]))
+		}
+		slices.Sort(parts)
+	} else {
+		for _, c := range n.Content {
+			parts = append(parts, st.key(c))
+		}
+	}
+
+	h := sha256.New()
+	for _, p := range parts {
+		h.Write([]byte(lengthPrefixed(p)))
+	}
+	v := prefix + string(h.Sum(nil))
+	st.keys[n] = v
+	return v
 }

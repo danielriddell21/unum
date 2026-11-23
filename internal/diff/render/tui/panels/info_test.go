@@ -69,6 +69,26 @@ func TestInfoPanel_WithRoot(t *testing.T) {
 	}
 }
 
+func TestInfoPanel_ApproximateNotice(t *testing.T) {
+	for _, approximate := range []bool{false, true} {
+		d := &node.Diff{Added: 1, Approximate: approximate}
+		p := NewInfoPanel(d, 80, 20)
+		out := p.View()
+		if got := strings.Contains(out, node.ApproximateNotice); got != approximate {
+			t.Errorf("Approximate=%v: notice shown = %v in %q", approximate, got, out)
+		}
+	}
+}
+
+func TestInfoPanel_ApproximateNoticeWrapsToWidth(t *testing.T) {
+	d := &node.Diff{Approximate: true}
+	p := NewInfoPanel(d, 20, 30)
+	out := p.View()
+	if !strings.Contains(out, "approximated") {
+		t.Errorf("narrow panel: want the notice wrapped, not dropped, in %q", out)
+	}
+}
+
 func TestInfoPanel_Resize(t *testing.T) {
 	d := makeDiff(0, 0)
 	p := NewInfoPanel(d, 80, 20)

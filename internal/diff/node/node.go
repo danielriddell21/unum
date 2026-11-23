@@ -56,13 +56,16 @@ type DiffNode struct {
 	Children []*DiffNode
 }
 
+const ApproximateNotice = "alignment approximated: input too large for exact diff"
+
 type Diff struct {
-	Format   Format
-	FileA    string
-	FileB    string
-	Hunks    []Hunk
-	Root     *DiffNode
-	Added    int
-	Removed  int
-	Modified int
+	Format      Format
+	FileA       string
+	FileB       string
+	Hunks       []Hunk
+	Root        *DiffNode
+	Added       int
+	Removed     int
+	Modified    int
+	Approximate bool
 }

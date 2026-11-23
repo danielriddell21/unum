@@ -17,40 +17,39 @@ func Start(d *node.Diff, theme string, version string) error {
 	applyTheme(theme)
 	diff := d
 	for {
-		m := NewModel(diff, version)
-		p := tea.NewProgram(m, tea.WithAltScreen())
-		result, err := p.Run()
-		if err != nil {
-			return fmt.Errorf("diff TUI: %w", err)
-		}
-		final, ok := result.(Model)
-		if !ok || !final.ReloadRequest {
-			return nil
-		}
-
-		cwd, _ := os.Getwd()
-		fileA, err := pickFile("SELECT FILE A", cwd)
-		if err != nil {
+		reload, err := runViewer(diff, version)
+		if err != nil || !reload {
 			return err
 		}
-		if fileA == "" {
-			return nil
-		}
-
-		fileB, err := pickFile("SELECT FILE B", filepath.Dir(fileA))
-		if err != nil {
+		next, err := pickAndReload()
+		if err != nil || next == nil {
 			return err
 		}
-		if fileB == "" {
-			return nil
-		}
-
-		newDiff, err := reloadDiff(fileA, fileB)
-		if err != nil {
-			return err
-		}
-		diff = newDiff
+		diff = next
 	}
+}
+
+func runViewer(d *node.Diff, version string) (bool, error) {
+	p := tea.NewProgram(NewModel(d, version), tea.WithAltScreen())
+	result, err := p.Run()
+	if err != nil {
+		return false, fmt.Errorf("diff TUI: %w", err)
+	}
+	final, ok := result.(Model)
+	return ok && final.ReloadRequest, nil
+}
+
+func pickAndReload() (*node.Diff, error) {
+	cwd, _ := os.Getwd()
+	fileA, err := pickFile("SELECT FILE A", cwd)
+	if err != nil || fileA == "" {
+		return nil, err
+	}
+	fileB, err := pickFile("SELECT FILE B", filepath.Dir(fileA))
+	if err != nil || fileB == "" {
+		return nil, err
+	}
+	return reloadDiff(fileA, fileB)
 }
 
 func pickFile(title, startDir string) (string, error) {
