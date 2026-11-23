@@ -87,10 +87,8 @@ func keys(m map[string]any) []string {
 // test ends. Fails the test if Chromium is not installed.
 func newBrowser(t *testing.T) *rod.Browser {
 	t.Helper()
-	l := launcher.New().Headless(true).Leakless(false)
-	if os.Getenv("CI") != "" || os.Geteuid() == 0 {
-		l = l.Set("no-sandbox")
-	}
+	// mutation testing runs the suite as an unprivileged user with a scrubbed environment, where Chromium has no usable sandbox
+	l := launcher.New().Headless(true).Leakless(false).Set("no-sandbox")
 	u, err := l.Launch()
 	if err != nil {
 		t.Fatalf("failed to launch browser (is Chromium installed?): %v", err)
